@@ -1,0 +1,10 @@
+<assembly>
+  <name>simpleassembly</name>
+  <image type='fedora13'>
+    <config>
+      <services>
+	<service name='httpd' action='start'/>
+      </services>
+    </config>
+  </image>
+</assembly>

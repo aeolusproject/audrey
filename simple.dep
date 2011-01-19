@@ -1,0 +1,11 @@
+<deployable>
+  <name>Simple Deployable</name>
+  <assemblies>
+    <assembly name='MyApp' type='simpleassembly'>
+      <hardware_profile>large</hardware_profile>
+    </assembly>
+    <assembly name='MyApp2' type='simpleassembly'>
+      <hardware_profile>large</hardware_profile>
+    </assembly>
+  </assemblies>
+</deployable>
