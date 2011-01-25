@@ -3,6 +3,10 @@
 import sys
 import os
 import libxml2
+import base64
+import time
+import tarfile
+import StringIO
 
 def usage():
     print "Usage: %s [xmlfiles]" % (sys.argv[0])
@@ -12,16 +16,63 @@ def usage():
     print " XML files."
     sys.exit(1)
 
-if len(sys.argv) < 2:
-    usage()
-
 class Instance:
-    def __init__(self, assyname, hwp, templatename, services):
+    def __init__(self, assyname, hwp, templatename, script):
         self.assemblyname = assyname
         self.hwp = hwp
         self.templatename = templatename
         self.realm = None
-        self.services = services
+        self.script = script
+
+def find_template(assemblytmplname, assyname, hwp, script):
+    found_templ = False
+    for template in templates:
+        templatenode = template.xpathEval('/template/name')
+        if len(templatenode) != 1:
+            raise Exception, "Invalid template document passed"
+        templatename = templatenode[0].getContent()
+        if templatename == assemblytmplname:
+            found_templ = True
+            instances.append(Instance(assyname, hwp, templatename, script))
+            break
+
+    if not found_templ:
+        raise Exception, "Could not find template to match %s" % (assemblytmplname)
+
+def find_assembly(neededassytype, assyname, hwp):
+    found_assy = False
+    for assy in assemblies:
+        assemblyname = assy.xpathEval('/assembly')[0].prop('name')
+        if assemblyname == neededassytype:
+            found_assy = True
+            # OK, found the assembly.  Let's find the template
+            assemblytmpl = assy.xpathEval('/assembly/template')
+            if len(assemblytmpl) != 1:
+                raise Exception, "No template specified in assembly %s" % (assemblyname)
+            assemblytmplname = assemblytmpl[0].prop('type')
+            if assemblytmplname == None:
+                raise Exception, "No template type specified in assembly %s" % (assemblyname)
+
+            script = {}
+            scriptnode = assy.xpathEval('/assembly/config/script/file')
+            if len(scriptnode) > 0:
+                for filename in scriptnode:
+                    script[filename.prop('name')] = filename.getContent()
+
+            find_template(assemblytmplname, assyname, hwp, script)
+
+            break
+    if not found_assy:
+        raise Exception, "Could not find assembly to match %s" % (assyname)
+
+def escape(inputstr):
+    out = inputstr.replace('\\', '\\\\')
+    out = out.replace(' ', '\\ ')
+    return out
+
+# main
+if len(sys.argv) < 2:
+    usage()
 
 deployable = None
 assemblies = []
@@ -36,7 +87,7 @@ for filename in sys.argv[1:]:
             raise Exception, "Multiple deployable files specified"
     elif len(doc.xpathEval('/assembly')) == 1:
         assemblies.append(doc)
-    elif len(doc.xpathEval('/image')) == 1:
+    elif len(doc.xpathEval('/template')) == 1:
         templates.append(doc)
     else:
         raise Exception, "Unknown XML file"
@@ -44,8 +95,8 @@ for filename in sys.argv[1:]:
 if deployable == None:
     raise Exception, "No deployable file specified"
 
-# OK, we classified all of the documents.  Let's make sure all of the assemblies
-# referenced in the deployable are present
+# OK, we classified all of the documents.  Let's make sure all of the
+# assemblies referenced in the deployable are present
 instances = []
 for neededassy in deployable.xpathEval('/deployable/assemblies/assembly'):
     assyname = neededassy.prop('name')
@@ -54,67 +105,37 @@ for neededassy in deployable.xpathEval('/deployable/assemblies/assembly'):
 
     neededassytype = neededassy.prop('type')
     if neededassytype == None:
-        raise Exception, "No type specified for assembly"
+        raise Exception, "No type specified for assembly %s" % (assyname)
 
-    hwpnode = neededassy.xpathEval('hardware_profile')
-    if len(hwpnode) == 1:
-        hwp = hwpnode[0].getContent()
-    elif len(hwpnode) == 0:
-        # FIXME: we want to eventually allow hardware_profiles in the assembly
-        # files and the template files as well
-        raise Exception, "No hardware_profile specified for assembly %s" % (assyname)
-    else:
-        raise Exception, "Invalid number of hardware_profiles specified"
+    hwp = neededassy.prop('hwp')
+    if hwp == None:
+        raise Exception, "No hardware profile specified for assembly %s" % (assyname)
 
-    found_assy = False
-    for assy in assemblies:
-        namenode = assy.xpathEval('/assembly/name')
-        if len(namenode) != 1:
-            raise Exception, "No name specified in assembly"
-        assemblyname = namenode[0].getContent()
-        if assemblyname == neededassytype:
-            found_assy = True
-            # OK, found the assembly.  Let's find the template
-            assemblyimage = assy.xpathEval('/assembly/image')
-            if len(assemblyimage) != 1:
-                raise Exception, "No image specified in assembly %s" % (assemblyname)
-            assemblyimagename = assemblyimage[0].prop('type')
-            if assemblyimagename == None:
-                raise Exception, "No image type specified in assembly %s" % (assemblyname)
-
-            servicesNode = assy.xpathEval('/assembly/image/config/services/service')
-            startservices = []
-            for service in servicesNode:
-                if service.prop('action') == 'start':
-                    startservices.append(service.prop('name'))
-
-            found_templ = False
-            for template in templates:
-                templatenode = template.xpathEval('/image/name')
-                if len(templatenode) != 1:
-                    raise Exception, "Invalid template document passed"
-                templatename = templatenode[0].getContent()
-                if templatename == assemblyimagename:
-                    found_templ = True
-                    instances.append(Instance(assyname, hwp, templatename))
-                    break
-            if not found_templ:
-                raise Exception, "Could not find template to match %s" % (assemblyimagename)
-            break
-    if not found_assy:
-        raise Exception, "Could not find assembly to match %s" % (assyname)
-
-def escape(inputstr):
-    out = inputstr.replace('\\', '\\\\')
-    out = out.replace(' ', '\\ ')
-    return out
+    find_assembly(neededassytype, assyname, hwp)
 
 jobnum = 1
 for instance in instances:
     job_name = "job_" + str(jobnum)
-    userdata = "#!/bin/bash\n"
-    for service in instance.services:
-        userdata += "service " + service + " start\n"
+
+    userdata = ""
+
+    tar = tarfile.open("out.tar.bz2", "w:bz2")
+    saw_go = False
+    for fname,contents in instance.script.items():
+        if fname == '/root/go.sh':
+            saw_go = True
+        cstring = StringIO.StringIO(contents)
+        info = tarfile.TarInfo(name=fname)
+        info.size = len(cstring.buf)
+        info.mtime = int(time.time())
+        tar.addfile(tarinfo=info, fileobj=cstring)
+    tar.close()
+
+    userdata = open('out.tar.bz2', 'r').read()
+    os.unlink('out.tar.bz2')
+
+    if not saw_go:
+        raise Exception, "A /root/go.sh file must be specified"
 
     if len(userdata) > 16 * 1024:
         raise Exception, "Userdata is too big for EC2; it must be <= 16K"
@@ -129,7 +150,11 @@ for instance in instances:
         resource += " NULL"
     else:
         resource += " " + instance.realm
-    resource += " $$(hardwareprofile_key) $$(keypair) " + b64 + "\n"
+    resource += " $$(hardwareprofile_key) $$(keypair) "
+    if len(b64) == 0:
+        resource += "NULL\n"
+    else:
+        resource += b64 + "\n"
     f.write(resource)
     requirements = "requirements = hardwareprofile == \"" + instance.hwp + "\" && image == \"" + instance.templatename + "\""
     if instance.realm != None:
