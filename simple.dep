@@ -1,7 +1,16 @@
 <deployable>
   <name>Simple Deployable</name>
   <assemblies>
-    <assembly name='MyApp' type='simpleassembly' hwp='large'/>
+    <assembly name='MyApp' type='simpleassembly' hwp='large'>
+      <services>
+	<service name='foo'>
+	  <config>
+	    <file name='/root/from.dep'>hello
+there</file>
+	  </config>
+	</service>
+      </services>
+    </assembly>
     <assembly name='MyApp2' type='simpleassembly2' hwp='large'/>
   </assemblies>
 </deployable>

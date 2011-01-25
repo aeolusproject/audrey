@@ -9,11 +9,4 @@ service postgresql start</file>
       </config>
     </service>
   </services>
-  <config>
-    <script>
-      <file name='/root/go.sh'>#!/bin/bash
-service postgresql initdb
-service postgresql start</file>
-    </script>
-  </config>
 </assembly>

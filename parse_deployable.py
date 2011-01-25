@@ -39,7 +39,7 @@ def find_template(assemblytmplname, assyname, hwp, script):
     if not found_templ:
         raise Exception, "Could not find template to match %s" % (assemblytmplname)
 
-def find_assembly(neededassytype, assyname, hwp):
+def find_assembly(neededassytype, assyname, hwp, script):
     found_assy = False
     for assy in assemblies:
         assemblyname = assy.xpathEval('/assembly')[0].prop('name')
@@ -53,11 +53,9 @@ def find_assembly(neededassytype, assyname, hwp):
             if assemblytmplname == None:
                 raise Exception, "No template type specified in assembly %s" % (assemblyname)
 
-            script = {}
-            scriptnode = assy.xpathEval('/assembly/config/script/file')
-            if len(scriptnode) > 0:
-                for filename in scriptnode:
-                    script[filename.prop('name')] = filename.getContent()
+            scriptnodes = assy.xpathEval('/assembly/services/service/config/file')
+            for config in scriptnodes:
+                script[config.prop('name')] = config.getContent()
 
             find_template(assemblytmplname, assyname, hwp, script)
 
@@ -111,7 +109,12 @@ for neededassy in deployable.xpathEval('/deployable/assemblies/assembly'):
     if hwp == None:
         raise Exception, "No hardware profile specified for assembly %s" % (assyname)
 
-    find_assembly(neededassytype, assyname, hwp)
+    script = {}
+    scriptnodes = neededassy.xpathEval('services/service/config/file')
+    for config in scriptnodes:
+        script[config.prop('name')] = config.getContent()    
+
+    find_assembly(neededassytype, assyname, hwp, script)
 
 jobnum = 1
 for instance in instances:
