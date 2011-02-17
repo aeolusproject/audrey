@@ -1,0 +1,16 @@
+This is the beginning of the Audrey code.  What's currently here are a few
+things:
+
+1)  An implementation of the Template/Assembly/Deployable XML parsing in Python.
+You feed it at least one deployable, at least one assembly, and at least
+one template.  It parses all of these, makes sure it can resolve all of them,
+and assuming it can, it generates condor jobs corresponding to those instances,
+which can then be launched.
+
+2)  An implementation of the Template/Assembly/Deployable XML parsing in Ruby.
+It's the same as the python implementation, but not as well tested and doesn't
+generate the right userdata yet.  This is what we'll eventually want to
+integrate into the conductor.
+
+3)  The modifications needed to ec2 rc.local files in order to actually execute
+the stuff sent out by audrey.
