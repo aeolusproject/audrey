@@ -148,22 +148,20 @@ for instance in instances:
     f = open(job_name + ".cnd", "w")
     f.write("universe = grid\n")
     f.write("executable = " + job_name + "\n")
-    resource = "grid_resource = dcloud $$(provider_url) $$(username) $$(password) $$(image_key) " + escape(instance.assemblyname)
-    if instance.realm == None:
-        resource += " NULL"
-    else:
-        resource += " " + instance.realm
-    resource += " $$(hardwareprofile_key) $$(keypair) "
-    if len(b64) == 0:
-        resource += "NULL\n"
-    else:
-        resource += b64 + "\n"
-    f.write(resource)
+    f.write("grid_resource = deltacloud $$(provider_url)\n")
+    f.write("DeltacloudUsername = $$(username)\n")
+    f.write("DeltacloudPassword = $$(password)\n")
+    f.write("DeltacloudImageId = $$(image_key)\n")
+    f.write("DeltacloudHardwareProfile = $$(hardwareprofile_key)\n")
+    f.write("DeltacloudKeyname = $$(keypair)\n")
+    if instance.realm != None:
+        f.write("DeltacloudRealmId = $$(realm_key)\n")
+
     requirements = "requirements = hardwareprofile == \"" + instance.hwp + "\" && image == \"" + instance.templatename + "\""
     if instance.realm != None:
         requirements += " && realm == \"" + instance.realm + "\""
     # FIXME: skipping the quota check for now
-    #requirements += " && deltacloud_quota_check(\"" + job_name + "\", other.cloud_account_id)"
+    #requirements += " && conductor_quota_check(\"" + job_name + "\", other.provider_account_id)"
     requirements += "\n"
     f.write(requirements)
     f.write("notification = never\n")
