@@ -155,19 +155,21 @@ $instances.each do |instance|
   f.write("universe = grid\n")
   f.write("executable = " + job_name + "\n")
 
-  resource = "grid_resource = dcloud $$(provider_url) $$(username) $$(password) $$(image_key) " + escape(instance.name)
-  if instance.realm == nil
-    resource += " NULL"
-  else
-    resource += " $$(realm_key)"
+  f.write("grid_resource = deltacloud $$(provider_url)\n")
+  f.write("DeltacloudUsername = $$(username)\n")
+  f.write("DeltacloudPassword = $$(password)\n")
+  f.write("DeltacloudImageID = $$(image_key)\n")
+  f.write("DeltacloudHardwareProfile = $$(hardwareprofile_key)\n")
+  f.write("DeltacloudKeyname = $$(keypair)\n")
+  if not instance.realm.nil?
+    f.write("DeltacloudRealmId = $$(realm_key)\n")
   end
-  resource += " $$(hardwareprofile_key) $$(keypair) "
-  # FIXME: this is where userdata goes
-  resource += "NULL\n"
-  f.write(resource)
+
+  if b64.length > 0:
+      f.write("DeltacloudUserData = " + b64 + "\n")
 
   requirements = 'requirements = hardwareprofile == "' + instance.hwp + '" && image == "' + instance.tmplname + '"'
-  if instance.realm != nil
+  if not instance.realm.nil?
     requirements += ' && realm == "' + instance.realm + '"'
   end
   # FIXME: skipping the quota check for now
