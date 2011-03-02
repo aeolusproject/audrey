@@ -1,13 +1,3 @@
 <assembly name='simpleassembly'>
   <template type='fedora13'/>
-  <services>
-    <service name='httpd'>
-      <config>
-	<file name='/root/go.sh'>#!/bin/bash
-service httpd start</file>
-        <file name='/etc/foo.rc'>FOO=bar
-BAZ=wow</file>
-      </config>
-    </service>
-  </services>
 </assembly>

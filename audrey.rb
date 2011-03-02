@@ -5,14 +5,13 @@ require 'libarchive_rs'
 require 'base64'
 
 class Instance
-  attr_reader :name, :hwp, :tmplname, :script, :realm
+  attr_reader :name, :hwp, :tmplname, :realm
 
-  def initialize(assyname, assyhwp, tmplname, script)
+  def initialize(assyname, assyhwp, tmplname, realm)
     @name = assyname
     @hwp = assyhwp
     @tmplname = tmplname
-    @script = script
-    @realm = nil
+    @realm = realm
   end
 end
 
@@ -24,7 +23,7 @@ def usage
   puts " template XML files."
 end
 
-def find_template(neededtmplname, assyname, assyhwp, script)
+def find_template(neededtmplname, assyname, assyhwp, assyrealm)
   found_tmpl = false
 
   $templates.each do |template|
@@ -36,7 +35,7 @@ def find_template(neededtmplname, assyname, assyhwp, script)
     tmplname = tmplnode[0].content
     if tmplname == neededtmplname
       found_tmpl = true
-      $instances << Instance.new(assyname, assyhwp, tmplname, script)
+      $instances << Instance.new(assyname, assyhwp, tmplname, assyrealm)
       break
     end
   end
@@ -46,7 +45,7 @@ def find_template(neededtmplname, assyname, assyhwp, script)
   end
 end
 
-def find_assembly(neededassytype, assyname, assyhwp, script)
+def find_assembly(neededassytype, assyname, assyhwp, assyrealm)
   found_assy = false
 
   $assemblies.each do |assy|
@@ -64,11 +63,7 @@ def find_assembly(neededassytype, assyname, assyhwp, script)
         raise "No template type specified in assembly %s" % [assemblyname]
       end
 
-      assy.xpath('/assembly/services/service/config/file').each do |config|
-        script[config['name']] = config.content.strip
-      end
-
-      find_template(assytmplname, assyname, assyhwp, script)
+      find_template(assytmplname, assyname, assyhwp, assyrealm)
 
       break
     end
@@ -133,12 +128,10 @@ deployable.xpath('/deployable/assemblies/assembly').each do |neededassy|
     raise "No hardware profile specified for assembly %s" % [assyname]
   end
 
-  script = {}
-  neededassy.xpath('services/service/config/file').each do |config|
-    script[config['name']] = config.content.strip
-  end
+  assyrealm = neededassy['realm']
+  # assyrealm is allowed to be nil
 
-  find_assembly(neededassytype, assyname, assyhwp, script)
+  find_assembly(neededassytype, assyname, assyhwp, assyrealm)
 end
 
 jobnum = 1
@@ -147,6 +140,7 @@ $instances.each do |instance|
 
   userdata = ""
 
+=begin
   if instance.script.length > 0
     tarfile = "deleteme.tar.bz2"
     Archive.write_open_filename(tarfile, Archive::COMPRESSION_BZIP2, Archive::FORMAT_TAR) do |ar|
@@ -167,6 +161,7 @@ $instances.each do |instance|
 
     File.unlink(tarfile)
   end
+=end
 
   # do base64 encoding
   b64 = [userdata].pack("m0").delete("\n")

@@ -1,12 +1,3 @@
 <assembly name='simpleassembly2'>
   <template type='fedora13'/>
-  <services>
-    <service name='postgresql'>
-      <config>
-        <file name='/root/go.sh'>#!/bin/bash
-service postgresql initdb
-service postgresql start</file>
-      </config>
-    </service>
-  </services>
 </assembly>

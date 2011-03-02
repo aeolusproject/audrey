@@ -3,11 +3,8 @@
   <assemblies>
     <assembly name='MyApp' type='simpleassembly' hwp='large'>
       <services>
-	<service name='foo'>
-	  <config>
-	    <file name='/root/from.dep'>hello
-there</file>
-	  </config>
+	<service name='httpd'>
+	  <param name='listenport' value='8080'/>
 	</service>
       </services>
     </assembly>
