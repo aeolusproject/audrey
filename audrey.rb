@@ -1,17 +1,17 @@
 #!/usr/bin/ruby
 
 require 'nokogiri'
-require 'libarchive_rs'
 require 'base64'
 
 class Instance
-  attr_reader :name, :hwp, :tmplname, :realm
+  attr_reader :name, :hwp, :tmplname, :realm, :yaml
 
-  def initialize(assyname, assyhwp, tmplname, realm)
+  def initialize(assyname, assyhwp, tmplname, realm, yaml)
     @name = assyname
     @hwp = assyhwp
     @tmplname = tmplname
     @realm = realm
+    @yaml = yaml
   end
 end
 
@@ -23,7 +23,7 @@ def usage
   puts " template XML files."
 end
 
-def find_template(neededtmplname, assyname, assyhwp, assyrealm)
+def find_template(neededtmplname, assyname, assyhwp, assyrealm, yaml)
   found_tmpl = false
 
   $templates.each do |template|
@@ -35,7 +35,7 @@ def find_template(neededtmplname, assyname, assyhwp, assyrealm)
     tmplname = tmplnode[0].content
     if tmplname == neededtmplname
       found_tmpl = true
-      $instances << Instance.new(assyname, assyhwp, tmplname, assyrealm)
+      $instances << Instance.new(assyname, assyhwp, tmplname, assyrealm, yaml)
       break
     end
   end
@@ -45,7 +45,7 @@ def find_template(neededtmplname, assyname, assyhwp, assyrealm)
   end
 end
 
-def find_assembly(neededassytype, assyname, assyhwp, assyrealm)
+def find_assembly(neededassytype, assyname, assyhwp, assyrealm, yaml)
   found_assy = false
 
   $assemblies.each do |assy|
@@ -63,7 +63,11 @@ def find_assembly(neededassytype, assyname, assyhwp, assyrealm)
         raise "No template type specified in assembly %s" % [assemblyname]
       end
 
-      find_template(assytmplname, assyname, assyhwp, assyrealm)
+      assy.xpath('/assembly/services/service/param').each do |service|
+        yaml[service['name']] = service['value']
+      end
+
+      find_template(assytmplname, assyname, assyhwp, assyrealm, yaml)
 
       break
     end
@@ -131,40 +135,28 @@ deployable.xpath('/deployable/assemblies/assembly').each do |neededassy|
   assyrealm = neededassy['realm']
   # assyrealm is allowed to be nil
 
-  find_assembly(neededassytype, assyname, assyhwp, assyrealm)
+  yaml = {}
+  neededassy.xpath('services/service/param').each do |service|
+    yaml[service['name']] = service['value']
+  end
+
+  find_assembly(neededassytype, assyname, assyhwp, assyrealm, yaml)
 end
 
 jobnum = 1
 $instances.each do |instance|
   job_name = "job_" + jobnum.to_s
 
-  userdata = ""
+  b64 = ""
 
-=begin
-  if instance.script.length > 0
-    tarfile = "deleteme.tar.bz2"
-    Archive.write_open_filename(tarfile, Archive::COMPRESSION_BZIP2, Archive::FORMAT_TAR) do |ar|
-      instance.script.each do |fn, data|
-        ar.new_entry do |entry|
-          entry.filetype = Archive::ENTRY_FILE
-          entry.pathname = fn
-          entry.size = data.length
-          entry.mtime = Time.now().to_i
-          entry.mode = 100640
-          ar.write_header(entry)
-          ar.write_data(data)
-        end
-      end
-    end
+  if not instance.yaml.empty?
+    data = "---\nparameters:\n"
+    instance.yaml.each {|name, value| data += "\t#{name}: #{value}\n"}
 
-    userdata = File.open(tarfile, "rb") {|f| f.read}
-
-    File.unlink(tarfile)
+    # ruby is retarded and adds carriage returns every 60 characters.  Remember
+    # to strip them out
+    b64 = [data].pack("m0").delete("\n")
   end
-=end
-
-  # do base64 encoding
-  b64 = [userdata].pack("m0").delete("\n")
 
   if b64.length > (16 * 1024)
     raise "Userdata is too big for EC2; it must be <= 16K"

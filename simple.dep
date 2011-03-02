@@ -4,7 +4,8 @@
     <assembly name='MyApp' type='simpleassembly' hwp='large'>
       <services>
 	<service name='httpd'>
-	  <param name='listenport' value='8080'/>
+	  <param name='httpd_port' value='8080'/>
+	  <param name='httpd_serverroot' value='/etc/httpd'/>
 	</service>
       </services>
     </assembly>

@@ -1,3 +1,8 @@
 <assembly name='simpleassembly'>
   <template type='fedora13'/>
+  <services>
+    <service name='httpd'>
+      <param name='httpd_keepalive' value='on'/>
+    </service>
+  </services>
 </assembly>
