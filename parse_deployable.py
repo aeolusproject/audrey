@@ -122,23 +122,24 @@ for instance in instances:
 
     userdata = ""
 
-    tar = tarfile.open("out.tar.bz2", "w:bz2")
-    saw_go = False
-    for fname,contents in instance.script.items():
-        if fname == '/root/go.sh':
-            saw_go = True
-        cstring = StringIO.StringIO(contents)
-        info = tarfile.TarInfo(name=fname)
-        info.size = len(cstring.buf)
-        info.mtime = int(time.time())
-        tar.addfile(tarinfo=info, fileobj=cstring)
-    tar.close()
+    if len(instance.script) > 0:
+        tar = tarfile.open("out.tar.bz2", "w:bz2")
+        saw_go = False
+        for fname,contents in instance.script.items():
+            if fname == '/root/go.sh':
+                saw_go = True
+            cstring = StringIO.StringIO(contents)
+            info = tarfile.TarInfo(name=fname)
+            info.size = len(cstring.buf)
+            info.mtime = int(time.time())
+            tar.addfile(tarinfo=info, fileobj=cstring)
+        tar.close()
 
-    userdata = open('out.tar.bz2', 'r').read()
-    os.unlink('out.tar.bz2')
+        if not saw_go:
+            raise Exception, "A /root/go.sh file must be specified"
 
-    if not saw_go:
-        raise Exception, "A /root/go.sh file must be specified"
+        userdata = open('out.tar.bz2', 'r').read()
+        os.unlink('out.tar.bz2')
 
     if len(userdata) > 16 * 1024:
         raise Exception, "Userdata is too big for EC2; it must be <= 16K"
@@ -156,6 +157,9 @@ for instance in instances:
     f.write("DeltacloudKeyname = $$(keypair)\n")
     if instance.realm != None:
         f.write("DeltacloudRealmId = $$(realm_key)\n")
+
+    if len(b64) > 0:
+        f.write("DeltacloudUserData = " + b64 + "\n")
 
     requirements = "requirements = hardwareprofile == \"" + instance.hwp + "\" && image == \"" + instance.templatename + "\""
     if instance.realm != None:
