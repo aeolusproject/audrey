@@ -1,6 +1,8 @@
 #!/usr/bin/ruby
 
 require 'nokogiri'
+require 'libarchive_rs'
+require 'base64'
 
 class Instance
   attr_reader :name, :hwp, :tmplname, :script, :realm
@@ -145,9 +147,31 @@ $instances.each do |instance|
 
   userdata = ""
 
-  # FIXME: deal with creating the tarfile here
+  if instance.script.length > 0
+    tarfile = "deleteme.tar.bz2"
+    Archive.write_open_filename(tarfile, Archive::COMPRESSION_BZIP2, Archive::FORMAT_TAR) do |ar|
+      instance.script.each do |fn, data|
+        ar.new_entry do |entry|
+          entry.filetype = Archive::ENTRY_FILE
+          entry.pathname = fn
+          entry.size = data.length
+          entry.mtime = Time.now().to_i
+          entry.mode = 100640
+          ar.write_header(entry)
+          ar.write_data(data)
+        end
+      end
+    end
 
-  if userdata.length > (16 * 1024)
+    userdata = File.open(tarfile, "rb") {|f| f.read}
+
+    File.unlink(tarfile)
+  end
+
+  # do base64 encoding
+  b64 = [userdata].pack("m0").delete("\n")
+
+  if b64.length > (16 * 1024)
     raise "Userdata is too big for EC2; it must be <= 16K"
   end
 
@@ -164,9 +188,9 @@ $instances.each do |instance|
   if not instance.realm.nil?
     f.write("DeltacloudRealmId = $$(realm_key)\n")
   end
-
-  if b64.length > 0:
+  if b64.length > 0
       f.write("DeltacloudUserData = " + b64 + "\n")
+  end
 
   requirements = 'requirements = hardwareprofile == "' + instance.hwp + '" && image == "' + instance.tmplname + '"'
   if not instance.realm.nil?
