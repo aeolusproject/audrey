@@ -1,14 +1,6 @@
 <deployable>
   <name>Simple Deployable</name>
   <assemblies>
-    <assembly name='MyApp' type='simpleassembly' hwp='large'>
-      <services>
-	<service name='httpd'>
-	  <param name='httpd_port' value='8080'/>
-	  <param name='httpd_serverroot' value='/etc/httpd'/>
-	</service>
-      </services>
-    </assembly>
-    <assembly name='MyApp2' type='simpleassembly2' hwp='large'/>
+    <assembly name='MyApp' type='simpleassembly' hwp='large'/>
   </assemblies>
 </deployable>

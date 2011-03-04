@@ -23,6 +23,19 @@ def usage
   puts " template XML files."
 end
 
+def handle_services(xml, yaml)
+  # we're puppet specific for now...
+  # when this needs to evolve for more config engines, this can be externalized
+  xml.xpath('services/puppet/service/class').each do |clas|
+    yaml[:classes] << clas.content
+  end
+  # as this evolves, we might need to handle more complex types
+  # of parameters such as lists
+  xml.xpath('services/puppet/service/parameter').each do |param|
+    yaml[:parameters][param['name']] = param['value']
+  end
+end
+
 def find_template(neededtmplname, assyname, assyhwp, assyrealm, yaml)
   found_tmpl = false
 
@@ -63,9 +76,7 @@ def find_assembly(neededassytype, assyname, assyhwp, assyrealm, yaml)
         raise "No template type specified in assembly %s" % [assemblyname]
       end
 
-      assy.xpath('/assembly/services/service/param').each do |service|
-        yaml[service['name']] = service['value']
-      end
+      handle_services(assy.xpath('/assembly')[0], yaml)
 
       find_template(assytmplname, assyname, assyhwp, assyrealm, yaml)
 
@@ -92,7 +103,6 @@ end
 deployable = nil
 $assemblies = []
 $templates = []
-
 for filename in ARGV
   doc = Nokogiri::XML(File::open(filename))
 
@@ -135,10 +145,8 @@ deployable.xpath('/deployable/assemblies/assembly').each do |neededassy|
   assyrealm = neededassy['realm']
   # assyrealm is allowed to be nil
 
-  yaml = {}
-  neededassy.xpath('services/service/param').each do |service|
-    yaml[service['name']] = service['value']
-  end
+  yaml = {:classes => [], :parameters => {}}
+  handle_services(neededassy, yaml)
 
   find_assembly(neededassytype, assyname, assyhwp, assyrealm, yaml)
 end
@@ -151,7 +159,9 @@ $instances.each do |instance|
 
   if not instance.yaml.empty?
     data = "---\nparameters:\n"
-    instance.yaml.each {|name, value| data += "\t#{name}: #{value}\n"}
+    instance.yaml[:parameters].each {|n,v| data += "    #{n}: #{v}\n"}
+    data += "classes:\n"
+    instance.yaml[:classes].each {|c| data += "    - #{c}\n"}
 
     # ruby is retarded and adds carriage returns every 60 characters.  Remember
     # to strip them out
@@ -170,7 +180,7 @@ $instances.each do |instance|
   f.write("DeltacloudUsername = $$(username)\n")
   f.write("DeltacloudPassword = $$(password)\n")
   f.write("DeltacloudImageID = $$(image_key)\n")
-  f.write("DeltacloudHardwareProfile = $$(hardwareprofile_key)\n")
+  f.write("DeltacloudHardwareProfile = $$(hardware_profile_key)\n")
   f.write("DeltacloudKeyname = $$(keypair)\n")
   if not instance.realm.nil?
     f.write("DeltacloudRealmId = $$(realm_key)\n")

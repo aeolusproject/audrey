@@ -1,9 +1,17 @@
 <template>
-  <name>fedora13</name>
+  <name>fedora14</name>
   <os>
     <name>Fedora</name>
-    <version>13</version>
+    <version>14</version>
     <arch>x86_64</arch>
   </os>
-  <description>Fedora 13 simple</description>
+  <description>Fedora 14 simple</description>
+  <services>
+    <puppet>
+      <service name="sshd">
+        <class>ssh::server</class>
+        <parameter type="scalar" name="ssh_port"/>
+      </service>
+    </puppet>
+  </services>
 </template>
