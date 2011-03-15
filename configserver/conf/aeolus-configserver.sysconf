@@ -1,0 +1,35 @@
+# Settings overrides for /etc/init.d/aeolus-configserver
+# Defaults shown for each config option
+
+# Environment setting for rack (sinatra)
+#RACK_ENV="${RACK_ENV:-production}"
+
+# root directory of the Aeolus Config Server sinatra application
+#CONFIG_SERVER_DIR="/usr/share/aeolus-configserver"
+
+# location of rackup file to configure rack for Aeolus Config Server
+# relative to the $CONFIG_SERVER_DIR
+#CONFIG_SERVER_RACKUP="config.ru"
+
+# thin server port
+#CONFIG_SERVER_PORT="4567"
+
+# thin log file for Aeolus Config Server
+#THIN_LOG="/var/log/aeolus-configserver/thin.log"
+
+# thin pid file for Aeolus Config Server
+#THIN_PID="/var/run/aeolus-configserver/thin.pid"
+
+# thin lock file for Aeolus Config Server
+#THIN_LOCKFILE="/var/lock/subsys/aeolus-configserver"
+
+# thin server IP address
+#THIN_IP="127.0.0.1"
+
+# user and group under which Aeolus Config Server sinatra application runs
+#AEOLUS_USER="aeolus"
+#AEOLUS_GROUP="aeolus"
+
+# thin server prefix (i.e., application context) for Aeolus Config Server
+# sinatra application
+#PREFIX="/"

@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+#
+# aeolus-configserver       startup script for aeolus-configserver
+#
+# chkconfig: - 99 01
+# description: aeolus-configserver is the primary server process for the
+#    Aeolus Config Server
+#
+
+[ -r /etc/sysconfig/aeolus-configserver ] && . /etc/sysconfig/aeolus-configserver
+
+RACK_ENV="${RACK_ENV:-production}"
+CONFIG_SERVER_DIR="${CONFIG_SERVER_DIR:-/usr/share/aeolus-configserver}"
+CONFIG_SERVER_RACKUP="${CONFIG_SERVER_RACKUP:-config.ru}"
+CONFIG_SERVER_PORT="${CONFIG_SERVER_PORT:-4567}"
+THIN_LOG="${THIN_LOG:-/var/log/aeolus-configserver/thin.log}"
+THIN_PID="${THIN_PID:-/var/run/aeolus-configserver/thin.pid}"
+THIN_LOCKFILE="${THIN_LOCKFILE:-/var/lock/subsys/aeolus-configserver}"
+AEOLUS_USER="${AEOLUS_USER:-aeolus}"
+AEOLUS_GROUP="${AEOLUS_GROUP:-aeolus}"
+PREFIX="${PREFIX:-/}"
+
+THIN_PROG=thin
+ADDR="${THIN_IP:-127.0.0.1}"
+RETVAL=0
+
+. /etc/init.d/functions
+
+start() {
+    echo -n "Starting aeolus-configserver: "
+
+    $THIN_PROG start -c $CONFIG_SERVER_DIR -l $THIN_LOG -P $THIN_PID \
+	-a $ADDR -e $RACK_ENV --user $AEOLUS_USER --group $AEOLUS_GROUP \
+	-d --prefix=$PREFIX -R $CONFIG_SERVER_RACKUP -p $CONFIG_SERVER_PORT
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ] && touch $THIN_LOCKFILE ; then
+	echo_success
+	echo
+    else
+	echo_failure
+	echo
+    fi
+
+}
+
+stop() {
+    echo -n "Shutting down aeolus-configserver: "
+    $THIN_PROG stop -c $CONFIG_SERVER_DIR -P $THIN_PID
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ] && rm -f $THIN_LOCKFILE ; then
+	echo_success
+	echo
+    else
+	echo_failure
+	echo
+    fi
+}
+
+case "$1" in
+    start)
+	start
+	;;
+    stop)
+	stop
+	;;
+    restart)
+	stop
+	start
+	;;
+    reload)
+        ;;
+    force-reload)
+        restart
+        ;;
+    status)
+	status -p ${THIN_PID} $THIN_PROG
+	RETVAL=$?
+	;;
+    *)
+      echo "Usage: aeolus-configserver {start|stop|restart|status}"
+      exit 1
+  ;;
+esac
+
+exit $RETVAL
