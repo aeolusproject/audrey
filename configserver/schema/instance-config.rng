@@ -1,0 +1,49 @@
+<element name="instance-config" xmlns="http://relaxng.org/ns/structure/1.0">
+  <attribute name="id"><text/></attribute>
+  <attribute name="type"><text/></attribute>
+  <attribute name="name"><text/></attribute>
+  <element name="deployable">
+    <attribute name="name"><text/></attribute>
+    <attribute name="id"><text/></attribute>
+  </element>
+  <element name="template">
+    <attribute name="name"><text/></attribute>
+  </element>
+  <optional>
+    <element name="provided-parameters">
+      <oneOrMore>
+        <element name="provided-parameter">
+          <attribute name="name"><text/></attribute>
+        </element>
+      </oneOrMore>
+    </element>
+  </optional>
+  <optional>
+    <element name="services">
+      <choice>
+        <!--FIXME: only supporting puppet for now -->
+        <element name="puppet">
+          <interleave>
+            <zeroOrMore>
+              <element name="class">
+                <attribute name="name"><text/></attribute>
+              </element>
+            </zeroOrMore>
+            <zeroOrMore>
+              <element name="parameter">
+                <attribute name="name"><text/></attribute>
+                <choice>
+                  <element name="value"><text/></element>
+                  <element name="reference">
+                    <attribute name="assembly"><text/></attribute>
+                    <attribute name="provided-parameter"><text/></attribute>
+                  </element>
+                </choice>
+              </element>
+            </zeroOrMore>
+          </interleave>
+        </element>
+      </choice>
+    </element>
+  </optional>
+</element>

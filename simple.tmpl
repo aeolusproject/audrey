@@ -10,7 +10,11 @@
     <puppet>
       <service name="sshd">
         <class>ssh::server</class>
-        <parameter type="scalar" name="ssh_port"/>
+        <class>apache2::common</class>
+        <parameter type="scalar" name="ssh_port" required="true"/>
+        <parameter type="scalar" name="apache_port" required="true"/>
+        <parameter type="scalar" name="operatingsystem" provided="true"/>
+        <parameter type="scalar" name="is_virtual" provided="true"/>
       </service>
     </puppet>
   </services>

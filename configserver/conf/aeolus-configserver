@@ -30,6 +30,9 @@ RETVAL=0
 start() {
     echo -n "Starting aeolus-configserver: "
 
+    export STORAGE_DIR="${STORAGE_DIR:-/var/lib/aeolus-configserver/configs}"
+    export INSTANCE_CONFIG_RNG="${INSTANCE_CONFIG_RNG:-/var/lib/aeolus-configserver/schema/instance-config.rng}"
+
     $THIN_PROG start -c $CONFIG_SERVER_DIR -l $THIN_LOG -P $THIN_PID \
 	-a $ADDR -e $RACK_ENV --user $AEOLUS_USER --group $AEOLUS_GROUP \
 	-d --prefix=$PREFIX -R $CONFIG_SERVER_RACKUP -p $CONFIG_SERVER_PORT

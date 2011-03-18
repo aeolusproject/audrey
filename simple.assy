@@ -4,8 +4,17 @@
     <puppet>
       <service name='sshd'>
         <class>ssh::server</class>
-        <parameter name='ssh_port' value='822'/>
+        <class>apache2::common</class>
+        <parameter name='ssh_port'>
+          <value><![CDATA[822]]></value>
+        </parameter>
+        <parameter name='apache_port'>
+          <value><![CDATA[8082]]></value>
+        </parameter>
+        <!--parameter name='external_param'>
+          <reference assembly='anotherOne' parameter='someParam'/>
+        </parameter-->
       </service>
-    <puppet>
+    </puppet>
   </services>
 </assembly>

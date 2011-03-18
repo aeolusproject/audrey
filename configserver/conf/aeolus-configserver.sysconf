@@ -33,3 +33,10 @@
 # thin server prefix (i.e., application context) for Aeolus Config Server
 # sinatra application
 #PREFIX="/"
+
+# Directory where aeolus-configserver stores the instance configrations
+#STORAGE_DIR="/var/lib/aeolus-configserver/configs"
+
+# Location of Relax NG schema file for instance-config
+# This can be a local file location or a URL (http://here.org/file.rng)
+#INSTANCE_CONFIG_RNG="/var/lib/aeolus-configserver/schema/instance-config.rng"

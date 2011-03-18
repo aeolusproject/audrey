@@ -1,0 +1,43 @@
+<element name="template" xmlns="http://relaxng.org/ns/structure/1.0"
+    datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+  <element name="name"><text/></element>
+  <element name="os">
+    <element name="name"><text/></element>
+    <element name="version"><text/></element>
+    <element name="arch"><text/></element>
+  </element>
+  <element name="description"><text/></element>
+  <element name="services">
+    <choice>
+      <!--FIXME: only supporting puppet for now -->
+      <element name="puppet">
+        <interleave>
+          <zeroOrMore>
+            <element name="class"><text/></element>
+          </zeroOrMore>
+          <zeroOrMore>
+            <elememnt name="parameter">
+              <attribute name="name"><text/></attribute>
+              <attribute name="type">
+                <choice>
+                  <value>scalar</value>
+                  <!-- no support for lists yet -->
+                  <!--value>list</value-->
+                </choice>
+              </attribute>
+              <optional>
+                <attribute name="provided"><data type="boolean"/></attribute>
+              </optional>
+              <optional>
+                <attribute name="required"><data type="boolean"/></attribute>
+              </optional>
+            </element>
+          </zeroOrMore>
+        </interleave>
+      </element>
+      <!--
+        To support other config types other than puppet, add new options here
+      -->
+    </choice>
+  </element>
+</element>

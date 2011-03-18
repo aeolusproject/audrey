@@ -13,7 +13,7 @@ require 'rake/clean'
 require 'rake/gempackagetask'
 
 PKG_NAME='aeolus-configserver'
-PKG_VERSION='0.0.1'
+PKG_VERSION='0.0.2'
 
 SPEC_FILE="aeolus-configserver.spec"
 
@@ -23,6 +23,7 @@ SPEC_FILE="aeolus-configserver.spec"
 
 PKG_FILES = FileList[
   "Rakefile", "COPYING",
+  "schema/*.rng",
   "src/**/*.*",
   "conf/**/*",
 ]
@@ -54,6 +55,10 @@ task :rpm => [ :package ] do |t|
     system("sed -e 's/@VERSION@/#{PKG_VERSION}/' #{SPEC_FILE} > pkg/#{SPEC_FILE}")
     Dir::chdir("pkg") do |dir|
         dir = File::expand_path(".")
+        system("which rpmbuild &> /dev/null")
+        if $? != 0
+            raise "Oops, no rpmbuild command found.  Please install the rpm-build package to run the rpm rake task."
+        end
         system("rpmbuild --define '_topdir #{dir}' --define '_sourcedir #{dir}' --define '_srcrpmdir #{dir}' --define '_rpmdir #{dir}' --define '_builddir #{dir}' -ba #{SPEC_FILE} > rpmbuild.log 2>&1")
         if $? != 0
             raise "rpmbuild failed"

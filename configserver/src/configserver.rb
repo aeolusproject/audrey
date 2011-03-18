@@ -1,87 +1,78 @@
 require 'sinatra'
 require 'rubygems'
-require 'fileutils'
 
-STORAGE_DIR='/tmp/audrey'
-
-before do
-  ensure_home_dir
+configure do
+  #set :storage_dir => '/tmp/audrey/'
 end
 
-## HTTP Interface
+#configure :production do
+  #set :storage_dir => '/var/lib/aeolus-configserver/'
+#end
+
+require 'lib/config_handler' # I don't like this name
+require 'lib/application_helper'
+
+helpers ApplicationHelper
+
+error 400 do
+  #FIXME: point the requestor to the relaxNG document used to parse the XML
+  # document.
+  #FIXME: show the requestor the set of errors that occured
+  "Could not parse the given XML document.\n"
+end
 
 ## GET request
 # Matches GET /configs/123
 # Attempts to retrieve the configuration data associated with :uuid
-get '/configs/:uuid', :provides => 'yaml' do
-  dir_exists?(params[:uuid]) ? retrieve(params[:uuid]) : not_found
+# try:
+#     curl -w "HTTP_CODE: %{http_code}\n" -H "Accept: application/xml" \
+#     http://localhost:4567/configs/1234
+get '/configs/:uuid', :provides => 'xml' do
+  configs.exists?(params[:uuid]) ? configs.get(params[:uuid]) : not_found
 end
 
 ## POST request
 # Matches POST /configs
-# Extracts the uuid and associated configuration data from the POST body and
-# creates (or updates) the configuration data for the uuid.
-# In the case of an update, the data is fully replaced.
+# Creates the configuration data related to uuid.
+# If configuration data for uuid already exists, it is completely replaced.  For
+# instance, if calls to PUT /params have been called to update the provided
+# param data for this uuid, the entire set of updated provided param data is
+# deleted (i.e., reset to it's start state of not having any values set for
+# provided params).
+# try:
+#     curl -w "HTTP_CODE: %{http_code}\n" \
+#     -d "uuid=1234&data=this+is+just+a+test" http://localhost:4567/configs
 post '/configs' do
-  update(params[:uuid], params[:data])
+  begin
+    configs.create(params[:uuid], params[:data])
+  rescue ConfigServer::InvalidInstanceConfigError
+    400
+  end
 end
 
 ## PUT request
-# Matches PUT /configs
-# Extracts the uuid and associated configuration data from the POST body and
-# creates (or updates) the configuration data for the uuid.
-# In the case of an update, the data is fully replaced.
-put '/configs' do
-  update(params[:uuid], params[:data])
+# Matches PUT /params
+# Extracts the uuid and associated configuration data from the HEADER data and
+# updates the provided parameter data for the given uuid.  Response data
+# contains the list of provided params that still need to be provided.
+# Supplying a param value for a provided param that already exists for this uuid
+# results in replacing that param value with the newly given value.
+# If the given uuid doesn't already have configurations on this server, then
+# HTTP_CODE 404 is returned.
+# try:
+#     curl -w "HTTP_CODE: %{http_code}\n" -X PUT \
+#     -d "uuid=1234&param1=value1&param2=value2" http://localhost:4567/params
+put '/params' do
+  configs.exists?(params[:uuid]) ?
+    configs.update(params[:uuid], params) :
+    not_found
 end
 
 ## DELETE request
 # Matches DELETE /configs/123
 # Deletes the configuration data associated with :uuid
+# try:
+#     curl -X DELETE http://localhost:4567/configs/1234
 delete '/configs/:uuid' do
-  delete(params[:uuid])
-end
-
-## Helpers
-
-def dir_exists?(uuid)
-  File.directory?(getdir(uuid))
-end
-
-def retrieve(uuid)
-  dir = getdir(uuid)
-  return File.directory?(dir) ? IO.read(dir + '/data.yaml') : ""
-end
-
-def update(uuid, data)
-  dir = getdir(uuid)
-  if File.directory?(dir)
-    # for now this is an outright replacement
-    # probably can get more sophisticated if needed
-    File.open(dir + '/data.yaml', 'w') do |f|
-      f.puts data
-    end
-  else
-    create(uuid, data)
-  end
-end
-
-def create(uuid, data)
-  dir = getdir(uuid)
-  Dir.mkdir(dir) unless File.directory?(dir)
-  File.open(dir + '/data.yaml', 'w') do |f|
-    f.puts data
-  end
-end
-
-def delete(uuid)
-  FileUtils.rm_rf(getdir(uuid))
-end
-
-def getdir(uuid)
-  return STORAGE_DIR + '/' + uuid
-end
-
-def ensure_home_dir
-  Dir.mkdir(STORAGE_DIR) unless File.directory?(STORAGE_DIR)
+  configs.delete(params[:uuid])
 end

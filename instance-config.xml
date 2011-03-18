@@ -1,0 +1,23 @@
+<instance-config name="${ASSEMBLY_NAME}" id="${UUID}" type="${ASSEMBLY_TYPE}">
+  <deployable name="${DEPLOYABLE_NAME}" id="${DEPLOYABLE_UUID}"/>
+  <template name="${TEMPLATE_NAME}"/>
+  <provided-parameters>
+    <provided-parameter name="${PROVIDED_PARAM_NAME}"/>
+    <provided-parameter name="${PROVIDED_PARAM_NAME}"/>
+  </provided-params>
+  <services>
+    <puppet>
+      <class name="${PUPPET_CLASS_NAME}"/>
+      <parameter name="${PARAM1_NAME}">
+        <value><![CDATA[${PARAM1_VALUE}]]>
+        </value>
+      </parameter>
+      <parameter name="${PARAM2_NAME}">
+        <reference assembly="${EXTERN_ASSEMBLY_NAME}"
+          provided-parameter="${EXTERN_ASSEMBLY_PROVIDED_PARAM_NAME"/>
+      </parameter>
+      <parameter name="no_child">
+      </parameter>
+    </puppet>
+  </services>
+</instance-config>

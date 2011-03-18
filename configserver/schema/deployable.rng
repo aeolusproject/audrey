@@ -1,0 +1,12 @@
+<element name="deployable" xmlns="http://relaxng.org/ns/structure/1.0">
+  <element name="name"><text/></element>
+  <element name="assemblies">
+    <oneOrMore>
+      <element name="assembly">
+        <attribute name="name"><text/></attribute>
+        <attribute name="type"><text/></attribute>
+        <attribute name="hwp"><text/></attribute>
+      </element>
+    </oneOrMore>
+  </element>
+</element>

@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	1%{?dist}%{?extra_release}
+Release:	2%{?dist}%{?extra_release}
 Summary:	The Aeolus Config Server
 
 Group:		Applications/System
@@ -13,12 +13,13 @@ BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires:	ruby
 BuildRequires:	ruby-devel
-Requires:	ruby >= 1.8.1
-Requires:	rubygem(sinatra)
-Requires:	rubygem(thin)
-Requires(post):	chkconfig
-Requires(prerun):	chkconfig
-Requires(prerun):	initscripts
+Requires:	    ruby >= 1.8.1
+Requires:       ruby-nokogiri
+Requires:       rubygem(sinatra)
+Requires:       rubygem(thin)
+Requires(post): chkconfig
+Requires(prerun): chkconfig
+Requires(prerun): initscripts
 
 
 
@@ -40,7 +41,7 @@ rm -rf $RPM_BUILD_ROOT
 %{__mkdir} -p %{buildroot}%{_initrddir}
 %{__mkdir} -p %{buildroot}%{_sysconfdir}/sysconfig
 %{__mkdir} -p %{buildroot}%{_sysconfdir}/%{name}
-%{__mkdir} -p %{buildroot}%{_localstatedir}/lib/%{name}
+%{__mkdir} -p %{buildroot}%{_localstatedir}/lib/%{name}/schema
 %{__mkdir} -p %{buildroot}%{_localstatedir}/log/%{name}
 %{__mkdir} -p %{buildroot}%{_localstatedir}/run/%{name}
 
@@ -51,12 +52,16 @@ rm -rf $RPM_BUILD_ROOT
 %{__cp} conf/%{name} %{buildroot}/%{_initrddir}
 %{__cp} conf/%{name}.sysconf %{buildroot}%{_sysconfdir}/sysconfig/%{name}
 
+# copy relaxNG schema files
+%{__cp} schema/*.rng %{buildroot}%{_localstatedir}/lib/%{name}/schema/
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %pre
 # Ensure the aeolus user/group is created (same IDs as in aeolus-conductor)
-getent group aeolus >/dev/null || /usr/sbin/groupadd -g 451 -r aeolus 2>/dev/null || :
+getent group aeolus >/dev/null || \
+    /usr/sbin/groupadd -g 451 -r aeolus 2>/dev/null || :
 getent passwd aeolus >/dev/null || \
     /usr/sbin/useradd -u 451 -g aeolus -c "aeolus" \
     -s /sbin/nologin -r -d /var/aeolus aeolus 2> /dev/null || :
@@ -87,5 +92,9 @@ fi
 
 
 %changelog
-* Wed Mar 16 2011 Greg Blomquist <gblmoqui@redhat.com>
+* Thu Mar 24 2011 Greg Blomquist <gblmoqui@redhat.com> 0.0.2-2
+- Added Nokogiri dependency
+* Thu Mar 24 2011 Greg Blomquist <gblmoqui@redhat.com> 0.0.2-1
+- Version bump for major functionality implementation
+* Wed Mar 16 2011 Greg Blomquist <gblmoqui@redhat.com> 0.0.1-1
 - Initial spec
