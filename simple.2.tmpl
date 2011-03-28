@@ -1,5 +1,5 @@
 <template>
-  <name>fedora14-1</name>
+  <name>fedora14-2</name>
   <os>
     <name>Fedora</name>
     <version>14</version>
@@ -18,8 +18,8 @@
         <class>apache2::common</class>
         <parameter type="scalar" name="apache_port" required="true"/>
       </service>
-      <service name="provides">
-        <parameter type="scalar" name="output" provided="true"/>
+      <service name="dependency">
+        <parameter type="scalar" name="input" required="true"/>
       </service>
     </puppet>
   </services>

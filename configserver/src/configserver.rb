@@ -22,17 +22,59 @@ error 400 do
 end
 
 ## GET request
-# Matches GET /configs/123
-# Attempts to retrieve the configuration data associated with :uuid
+# Matches GET /configs/0.0.1/123
+# Attempts to retrieve the configuration data (as xml) associated with :uuid
 # try:
 #     curl -w "HTTP_CODE: %{http_code}\n" -H "Accept: application/xml" \
-#     http://localhost:4567/configs/1234
-get '/configs/:uuid', :provides => 'xml' do
-  configs.exists?(params[:uuid]) ? configs.get(params[:uuid]) : not_found
+#     http://localhost:4567/configs/0.0.1/1234
+get '/configs/:version/:uuid', :provides => 'xml' do
+  configs.exists?(params[:uuid]) ?
+    configs.get_configs(params[:uuid], :as => :xml) :
+    not_found
 end
 
+
+## GET request
+# Matches GET /configs/0.0.1/123
+# Attempts to retrieve the configuration data (as text) associated with :uuid
+# try:
+#     curl -w "HTTP_CODE: %{http_code}\n" -H "Accept: text/plain" \
+#     http://localhost:4567/configs/0.0.1/1234
+get '/configs/:version/:uuid', :provides => 'text' do
+  configs.exists?(params[:uuid]) ?
+    configs.get_configs(params[:uuid], :as => :text) :
+    not_found
+end
+
+
+## GET request
+# Matches GET /params/0.0.1/123
+# Attempts to retrieve the "provides" parameters associated with :uuid
+# try:
+#     curl -w "HTTP_CODE: %{http_code}\n" -H "Accept: application/xml" \
+#     http://localhost:4567/params/0.0.1/1234
+get '/params/:version/:uuid', :provides => 'xml' do
+  configs.exists?(params[:uuid]) ?
+    configs.get_provides(params[:uuid], :as => :xml) :
+    not_found
+end
+
+
+## GET request
+# Matches GET /params/0.0.1/123
+# Attempts to retrieve the "provides" parameters associated with :uuid
+# try:
+#     curl -w "HTTP_CODE: %{http_code}\n" -H "Accept: text/plain" \
+#     http://localhost:4567/params/0.0.1/1234
+get '/params/:version/:uuid', :provides => 'text' do
+  configs.exists?(params[:uuid]) ?
+    configs.get_provides(params[:uuid], :as => :text) :
+    not_found
+end
+
+
 ## POST request
-# Matches POST /configs
+# Matches POST /configs/0.0.1/123
 # Creates the configuration data related to uuid.
 # If configuration data for uuid already exists, it is completely replaced.  For
 # instance, if calls to PUT /params have been called to update the provided
@@ -41,8 +83,9 @@ end
 # provided params).
 # try:
 #     curl -w "HTTP_CODE: %{http_code}\n" \
-#     -d "uuid=1234&data=this+is+just+a+test" http://localhost:4567/configs
-post '/configs' do
+#     -d "data=this+is+just+a+test" \
+#     http://localhost:4567/configs/0.0.1/123
+post '/configs/:version/:uuid' do
   begin
     configs.create(params[:uuid], params[:data])
   rescue ConfigServer::InvalidInstanceConfigError
@@ -51,7 +94,7 @@ post '/configs' do
 end
 
 ## PUT request
-# Matches PUT /params
+# Matches PUT /params/0.0.1/1234
 # Extracts the uuid and associated configuration data from the HEADER data and
 # updates the provided parameter data for the given uuid.  Response data
 # contains the list of provided params that still need to be provided.
@@ -61,18 +104,19 @@ end
 # HTTP_CODE 404 is returned.
 # try:
 #     curl -w "HTTP_CODE: %{http_code}\n" -X PUT \
-#     -d "uuid=1234&param1=value1&param2=value2" http://localhost:4567/params
-put '/params' do
+#     -d "audrey_data=|param1&value1|param2&value2|" \
+#     http://localhost:4567/params/0.0.1/1234
+put '/params/:version/:uuid' do
   configs.exists?(params[:uuid]) ?
-    configs.update(params[:uuid], params) :
+    configs.update(params[:uuid], params[:audrey_data]) :
     not_found
 end
 
 ## DELETE request
-# Matches DELETE /configs/123
+# Matches DELETE /configs/0.0.1/123
 # Deletes the configuration data associated with :uuid
 # try:
 #     curl -X DELETE http://localhost:4567/configs/1234
-delete '/configs/:uuid' do
+delete '/configs/:version/:uuid' do
   configs.delete(params[:uuid])
 end

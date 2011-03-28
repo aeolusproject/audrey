@@ -1,5 +1,5 @@
-<assembly name='simpleassembly'>
-  <template type='fedora14-1'/>
+<assembly name='simpleassembly2'>
+  <template type='fedora14-2'/>
   <services>
     <puppet>
       <service name='sshd'>
@@ -12,6 +12,11 @@
         <class>apache2::common</class>
         <parameter name='apache_port'>
           <value><![CDATA[8082]]></value>
+        </parameter>
+      </service>
+      <service name="dependency">
+        <parameter name="input">
+          <reference assembly="MyApp" parameter="output"/>
         </parameter>
       </service>
     </puppet>

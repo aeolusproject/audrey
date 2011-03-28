@@ -7,10 +7,11 @@ end
 
 module ApplicationHelper
   def configs
-    puts "ApplicationHelper::configs"
-    @configs ||= ConfigServer::InstanceConfigs.new(
-        :storage_dir => settings.storage_dir,
-        :instance_config_rng => settings.instance_config_rng)
+    ConfigServer::Model.storage_dir = settings.storage_dir
+    ConfigServer::Model.instance_config_schema_location =
+      settings.instance_config_rng
+
+    @configs ||= ConfigServer::InstanceConfigs.new
   end
 
   #def deployables

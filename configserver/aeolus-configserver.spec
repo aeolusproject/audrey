@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	2%{?dist}%{?extra_release}
+Release:	1%{?dist}%{?extra_release}
 Summary:	The Aeolus Config Server
 
 Group:		Applications/System
@@ -90,8 +90,9 @@ fi
 %doc COPYING
 
 
-
 %changelog
+* Fri Apr 09 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.0-1
+- Now supporting multi-instance configuration
 * Thu Mar 24 2011 Greg Blomquist <gblmoqui@redhat.com> 0.0.2-2
 - Added Nokogiri dependency
 * Thu Mar 24 2011 Greg Blomquist <gblmoqui@redhat.com> 0.0.2-1

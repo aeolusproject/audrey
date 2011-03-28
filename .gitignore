@@ -1,3 +1,4 @@
 *.swp
 configserver/pkg/*
 job*.cnd
+*-*-*-*-*

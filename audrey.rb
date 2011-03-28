@@ -59,9 +59,9 @@ class Instance
         job += "DeltacloudUserData = #{data}\n"
     end
 
-    requirements = "requirements = hardwareprofile == '#{@hwp}' && image == '#{@tmplname}'"
+    requirements = "requirements = hardwareprofile == \"#{@hwp}\" && image == \"#{@tmplname}\""
     if not @realm.nil?
-      requirements += " && realm == '#{@realm}'"
+      requirements += " && realm == \"#{@realm}\""
     end
     # FIXME: skipping the quota check for now
     requirements += "\n"
@@ -103,21 +103,23 @@ class Instance
       #     1) :name => "name", :value => "value": for simple name-value pairs
       #     2) :name => "name", :ref_assembly => "assy", \
       #         :ref_parameter = "param": for externally referenced parameters
+      xml += "      <service name='#{s[:name]}'>\n"
       s[:classes].each do |c|
-        xml += "      <class name='#{c}'/>\n"
+        xml += "        <class name='#{c}'/>\n"
       end
       s[:parameters].each do |p|
         if p.key?(:value) # handle simple name-value pair
-          xml += "      <parameter name='#{p[:name]}'>\n"
-          xml += "        <value><![CDATA[#{p[:value]}]]></value>\n"
-          xml += "      </parameter>\n"
+          xml += "        <parameter name='#{p[:name]}'>\n"
+          xml += "          <value><![CDATA[#{p[:value]}]]></value>\n"
+          xml += "        </parameter>\n"
         elsif p.key?(:ref_assembly) # handle externally referenced parameter
-          xml += "      <parameter name='#{p[:name]}'>\n"
-          xml += "        <reference assembly='#{p[:ref_assembly]}'" +
-                          " provided-parameter='#{p[:ref_parameter]}'/>\n"
-          xml += "      </parameter>\n"
+          xml += "        <parameter name='#{p[:name]}'>\n"
+          xml += "          <reference assembly='#{p[:ref_assembly]}'" +
+                            " provided-parameter='#{p[:ref_parameter]}'/>\n"
+          xml += "        </parameter>\n"
         end
       end
+      xml += "      </service>\n"
     end
     xml += "    </puppet>\n"
     xml += "  </services>\n"
@@ -307,10 +309,10 @@ $instances.each do |instance|
   puts "Wrote instance config for #{instance.uuid} to #{instance.uuid}"
   host = $options[:config_server_host]
   port = $options[:config_server_port]
-  puts "  - Submit with:  curl -X POST -d \"uuid=#{instance.uuid}\" " +
+  puts "  - Submit with:  curl -X POST " +
           "--data-urlencode \"data@#{instance.uuid}\" " +
           "-w \"HTTP_CODE: %{http_code}\\n\" " +
-          "http://#{host}:#{port}/configs"
+          "http://#{host}:#{port}/configs/0/#{instance.uuid}"
 
   jobnum += 1
 end

@@ -2,5 +2,6 @@
   <name>Simple Deployable</name>
   <assemblies>
     <assembly name='MyApp' type='simpleassembly' hwp='large'/>
+    <assembly name='MyApp2' type='simpleassembly2' hwp='large'/>
   </assemblies>
 </deployable>
