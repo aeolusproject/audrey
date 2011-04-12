@@ -85,6 +85,10 @@ module ConfigServer
       end
     end
 
+    def get_ip(uuid, options={})
+      Model::Instance.find(uuid).ip if exists?(uuid)
+    end
+
     def delete(uuid)
       Model::Instance.find(uuid).delete! if exists?(uuid)
     end
@@ -93,11 +97,13 @@ module ConfigServer
       Model::Instance.new(uuid, data)
     end
 
-    def update(uuid, data, options={})
+    def update(uuid, data, ip, options={})
       return nil if not exists?(uuid)
+      
+      instance = Model::Instance.find(uuid)
+      instance.ip = ip
 
       params = parse_audrey_data(data)
-      instance = Model::Instance.find(uuid)
       instance.provided_parameters_values = params
 
       provided_params = instance.provided_parameters(

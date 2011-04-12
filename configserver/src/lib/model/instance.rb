@@ -29,9 +29,10 @@ module ConfigServer
       @@INSTANCE_CONFIG_FILE = "instance-config.xml"
       @@PROVIDED_PARAMS_FILE = "provided-parameters.xml"
       @@REQUIRED_PARAMS_FILE = "required-parameters.xml"
+      @@IP_FILE = "ip"
       @@EMPTY_DOCUMENT = Nokogiri::XML("")
 
-      attr_reader :instance_config
+      attr_reader :instance_config, :ip
 
       def self.exists?(uuid)
         File.exist?(File.join(storage_path, uuid))
@@ -46,6 +47,7 @@ module ConfigServer
       end
 
       @uuid = ""
+      @ip = ""
       @instance_dir = ""
       @validator = nil
 
@@ -68,6 +70,7 @@ module ConfigServer
       def delete!
         FileUtils.rm_rf(@instance_dir)
         @uuid = nil
+        @ip = nil
         @instance_dir = nil
         @instance_config = nil
         @provided_parameters = nil
@@ -88,6 +91,10 @@ module ConfigServer
 
       def instance_config=(xml)
         replace_instance_config(xml)
+      end
+
+      def ip=(ip)
+        replace_ip(ip)
       end
 
       def provided_parameters_values=(params={})
@@ -273,6 +280,11 @@ module ConfigServer
         @deployable.add_instance(@uuid)
 
         @instance_config
+      end
+
+      def replace_ip(ip)
+        file = get_path(@@IP_FILE)
+        File.open(file, 'w') {|f| f.write(ip) }
       end
 
       def replace_provided_parameters
