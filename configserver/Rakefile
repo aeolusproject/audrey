@@ -59,7 +59,7 @@ task :rpm => [ :package ] do |t|
         if $? != 0
             raise "Oops, no rpmbuild command found.  Please install the rpm-build package to run the rpm rake task."
         end
-        system("rpmbuild --define '_topdir #{dir}' --define '_sourcedir #{dir}' --define '_srcrpmdir #{dir}' --define '_rpmdir #{dir}' --define '_builddir #{dir}' -ba #{SPEC_FILE} > rpmbuild.log 2>&1")
+        system("rpmbuild --define '_sourcedir #{dir}' -ba #{SPEC_FILE} > rpmbuild.log 2>&1")
         if $? != 0
             raise "rpmbuild failed"
         end
