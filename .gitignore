@@ -1,4 +1,5 @@
 *.swp
 configserver/pkg/*
+audrey_start/pkg/*
 job*.cnd
 *-*-*-*-*
