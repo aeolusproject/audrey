@@ -1,0 +1,50 @@
+# -*- ruby -*-
+# Rakefile: build aeolus config server
+#
+# Copyright (C) 2011 Red Hat, Inc.
+#
+# Distributed under the GNU Lesser General Public License v2.1 or later.
+# See COPYING for details
+#
+# Greg Blomquist <gblomqui@redhat.com>
+#
+# Why a Rakefile?
+# It's just an easy way to wrap up the process of tarring up the script and
+# building the RPM in one step.
+
+# Rakefile for ruby-rpm -*- ruby -*-
+require 'rake/clean'
+require 'rake/packagetask'
+
+PKG_NAME='aeolus-audrey-startup'
+PKG_VERSION='0.0.1'
+SPEC_FILE="aeolus-audrey-startup.spec"
+
+PKG_FILES = FileList[
+  "audrey_startup.py",
+]
+
+DIST_FILES = FileList[
+  "pkg/*.tgz",
+]
+
+Rake::PackageTask.new(PKG_NAME, PKG_VERSION) do |pkg|
+    pkg.need_tar = true
+    pkg.package_files = PKG_FILES
+end
+
+desc "Build (S)RPM for #{PKG_NAME}"
+task :rpm => [ :package ] do |t|
+    system("sed -e 's/@VERSION@/#{PKG_VERSION}/' #{SPEC_FILE} > pkg/#{SPEC_FILE}")
+    Dir::chdir("pkg") do |dir|
+        dir = File::expand_path(".")
+        system("which rpmbuild &> /dev/null")
+        if $? != 0
+            raise "Oops, no rpmbuild command found.  Please install the rpm-build package to run the rpm rake task."
+        end
+        system("rpmbuild --define '_sourcedir #{dir}' -ba #{SPEC_FILE} > rpmbuild.log 2>&1")
+        if $? != 0
+            raise "rpmbuild failed"
+        end
+    end
+end
