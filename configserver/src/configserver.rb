@@ -1,3 +1,4 @@
+require 'cgi'
 require 'sinatra'
 require 'rubygems'
 
@@ -19,6 +20,13 @@ error 400 do
   # document.
   #FIXME: show the requestor the set of errors that occured
   "Could not parse the given XML document.\n"
+end
+
+
+get '/ip/:version/:uuid', :provides => 'xml' do
+  configs.exists?(params[:uuid]) ?
+    configs.get_ip(params[:uuid]) :
+    not_found
 end
 
 ## GET request
@@ -108,7 +116,7 @@ end
 #     http://localhost:4567/params/0.0.1/1234
 put '/params/:version/:uuid' do
   configs.exists?(params[:uuid]) ?
-    configs.update(params[:uuid], params[:audrey_data]) :
+    configs.update(params[:uuid], params[:audrey_data], request.ip) :
     not_found
 end
 
