@@ -20,35 +20,30 @@
   </optional>
   <optional>
     <element name="services">
-      <choice>
-        <!--FIXME: only supporting puppet for now -->
-        <element name="puppet">
-          <zeroOrMore>
-            <element name="service">
-              <attribute name="name"><text/></attribute>
-              <interleave>
-                <zeroOrMore>
-                  <element name="class">
-                    <attribute name="name"><text/></attribute>
+      <zeroOrMore>
+        <element name="service">
+          <attribute name="name"><text/></attribute>
+          <interleave>
+            <zeroOrMore>
+              <element name="script">
+                <attribute name="name"><text/></attribute>
+              </element>
+            </zeroOrMore>
+            <zeroOrMore>
+              <element name="parameter">
+                <attribute name="name"><text/></attribute>
+                <choice>
+                  <element name="value"><text/></element>
+                  <element name="reference">
+                    <attribute name="assembly"><text/></attribute>
+                    <attribute name="provided-parameter"><text/></attribute>
                   </element>
-                </zeroOrMore>
-                <zeroOrMore>
-                  <element name="parameter">
-                    <attribute name="name"><text/></attribute>
-                    <choice>
-                      <element name="value"><text/></element>
-                      <element name="reference">
-                        <attribute name="assembly"><text/></attribute>
-                        <attribute name="provided-parameter"><text/></attribute>
-                      </element>
-                    </choice>
-                  </element>
-                </zeroOrMore>
-              </interleave>
-            </element>
-          </zeroOrMore>
+                </choice>
+              </element>
+            </zeroOrMore>
+          </interleave>
         </element>
-      </choice>
+      </zeroOrMore>
     </element>
   </optional>
 </element>
