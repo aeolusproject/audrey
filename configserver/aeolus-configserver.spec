@@ -2,8 +2,9 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	1%{?dist}%{?extra_release}
+Release:	3%{?dist}%{?extra_release}
 Summary:	The Aeolus Config Server
+BuildArch:  noarch
 
 Group:		Applications/System
 License:	GPLv2+ and MIT and BSD
@@ -91,6 +92,10 @@ fi
 
 
 %changelog
+* Wed May 04 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.1-3
+- Fixed IP storage bugs
+* Wed May 04 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.1-2
+- Removed arch requirement from rpm spec
 * Wed May 04 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.1-1
 - Storing IP address of instances that check-in
 * Fri Apr 09 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.0-1

@@ -218,6 +218,7 @@ module ConfigServer
         @instance_config = get_xml(get_path(@@INSTANCE_CONFIG_FILE))
         @provided_parameters = get_xml(get_path(@@PROVIDED_PARAMS_FILE))
         @required_parameters = get_xml(get_path(@@REQUIRED_PARAMS_FILE))
+        @ip = get_ip
         deployable
       end
 
@@ -280,6 +281,13 @@ module ConfigServer
         @deployable.add_instance(@uuid)
 
         @instance_config
+      end
+
+      def get_ip
+        filename = get_path(@@IP_FILE)
+        File.open(filename) do |f| 
+          f.read
+        end if File.exists?(filename)
       end
 
       def replace_ip(ip)
