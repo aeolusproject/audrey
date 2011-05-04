@@ -91,6 +91,8 @@ fi
 
 
 %changelog
+* Wed May 04 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.1-1
+- Storing IP address of instances that check-in
 * Fri Apr 09 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.0-1
 - Now supporting multi-instance configuration
 * Thu Mar 24 2011 Greg Blomquist <gblmoqui@redhat.com> 0.0.2-2
