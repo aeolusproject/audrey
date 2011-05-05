@@ -21,11 +21,12 @@ Algorithim:
 
 import base64
 import os
-import pycurl
+import httplib2
 import sys
 import syslog
 from subprocess import Popen, PIPE
 import urllib
+import dmidecode
 
 LOG = '/var/log/audrey.log'
 PUPPET_ROOT = '/usr/share/puppet/cloud_engine/sshd'
@@ -86,7 +87,7 @@ def _run_cmd(cmd):
         ret['out'] = command out list.
 
     Example:
-        
+
         cmd = ['ls', '/tmp']
         ret = _run_cmd(cmd)
 
@@ -155,7 +156,7 @@ def _run_pipe_cmd(cmd1, cmd2):
         ret['out'] = command out list.
 
     Example:
-        
+
         cmd1 = ['ls', '/tmp']
         cmd2 = ['grep', 'a_file']
         ret = _run_pipe_cmd(cmd1, cmd2)
@@ -219,7 +220,7 @@ def _parse_require_config(src):
     Description:
         Parse the required config text message sent from the Config Server.
 
-    Input: 
+    Input:
         The required config string obtained from the Config Server.
     The delimiters will be an | and an &
 
@@ -273,14 +274,14 @@ def _parse_require_config(src):
 
     return params_str[len('|parameters')+1:].split('|'), \
         classes_str[len('|classes')+1:].split('&')
-        
+
 def generate_yaml(src, yaml_file=PUPPET_YAML_FILE):
     '''
     Description:
         Generate the Puppet input YAML file.
         Uses _parse_require_config()
 
-    Input: 
+    Input:
         The required config string obtained from the Config Server.
 
         Allow for an alternate puppet YAML file for unit testing.
@@ -289,12 +290,12 @@ def generate_yaml(src, yaml_file=PUPPET_YAML_FILE):
         The Puppet YAML file.
             The YAML file format:
                 ---
-                parameters: 
+                parameters:
                   <p1>: <v1>
                   <p2>: <v2>
                 ...
                 <pN>: <vN>
-                classes: 
+                classes:
                 - <name1::type1>
                 - <name2::type2>
                 ...
@@ -302,10 +303,10 @@ def generate_yaml(src, yaml_file=PUPPET_YAML_FILE):
 
             e.g.:
                 ---
-                parameters: 
+                parameters:
                   ssh_port: 22
                   apache_port: 8081
-                classes: 
+                classes:
                 - ssh::server
                 - apache2::common
 
@@ -352,7 +353,7 @@ def invoke_puppet(yaml_file=PUPPET_YAML_FILE):
         Run the puppet command using the generated Puppet input YAML file.
         Uses _run_pipe_cmd()
 
-    Input: 
+    Input:
         The Puppet input YAML file must exist.
 
         Allow for an alternate puppet YAML file for unit testing.
@@ -387,7 +388,7 @@ def _get_system_info():
 
         Currently utilizes Puppet's facter via a Python subprocess call.
 
-    Input: 
+    Input:
         None
 
     Returns:
@@ -404,17 +405,17 @@ def _get_system_info():
     for fact in ret['out'].split('\n'):
         if fact: # Handle the new line at the end of the facter output
             n, v = fact.split(" => ")
-            facts[ n ] = v.rstrip() 
+            facts[ n ] = v.rstrip()
 
     return facts
-     
+
 def _parse_provides_params(src):
     '''
     Description:
         Parse the provides parameters text message sent from the
         Config Server.
 
-    Input: 
+    Input:
         The provides parameters string obtained from the Config Server.
 
         The delimiters will be an | and an &
@@ -442,16 +443,16 @@ def _parse_provides_params(src):
         return ['']
 
     params_str = src[src.find('|')+1:len(src)-1]
- 
+
     return params_str.split('&')
-        
+
 def generate_provides(src):
     '''
     Description:
         Generate the provides parameters list.
         Uses _parse_provides_params()
 
-    Input: 
+    Input:
         The provides parameters string obtained from the Config Server.
 
     Returns:
@@ -502,36 +503,31 @@ def generate_provides(src):
     return urllib.urlencode({'audrey_data':'|'.join(provides_list)})
 
 #
-# Classes and methods to perform the curl get and put to and from
+# Classes and methods to perform the get and put to and from
 # the Config Server (CS)
 #
-class CSCurlUnitTest(object):
+class HttpUnitTest(object):
     '''
     Description:
-        When testing the curl object does not exists.
-        This class provides methods that could be preformed
-        on a real curl class when doing UNITTESTing.
+        When testing the http object does not exists.
+        This class provides test methods that could be preformed when doing
+        UNITTESTing.
     '''
-    def errstr(self):
-        return 'UNITTEST - No Errors'
+    def request(self, url, method='GET', body=None, headers=None):
+        if method == 'GET' and url.find('/configs/') > -1:
+            body = "|classes&c1&c2|parameters|param1&%s|param2&%s" % \
+                    (base64.b64encode('value1'), base64.b64encode('value2')
+        elif method == 'GET' and url.find('/params/') > -1:
+            body = "|param1&param2|"
+        elif method == 'PUT' and url.find('/params/') > -1:
+            body = ""
+        return {'status': 200}, body
 
-    def getinfo(self, no_param):
-        return 'UNITTEST - No Info'
-
-    def setopt(self, no_opt, no_val):
-        pass
-
-    def perform(self):
-        pass
-
-    def close(self):
-        pass
-
-class CSCurl(object):
+class CSClient(object):
 
     '''
     Description:
-        Curl interface to Config Server (CS)
+        Client interface to Config Server (CS)
     '''
 
     def __init__(self, UNITTEST =  False):
@@ -569,33 +565,54 @@ class CSCurl(object):
         else:
             read_data = 'UNITTEST'
 
+        self.http = httplib2.Http()
+
         #
         # Discover the Config Server access info.
         #
-        if 'EC2' in read_data.upper():
+        cloud_type = read_data.upper()
+        if 'EC2' in cloud_type:
             #
-            # If on EC2 curl the user data will contain the Config Server
+            # If on EC2 the user data will contain the Config Server
             # access info.
             #
             self.cloud_type = 'EC2'
 
             try:
-                self.curlp = pycurl.Curl()
-                self.curlp.setopt(pycurl.HTTPHEADER, ['Accept: text/plain'])
-                self.curlp.setopt(pycurl.WRITEFUNCTION, self._get_ec2_user_data)
-                self.curlp.setopt(pycurl.FOLLOWLOCATION, 1)
-                self.curlp.setopt(pycurl.MAXREDIRS, 5)
+                max_attempts = 5
                 url = self.ec2_user_data_url
-                self.curlp.setopt(pycurl.URL, url)
-                self.curlp.perform()
+                headers = {'Accept': 'text/plain'}
+                for attempt in range(1, max_attempts):
+                    response, body = self._get(url, headers=headers)
+                    if response.status == 200:
+                        break
+                if response.status != 200:
+                    _raise_ASError('Max attempts to get EC2 user data
+                            exceeded.')
 
-                self.cs_addr = self.config_serv.split(':')[0]
-                self.cs_port = self.config_serv.split(':')[1]
-                self.cs_UUID = self.config_serv.split(':')[2]
+                self.config_serv = base64.b64decode(body)
+                self.cs_addr, self.cs_port, self.cs_UUID = \
+                        self.config_serv.split(':')
             except:
                 _raise_ASError('Failed accessing EC2 user data.')
 
-        elif 'UNITTEST' in read_data.upper():
+        elif 'FALCON' in cloud_type:
+            #
+            # If on Falcon (condor-cloud), the user data will be in smbios
+            # Uses dmidecode to access smbios information
+            #
+            import dmidecode
+            self.cloud_type = 'FALCON'
+            try:
+                system_data = dmidecode.system()['0x0100']['data']
+                self.cs_addr, self.cs_port = system_data['Manufacturer'].split(':')
+                self.cs_UUID = system_data['Product Name']
+                self.config_serv = "%s:%s:%s" % (self.cs_addr, self.cs_port,
+                        self.cs_UUID)
+            except:
+                _raise_ASError('Failed accessing Falcon user data.')
+
+        elif 'UNITTEST' in cloud_type:
             #
             # For testing from UNITTEST
             # Populate self.cloud_info_file with UNITTEST
@@ -605,7 +622,7 @@ class CSCurl(object):
             self.cs_addr = self.config_serv.split(':')[0]
             self.cs_port = self.config_serv.split(':')[1]
             self.cs_UUID = self.config_serv.split(':')[2]
-            self.curlp = CSCurlUnitTest()
+            self.http = HttpUnitTest()
 
         else:
             _raise_ASError(('Unrecognized Cloud Type: %s') % \
@@ -639,100 +656,51 @@ class CSCurl(object):
             str(self.cs_params),
             str(self.cs_configs)))
 
-    #
-    # Pycurl Callbacks:
-    # These callback methods will be specified as a pycurl.WRITEFUNCTION
-    # Which pycurl will then invoke with returned data to write.
-    #
-    def _get_ec2_user_data(self, buf):
-        '''
-        Description:
-            pycurl call back for ec2 user data
+    def _get(self, url, headers=None):
+        return self.http.request(url, 'GET', headers=headers)
 
-            The EC2 User data contains the b64 encoded Config Server
-            access info.
-        '''
-        self.config_serv = base64.b64decode(buf)
-
-    def _get_cs_configs_CB(self, buf):
-        '''
-        Description:
-            pycurl call back for get_cs_configs
-        '''
-        self.cs_configs = buf
-
-    def _get_cs_params_CB(self, buf):
-        '''
-        Description:
-            pycurl call back for get_cs_params
-        '''
-        self.cs_params = buf
+    def _put(self, url, body=None, headers=None):
+        return self.http.request(url, 'PUT', body=body, headers=headers)
 
     # Public interfaces
     def get_cs_configs(self):
         '''
         Description:
-            Curl get the required configuration from the Config Server.
+            get the required configuration from the Config Server.
         '''
-        syslog.syslog('Invoked CSCurl.get_cs_configs()')
-
-        self.curlp.setopt(pycurl.WRITEFUNCTION, self._get_cs_configs_CB)
-
+        syslog.syslog('Invoked CSClient.get_cs_configs()')
         url = 'http://' + self.cs_addr + ':' + self.cs_port + \
             '/configs/' + str(self.version) + '/' + self.cs_UUID
+        headers = {'Accept': 'text/plain'}
 
-        self.curlp.setopt(pycurl.URL, url)
-        self.curlp.perform()
-
-        return self.cs_configs
+        response, body = self._get(url, headers=headers)
+        return response.status, body
 
     def get_cs_params(self):
         '''
         Description:
-            Curl get the provides parameters from the Config Server.
+            get the provides parameters from the Config Server.
         '''
-        syslog.syslog('Invoked CSCurl.get_cs_params()')
-
-        self.curlp.setopt(pycurl.WRITEFUNCTION, self._get_cs_params_CB)
-
+        syslog.syslog('Invoked CSClient.get_cs_params()')
         url = 'http://' + self.cs_addr + ':' + self.cs_port + \
             '/params/' + str(self.version) + '/' + self.cs_UUID
+        headers = {'Accept': 'text/plain'}
 
-        self.curlp.setopt(pycurl.URL, url)
-        self.curlp.perform()
-
-        return self.cs_params
+        response, body = self._get(url, headers=headers)
+        return response.status, body
 
     def put_cs_params_values(self, params_values):
         '''
         Description:
-            Curl put the provides parameters to the Config Server.
+            put the provides parameters to the Config Server.
         '''
-        syslog.syslog('Invoked CSCurl.put_cs_params_values()')
-
+        syslog.syslog('Invoked CSClient.put_cs_params_values()')
         url = 'http://' + self.cs_addr + ':' + self.cs_port + \
             '/params/' + str(self.version) + '/' + self.cs_UUID
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
-        params_values_str = ['"', params_values, '"']
-
-        cmd = ['/usr/bin/curl', '-X', 'PUT', '-w', \
-            '"HTTP_CODE: %{http_code}\n"', '-d',
-            params_values, url ]
-
-        ret = _run_cmd(cmd)
-        if ret['subproc'].returncode != 0:
-            _raise_ASError(('Failed command: %s Error: %s') % \
-                (str(cmd), str(ret)))
-
-
-    def close_cs(self):
-        '''
-        Description:
-            Close the curl pointer open by _init()
-        '''
-        syslog.syslog('Invoked CSCurl.close_cs()')
-
-        self.curlp.close()
+        response, body = self._put(url, body=params_values, headers=headers)
+        return response.status, body
 
 def audrey_script_main():
     '''
@@ -742,17 +710,17 @@ def audrey_script_main():
         launch time in the user data.
 
     '''
-    syslog.syslog('Invoked CSCurl.close_cs()')
+    syslog.syslog('Invoked audrey_script_main')
 
     finished = False
 
     while not finished:
 
-        # Create the Curl Object
-        cs_curl = CSCurl()
+        # Create the Client Object
+        cs_client = CSClient()
 
-        # Curl/Get the Required Configs from the Config Server
-        configs = cs_curl.get_cs_configs()
+        # Get the Required Configs from the Config Server
+        config_status, configs = cs_client.get_cs_configs()
 
         # Generate the YAML file using the provided required configs
         generate_yaml(configs)
@@ -764,20 +732,19 @@ def audrey_script_main():
         #
         invoke_puppet()
 
-        # Curl/Get the requested provides from the Config Server
-        params = cs_curl.get_cs_params()
+        # Get the requested provides from the Config Server
+        param_status, params = cs_client.get_cs_params()
 
         # Generate the values for the requested provides parameters.
         params_values = generate_provides(params)
 
-        # Curl/Put the requested provides with values to the Config Server
-        cs_curl.put_cs_params_values(params_values)
+        # Put the requested provides with values to the Config Server
+        cs_client.put_cs_params_values(params_values)
 
         #
-        # Eventually this loop will be repeated until the Config Server
-        # indiactes all "requres" and "profides" have been exchanged. For
-        # now the Config Server is coded to only support/require 1 pass
-        finished = True
+        # Finish processing when the HTTP status from the get_cs_configs and the
+        # get_cs_params both return 200
+        finished = (config_status == 200) && (param_status == 200)
 
 
 if __name__ == '__main__':
