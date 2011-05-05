@@ -2,8 +2,9 @@
 
 Name:		aeolus-audrey-startup
 Version:	@VERSION@
-Release:	2%{?dist}%{?extra_release}
+Release:	3%{?dist}%{?extra_release}
 Summary:	The Aeolus Audrey Startup Script
+BuildArch:  noarch
 
 Group:		Applications/System
 License:	GPLv2+ and MIT and BSD
@@ -39,5 +40,7 @@ rm -rf $RPM_BUILD_ROOT
 %{app_root}/audrey_startup.py
 
 %changelog
+* Tue May 03 2011 Greg Blomquist <gblomqui@redhat.com> 0.0.1-3
+- Changed to noarch
 * Thu Apr 28 2011 Greg Blomquist <gblomqui@redhat.com> 0.0.1-2
 - Initial spec
