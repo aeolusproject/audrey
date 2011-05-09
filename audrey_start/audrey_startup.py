@@ -26,7 +26,6 @@ import sys
 import syslog
 from subprocess import Popen, PIPE
 import urllib
-import dmidecode
 
 LOG = '/var/log/audrey.log'
 PUPPET_ROOT = '/usr/share/puppet/cloud_engine/sshd'
@@ -507,6 +506,15 @@ def generate_provides(src):
 # the Config Server (CS)
 #
 class HttpUnitTest(object):
+    class HttpUnitTestResponse(object):
+        def __init__(self, status):
+            self.status = status
+        def status(self):
+            return self.status
+
+    # simple HTTP Response with 200 status code
+    ok_response = HttpUnitTestResponse(200)
+
     '''
     Description:
         When testing the http object does not exists.
@@ -516,12 +524,12 @@ class HttpUnitTest(object):
     def request(self, url, method='GET', body=None, headers=None):
         if method == 'GET' and url.find('/configs/') > -1:
             body = "|classes&c1&c2|parameters|param1&%s|param2&%s" % \
-                    (base64.b64encode('value1'), base64.b64encode('value2')
-        elif method == 'GET' and url.find('/params/') > -1:
+                    (base64.b64encode('value1'), base64.b64encode('value2'))
+        elif (method == 'GET') and (url.find('/params/') > -1):
             body = "|param1&param2|"
         elif method == 'PUT' and url.find('/params/') > -1:
             body = ""
-        return {'status': 200}, body
+        return HttpUnitTest.ok_response, body
 
 class CSClient(object):
 
@@ -587,7 +595,7 @@ class CSClient(object):
                     if response.status == 200:
                         break
                 if response.status != 200:
-                    _raise_ASError('Max attempts to get EC2 user data
+                    _raise_ASError('Max attempts to get EC2 user data \
                             exceeded.')
 
                 self.config_serv = base64.b64decode(body)
@@ -744,7 +752,7 @@ def audrey_script_main():
         #
         # Finish processing when the HTTP status from the get_cs_configs and the
         # get_cs_params both return 200
-        finished = (config_status == 200) && (param_status == 200)
+        finished = (config_status == 200) and (param_status == 200)
 
 
 if __name__ == '__main__':

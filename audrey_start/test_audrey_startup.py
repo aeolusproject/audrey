@@ -59,7 +59,9 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         self.assertEqual(params_list, expected_params_list)
         self.assertEqual(classes_list, expected_classes_list)
 
-        print 'generate_yaml returned: ' + str(generate_yaml(src))
+        with tempfile.NamedTemporaryFile() as tmpf:
+            print 'generate_yaml returned: ' + str(generate_yaml(src,
+                yaml_file=tmpf.name))
 
     def test_success_no_classes_and_parameters(self):
         '''
@@ -84,7 +86,10 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         self.assertEqual(params_list, expected_params_list)
         self.assertEqual(classes_list, expected_classes_list)
 
-        print 'generate_yaml returned: ' + str(generate_yaml(src))
+        # this is only safe on unix filesystems
+        with tempfile.NamedTemporaryFile() as tmpf:
+            print 'generate_yaml returned: ' + str(generate_yaml(src, 
+                yaml_file=tmpf.name))
 
     def test_success_empty_classes_and_parameters(self):
         '''
@@ -109,7 +114,8 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         self.assertEqual(params_list, expected_params_list)
         self.assertEqual(classes_list, expected_classes_list)
 
-        print 'generate_yaml returned: ' + str(generate_yaml(src))
+        with tempfile.NamedTemporaryFile() as tmpf:
+            print 'generate_yaml returned: ' + str(generate_yaml(src, yaml_file=tmpf.name))
 
     def test_failure_empty_classes(self):
         '''
@@ -418,9 +424,9 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
             provides = generate_provides(src)
 
 '''
-Class for exercising the curl gets and put to and from the CS
+Class for exercising the gets and put to and from the CS
 '''
-class TestConfigServerCurl(unittest.TestCase):
+class TestConfigServerClient(unittest.TestCase):
 
     def setUp(self):
         '''
@@ -429,78 +435,75 @@ class TestConfigServerCurl(unittest.TestCase):
         of the code without having to be running in a cloud VM.
         '''
         if os.path.exists('/etc/sysconfig/cloud-info'):
-            self.cs_curl_UNITTEST = False
+            self.cs_client_UNITTEST = False
         else:
-            self.cs_curl_UNITTEST = True
+            self.cs_client_UNITTEST = True
 
-        # Create the Curl Object
-        self.cs_curl = CSCurl(self.cs_curl_UNITTEST)
+        # Create the client Object
+        self.cs_client = CSClient(self.cs_client_UNITTEST)
 
     def tearDown(self):
-        #
-        # Close the curl connection to the Config Server
-        #
-        self.cs_curl.close_cs()
+        pass
 
-    def test_success_CSCurl_init(self):
-        print '\n\n--- TEST NAME: test_success_CSCurl_init ---'
+    def test_success_CSClient_init(self):
+        print '\n\n--- TEST NAME: test_success_CSClient_init ---'
 
-        print 'self.cs_curl : START \n' + str(self.cs_curl) + \
-            '\nself.cs_curl : END'
+        print 'self.cs_client : START \n' + str(self.cs_client) + \
+            '\nself.cs_client : END'
 
-        print 'errstr: ' + str(self.cs_curl.curlp.errstr())
-        print 'HTTP_CODE: ' + \
-            str(self.cs_curl.curlp.getinfo(pycurl.HTTP_CODE))
-        print 'EFFECTIVE_URL: ' + \
-            str(self.cs_curl.curlp.getinfo(pycurl.EFFECTIVE_URL))
+        #print 'errstr: ' + str(self.cs_client.curlp.errstr())
+        #print 'HTTP_CODE: ' + \
+            #str(self.cs_client.curlp.getinfo(pycurl.HTTP_CODE))
+        #print 'EFFECTIVE_URL: ' + \
+            #str(self.cs_client.curlp.getinfo(pycurl.EFFECTIVE_URL))
 
-        if self.cs_curl_UNITTEST:
-            self.assertEqual(self.cs_curl.ec2_user_data_url, \
+        if self.cs_client_UNITTEST:
+            self.assertEqual(self.cs_client.ec2_user_data_url, \
                 'http://169.254.169.254/2009-04-04/user-data')
-            self.assertEqual(self.cs_curl.cloud_type,  'UNITTEST')
-            self.assertEqual(self.cs_curl.cs_addr, 'csAddr')
-            self.assertEqual(self.cs_curl.cs_port, 'csPort')
-            self.assertEqual(self.cs_curl.cs_UUID, 'csUUID')
-            self.assertEqual(self.cs_curl.config_serv, 'csAddr:csPort:csUUID')
+            self.assertEqual(self.cs_client.cloud_type,  'UNITTEST')
+            self.assertEqual(self.cs_client.cs_addr, 'csAddr')
+            self.assertEqual(self.cs_client.cs_port, 'csPort')
+            self.assertEqual(self.cs_client.cs_UUID, 'csUUID')
+            self.assertEqual(self.cs_client.config_serv, 'csAddr:csPort:csUUID')
         else:
-            self.assertEqual(self.cs_curl.ec2_user_data_url, \
+            self.assertEqual(self.cs_client.ec2_user_data_url, \
                 'http://169.254.169.254/2009-04-04/user-data')
-            self.assertEqual(self.cs_curl.cloud_type,  'EC2')
+            self.assertEqual(self.cs_client.cloud_type,  'EC2')
 
             # For live nondeterministic data check for not blank.
-            self.assertNotEqual(self.cs_curl.cs_addr, '')
-            self.assertNotEqual(self.cs_curl.cs_port, '')
-            self.assertNotEqual(self.cs_curl.cs_UUID, '')
-            self.assertNotEqual(self.cs_curl.config_serv, '')
+            self.assertNotEqual(self.cs_client.cs_addr, '')
+            self.assertNotEqual(self.cs_client.cs_port, '')
+            self.assertNotEqual(self.cs_client.cs_UUID, '')
+            self.assertNotEqual(self.cs_client.config_serv, '')
 
     def test_success_get_cs_configs(self):
         print '\n\n--- TEST NAME: test_success_get_cs_configs ---'
 
-        self.cs_curl.get_cs_configs()
+        self.cs_client.get_cs_configs()
 
         # JJV Add asserts
-        print 'self.cs_curl : START \n' + str(self.cs_curl) + \
-            '\nself.cs_curl : END'
+        print 'self.cs_client : START \n' + str(self.cs_client) + \
+            '\nself.cs_client : END'
 
     def test_success_get_cs_params(self):
         print '\n\n--- TEST NAME: test_success_get_cs_params ---'
 
-        self.cs_curl.get_cs_params()
+        self.cs_client.get_cs_params()
 
         # JJV Add asserts
-        print 'self.cs_curl : START \n' + str(self.cs_curl) + \
-            '\nself.cs_curl : END'
+        print 'self.cs_client : START \n' + str(self.cs_client) + \
+            '\nself.cs_client : END'
 
 
     def test_success_get_cs_configs_and_params(self):
         print '\n\n--- TEST NAME: test_success_get_cs_configs_and_params ---'
 
-        self.cs_curl.get_cs_configs()
-        self.cs_curl.get_cs_params()
+        self.cs_client.get_cs_configs()
+        self.cs_client.get_cs_params()
 
         # JJV Add asserts
-        print 'self.cs_curl : START \n' + str(self.cs_curl) + \
-            '\nself.cs_curl : END'
+        print 'self.cs_client : START \n' + str(self.cs_client) + \
+            '\nself.cs_client : END'
 
 '''
 Class for exercising the full audrey script functionality
@@ -514,10 +517,7 @@ class TestAudreyScript(unittest.TestCase):
         '''
 
     def tearDown(self):
-        #
-        # Close the curl connection to the Config Server
-        #
-        self.cs_curl.close_cs()
+        pass
 
     def audrey_script_main(self):
         '''
@@ -531,11 +531,11 @@ class TestAudreyScript(unittest.TestCase):
         if not os.path.exists('/etc/sysconfig/cloud-info'):
             pass
         
-        # Create the Curl Object
-        self.cs_curl = CSCurl()
+        # Create the client Object
+        self.cs_client = CSClient()
 
-        # Curl/Get the Required Configs from the Config Server
-        configs = self.cs_curl.get_cs_configs()
+        # Get the Required Configs from the Config Server
+        configs = self.cs_client.get_cs_configs()
 
         # Generate the YAML file using the provided required configs
         generate_yaml(configs)
@@ -547,22 +547,22 @@ class TestAudreyScript(unittest.TestCase):
         #
         invoke_puppet()
 
-        # Curl/Get the requested provides from the Config Server
-        params = self.cs_curl.get_cs_params()
+        # Get the requested provides from the Config Server
+        params = self.cs_client.get_cs_params()
 
         # Generate the values for the requested provides parameters.
         params_values = generate_provides(params)
 
         # JJV Add asserts
-        print 'self.cs_curl : START \n' + str(self.cs_curl) + \
-            '\nself.cs_curl : END'
+        print 'self.cs_client : START \n' + str(self.cs_client) + \
+            '\nself.cs_client : END'
 
         print 'configs: \n' + str(configs)
         print 'params: \n' + str(params)
         print 'params_values: \n' + str(params_values)
 
-        # Curl/Put the requested provides with values to the Config Server
-        self.cs_curl.put_cs_params_values(params_values)
+        # Put the requested provides with values to the Config Server
+        self.cs_client.put_cs_params_values(params_values)
 
 if __name__ == '__main__':
 
