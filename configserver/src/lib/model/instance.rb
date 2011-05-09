@@ -8,9 +8,11 @@ module ConfigServer
   module Model
     class InvalidInstanceConfigError < StandardError
       attr_reader :errors
+      attr_reader :cause
 
-      def initialize(errors=nil)
+      def initialize(errors=nil, cause=nil)
         @errors = errors if not errors.nil?
+        @cause = cause if not cause.nil?
       end
     end
 
@@ -32,6 +34,9 @@ module ConfigServer
       @@IP_FILE = "ip"
       @@EMPTY_DOCUMENT = Nokogiri::XML("")
 
+      # Nokogiri XML validator
+      @@validator = nil
+
       attr_reader :instance_config, :ip
 
       def self.exists?(uuid)
@@ -46,10 +51,45 @@ module ConfigServer
         Instance.new(uuid) if exists?(uuid)
       end
 
+      def self.get_validator
+        validator_schema = ConfigServer::Model.instance_config_schema_location
+        begin
+          @@validator ||= open(validator_schema) do |v|
+            Nokogiri::XML::RelaxNG(v)
+          end
+        rescue SocketError => se
+          raise InvalidValidatorError,
+            "Could not load validator from address #{validator_schema}"
+        rescue SystemCallError => sce
+          raise InvalidValidatorError,
+            "Could not load validator from file #{validator_schema}"
+        end
+        @@validator
+      end
+
+      def self.validate(uuid, xml)
+        # make sure the xml is wrapped in Nokogiri
+        if xml.instance_of?(String) or xml.kind_of?(IO)
+          xml = Nokogiri::XML(xml)
+        end
+        errors = []
+        begin
+          errors = get_validator.validate(xml)
+        rescue Exception => e
+          raise InvalidInstanceConfigError.new(), ["The provided instance " +
+              "config for #{uuid} caused an error during validation:  ", e]
+        end
+        if errors.size > 0
+          raise InvalidInstanceConfigError.new(errors),
+                "The provided instance config for #{uuid} is not a valid " +
+                "instance-config document."
+        end
+        xml
+      end
+
       @uuid = ""
       @ip = ""
       @instance_dir = ""
-      @validator = nil
 
       def initialize(uuid, configs=nil)
         super()
@@ -75,7 +115,6 @@ module ConfigServer
         @instance_config = nil
         @provided_parameters = nil
         @required_parameters = nil
-        @validator = nil
         @deployable = nil
         @assembly_name = nil
       end
@@ -236,38 +275,8 @@ module ConfigServer
         (config % '//deployable')['id'] if not config.nil?
       end
 
-      def get_validator
-        validator_schema = ConfigServer::Model.instance_config_schema_location
-        begin
-          @validator ||= open(validator_schema) do |v|
-            Nokogiri::XML::RelaxNG(v)
-          end
-        rescue SocketError => se
-          raise InvalidValidatorError,
-            "Could not load validator from address #{validator_schema}"
-        rescue SystemCallError => sce
-          raise InvalidValidatorError,
-            "Could not load validator from file #{validator_schema}"
-        end
-        @validator
-      end
-
-      def validate(xml)
-        # make sure the xml is wrapped in Nokogiri
-        if xml.instance_of?(String) or xml.kind_of?(IO)
-          xml = Nokogiri::XML(xml)
-        end
-        errors = get_validator.validate(xml)
-        if errors.size > 0
-          raise InvalidInstanceConfigError.new(errors),
-              "The provided instance config for #{@uuid} is not a valid " +
-              "instance-config document."
-        end
-        xml
-      end
-
-      def replace_instance_config(configs)
-        xml = validate(configs)
+      def replace_instance_config(xml)
+        xml = Instance.validate(@uuid, xml)
         file = get_path(@@INSTANCE_CONFIG_FILE)
         File.open(file, "w") do |f|
           xml.write_xml_to(f)
@@ -285,7 +294,7 @@ module ConfigServer
 
       def get_ip
         filename = get_path(@@IP_FILE)
-        File.open(filename) do |f| 
+        File.open(filename) do |f|
           f.read
         end if File.exists?(filename)
       end

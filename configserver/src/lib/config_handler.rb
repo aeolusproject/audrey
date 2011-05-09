@@ -94,12 +94,13 @@ module ConfigServer
     end
 
     def create(uuid, data)
-      Model::Instance.new(uuid, data)
+      xml = Model::Instance.validate(uuid, data)
+      Model::Instance.new(uuid, xml)
     end
 
     def update(uuid, data, ip, options={})
       return nil if not exists?(uuid)
-      
+
       instance = Model::Instance.find(uuid)
       instance.ip = ip
 
