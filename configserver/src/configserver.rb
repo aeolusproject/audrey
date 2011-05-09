@@ -23,7 +23,7 @@ error 400 do
 end
 
 
-get '/ip/:version/:uuid', :provides => 'xml' do
+get '/ip/:version/:uuid', :provides => ['text', 'html'] do
   configs.exists?(params[:uuid]) ?
     configs.get_ip(params[:uuid]) :
     not_found
