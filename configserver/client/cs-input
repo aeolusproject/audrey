@@ -1,0 +1,27 @@
+#!/bin/bash
+
+PROGNAME=`basename $0`
+USAGE=$(cat <<END_OF_USAGE
+  Usage: $0 UUID
+
+    Generate a bare-bones instance-config.xml document based on the provided
+    UUID.  The document is output to standard out.
+END_OF_USAGE
+)
+
+UUID="$1"
+if [ "x$UUID" == "x" ]; then
+  echo "Please provide a value for UUID.  This can be any value."
+  echo "$USAGE"
+  exit 1
+fi
+
+XML=$(cat <<END_OF_XML
+<instance-config id='$UUID' name='$UUID' type='$UUID'> 
+    <deployable name='$UUID' id='$UUID'/> 
+    <template name='$UUID'/> 
+</instance-config>
+END_OF_XML
+)
+
+echo "$XML"

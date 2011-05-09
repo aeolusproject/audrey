@@ -141,3 +141,19 @@ management.  The API provides the following:
   Example:
     curl -H "Accept: text/plain" -w "HTTP_CODE: ${http_code}\n" \
     http://localhost:4567/ip/0/b3f127c0-4cc0-012e-afcb-70def1284ca2
+
+
+Client
+~~~~~~
+
+A small set of client tools is provided with the config server codebase for
+testing with a live config server.  For more information, try:
+
+  $> client/cs-client -h
+  $> client/cs-input -h
+
+For generating a bare-bones instance-config file that can be sent to a Config
+Server, try:
+
+  $> cd client
+  $> ./cs-input $UUID | ./cs-client post $UUID -

@@ -1,0 +1,134 @@
+#!/bin/bash
+
+PROGNAME=`basename $0`
+USAGE=$(cat <<END_OF_USAGE
+  Usage: $0 {-s server_host} {-p server_port} [post|put|get] {options}
+    
+    post: $PROGNAME post \$uuid [\$filename]
+          \$uuid: the instance indentifier for this data
+          \$filename: (optional) the file where the data can be found
+                      if empty, then the file called ./\$uuid is used
+                      if -, then stdin is used
+     get: $PROGNAME get \$data \$uuid
+          \$data: either "configs", "params", or "ip";
+                  when "configs", retrieves the configs for the \$uuid
+                  when "params", retrieves the "provides" parameters for the \$uuid
+          \$uuid: the instance identifier
+     put: $PROGNAME put \$uuid \$data
+          \$uuid: the instance identifier for this data
+          \$data: key/value pairs of data in HTTP GET format
+                  (i.e., key1=value1&key2=value2)
+
+   Advanced:  Use cs-input to generate a bare-bones instance-config document.
+     $> ./cs-input \$UUID | $0 post \$UUID -
+     
+     * cs-input will generate an XML document to stdout
+     * cs-client will read the XML document on POST from stdin when the last arg
+       is "-"
+END_OF_USAGE
+)
+
+
+VALID_VERBS=(POST PUT GET DELETE)
+
+SERVER="localhost"
+PORT="4567"
+VERBOSE=false
+while getopts "vhs:p:" opt; do
+  case $opt in
+    v) VERBOSE=true;;
+    s) SERVER=$OPTARG;;
+    p) PORT=$OPTARG;;
+    h) echo "$USAGE"
+       exit 0;;
+    *) echo "$USAGE"
+       exit 1;;
+  esac
+done
+shift $((OPTIND-1))
+
+## Validate the argument against the list of VALID_VERBS
+function validate_verb {
+  for verb in "${VALID_VERBS[@]}"; do
+    if [ "$1" == "$verb" ]; then return 0; fi
+  done
+  return 1
+}
+
+function post {
+  uuid="$1"
+  if [ "x$2" == "x" ]; then
+    fname="./$1"
+  elif [ "$2" == "-" ]; then
+    xml=`cat /dev/stdin`
+    fname=`mktemp`
+    echo "$xml" > $fname
+  else
+    fname="$2"
+  fi
+  if [ ! -f $fname ]; then
+    echo "Could not find file $fname to submit instance config to config server"
+    return 1
+  fi 
+  echo "Using $fname for the data"
+  if [ $VERBOSE == true ]; then
+    echo "curl -X POST -w \"\\nHTTP_CODE: %{http_code}\\n\" --data-urlencode \"data@$fname\" http://$SERVER:$PORT/configs/0/$uuid"
+  fi
+  curl -X POST -w "\nHTTP_CODE: %{http_code}\n" --data-urlencode "data@$fname" http://$SERVER:$PORT/configs/0/$uuid
+}
+
+function format_put_params {
+  data="|"
+  while IFS='&' read -ra PARAMS; do
+    for param in "${PARAMS[@]}"; do
+      k=${param%=*}
+      v=${param#*=}
+      b64=`echo -n $v | base64 -w 0 -`
+      data="${data}${k}&${b64}|"
+    done 
+  done <<< "$1" 
+  if [ "$data" == "|" ]; then
+    data="||"
+  fi
+  echo -n "$data"
+}
+
+function put {
+  uuid="$1"
+  data=$(format_put_params "$2")
+  if [ $VERBOSE == true ]; then
+    echo "curl -X PUT -w \"\\n\\nHTTP_CODE: %{http_code}\\n\" --data-urlencode \"audrey_data=$data\" http://$SERVER:$PORT/params/0/$uuid"
+  fi
+  curl -X PUT -w "\n\nHTTP_CODE: %{http_code}\n" --data-urlencode "audrey_data=$data" http://$SERVER:$PORT/params/0/$uuid
+}
+
+function format_get_output {
+  exit 1
+}
+
+function get {
+  what="$1"
+  uuid="$2"
+  if [ $VERBOSE == true ]; then
+    echo "curl -H \"Accept: text/plain\" -w \"\\n\\nHTTP_CODE: %{http_code}\\n\" http://$SERVER:$PORT/$what/0/$uuid"
+  fi
+  curl -H "Accept: text/plain" -w "\n\nHTTP_CODE: %{http_code}\n" http://$SERVER:$PORT/$what/0/$uuid
+}
+
+VERB=`echo $1 | tr '[:lower:]' '[:upper:]'`
+validate_verb $VERB
+if [ $? -ne 0 ]; then
+  echo -n "$1 is not a valid verb: "
+  echo "${VALID_VERBS[@]}"
+  exit 1
+fi
+
+shift
+case $VERB in
+  "POST"    ) post "$@";;
+  "PUT"     ) put "$@";; 
+  "GET"     ) get "$@";;
+  *         ) echo "Unsupported for now.";;
+esac
+
+exit $?
