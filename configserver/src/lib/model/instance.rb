@@ -138,12 +138,14 @@ module ConfigServer
 
       def provided_parameters_values=(params={})
         puts "provided params: #{params.inspect}"
-        params.each do |k,v|
-          param = pp % "//provided-parameter[@name='#{k}']"
-          param.inner_html = "<value><![CDATA[#{v}]]></value>" if not param.nil?
-        end if not (params.nil? or params.empty?)
-        File.open(get_path(@@PROVIDED_PARAMS_FILE), 'w') do |f|
-          @provided_parameters.write_xml_to(f)
+        if not (params.nil? or params.empty?)
+          params.each do |k,v|
+            param = pp % "//provided-parameter[@name='#{k}']"
+            param.inner_html = "<value><![CDATA[#{v}]]></value>" if not param.nil?
+          end
+          File.open(get_path(@@PROVIDED_PARAMS_FILE), 'w') do |f|
+            @provided_parameters.write_xml_to(f)
+          end
         end
       end
 
@@ -305,22 +307,23 @@ module ConfigServer
       end
 
       def replace_provided_parameters
-        file = get_path(@@PROVIDED_PARAMS_FILE)
         provided_params = config / '//provided-parameter'
+        xml = ""
         if not provided_params.empty?
           xml = "<provided-parameters>\n"
           provided_params.each do |p|
             xml += "  <provided-parameter name='#{p['name']}'/>\n"
           end
           xml += "</provided-parameters>\n"
-          File.open(file, 'w') do |f|
-            f.write(xml)
-          end
-          @provided_parameters = Nokogiri::XML(xml)
-        else
-          File.delete(file) if File.exists?(file)
-          @provided_parameters = nil
         end
+        # Always create the provided_params file, even
+        # if it's empty...saves a little trouble later
+        # on with some validation
+        file = get_path(@@PROVIDED_PARAMS_FILE)
+        File.open(file, 'w') do |f|
+          f.write(xml)
+        end
+        @provided_parameters = Nokogiri::XML(xml)
       end
 
       def replace_required_parameters
