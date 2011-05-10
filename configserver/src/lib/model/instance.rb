@@ -221,18 +221,18 @@ module ConfigServer
         services = opts[:flat] ? [[], {}] : []
         (config / '//service').each do |s|
           name = s["name"]
-          classes = (s / './/class').map {|c| c["name"] } || []
+          scripts = (s / './/script').map {|c| c["name"] } || []
           params_with_values = (s / './parameter/value/..') +
             (rp / "//required-parameter[@service='#{name}']/value/..")
           parameters = (params_with_values.map do |p|
             {p["name"] => (p % 'value').content}
           end || []).inject(:merge) || {}
           if opts[:flat]
-            services[0] += classes
+            services[0] += scripts
             services[1].merge!(parameters)
           else
             services << {:name => name,
-              :classes => classes, :parameters => parameters}
+              :classes => scripts, :parameters => parameters}
           end
         end
         services
