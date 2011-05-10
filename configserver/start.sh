@@ -1,4 +1,9 @@
 #!/bin/bash
 
+export STORAGE_DIR="/tmp/audrey"
+export INSTANCE_CONFIG_RNG="../schema/instance-config.rng"
+
 cd src
-thin -V -R config.ru -p 4567 start
+
+
+thin -R config.ru -p 4567 start
