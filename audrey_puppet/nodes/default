@@ -1,0 +1,5 @@
+--- 
+parameters: 
+  #ssh_port: 22
+classes: 
+- ssh::client

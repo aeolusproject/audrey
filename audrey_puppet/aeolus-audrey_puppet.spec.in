@@ -1,0 +1,51 @@
+%define app_root /usr/share/puppet/cloud_engine
+
+Name:		aeolus-audrey_puppet
+Version:	@VERSION@
+Release:	0%{?dist}%{?extra_release}
+
+Summary:	The Aeolus Audrey Puppet Modules
+BuildArch:	noarch
+
+Group:		Applications/System
+License:	GPLv2+ and MIT and BSD
+URL:		http://aeolusproject.org
+Source0:	aeolus-audrey_puppet-%{version}.tar.gz
+BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+
+%description
+The Aeolus Audrey Puppet modules are driven by the Aeolus Audrey Start
+script on a instances in a cloud at boot time.
+
+%prep
+%setup -q
+
+%build
+
+%install
+rm -rf $RPM_BUILD_ROOT
+
+%{__mkdir} -p %{buildroot}%{app_root}/audrey_puppet
+
+# copy over the puppet bits
+%{__cp} -R manifests %{buildroot}%{app_root}/audrey_puppet
+%{__cp} -R modules %{buildroot}%{app_root}/audrey_puppet
+%{__cp} -R nodes %{buildroot}%{app_root}/audrey_puppet
+%{__cp}    node %{buildroot}%{app_root}/audrey_puppet
+
+echo %{buildroot}%{app_root}
+echo $RPM_BUILD_ROOT
+echo "pwd: $(pwd)"
+pwd
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-,root,root,-)
+%{app_root}/audrey_puppet/*
+
+
+%changelog
+* Wed May 18 2011 Joe VLcek <joev@redhat.com> 0.0.1-1
+- Initial build.

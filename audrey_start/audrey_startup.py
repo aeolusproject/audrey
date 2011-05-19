@@ -20,20 +20,24 @@ Algorithim:
 '''
 
 import base64
-import os
 import httplib2
-import sys
 import syslog
 from subprocess import Popen, PIPE
 import urllib
 
 LOG = '/var/log/audrey.log'
-PUPPET_ROOT = '/usr/share/puppet/cloud_engine/sshd'
+PUPPET_ROOT = '/usr/share/puppet/cloud_engine/audrey_puppet'
 PUPPET_YAML_FILE = str(PUPPET_ROOT) + '/nodes/default'
 PUPPET_EXT_NODE = str(PUPPET_ROOT) + '/node'
 
 CLASS_TAG = '|classes'
 PARAM_TAG = '|parameters'
+
+# When running on condor-cloud, the Config Server (CS) contact
+# information will be stored in the smbios.
+# These are the dmi files where the smbios information is stored.
+CONDORCLOUD_CS_ADDR='/sys/devices/virtual/dmi/id/sys_vendor'
+CONDORCLOUD_CS_UUID='/sys/devices/virtual/dmi/id/product_name'
 
 #
 # Error Handling methods:
@@ -100,8 +104,6 @@ def _run_cmd(cmd):
 
     '''
 
-    p1 = None
-    p2 = None
     pfail = _run_cmd_return_subproc()
 
     # Return dictionary to contain keys: 'cmd', 'subproc', 'err', 'out'
@@ -206,7 +208,7 @@ def _run_pipe_cmd(cmd1, cmd2):
 #
 # Methods used to parse the CS<->AS text based API
 #
-def _commond_validate_message(src):
+def _common_validate_message(src):
     '''
     Perform validation of the text message sent from the Config Server.
     '''
@@ -254,7 +256,7 @@ def _parse_require_config(src):
         - a name&value list of parameters.
     '''
 
-    _commond_validate_message(src)
+    _common_validate_message(src)
 
     # Message specific validation
     if src == '||':
@@ -346,7 +348,7 @@ def generate_yaml(src, yaml_file=PUPPET_YAML_FILE):
 
     return True
 
-def invoke_puppet(yaml_file=PUPPET_YAML_FILE):
+def invoke_puppet():
     '''
     Description:
         Run the puppet command using the generated Puppet input YAML file.
@@ -354,8 +356,6 @@ def invoke_puppet(yaml_file=PUPPET_YAML_FILE):
 
     Input:
         The Puppet input YAML file must exist.
-
-        Allow for an alternate puppet YAML file for unit testing.
 
     Returns:
         None
@@ -403,8 +403,8 @@ def _get_system_info():
     facts = {}
     for fact in ret['out'].split('\n'):
         if fact: # Handle the new line at the end of the facter output
-            n, v = fact.split(" => ")
-            facts[ n ] = v.rstrip()
+            name, val = fact.split(" => ")
+            facts[ name ] = val.rstrip()
 
     return facts
 
@@ -434,7 +434,7 @@ def _parse_provides_params(src):
         - a list of parameter names.
     '''
 
-    _commond_validate_message(src)
+    _common_validate_message(src)
 
     # Message specific validation
     if src == '||':
@@ -506,7 +506,18 @@ def generate_provides(src):
 # the Config Server (CS)
 #
 class HttpUnitTest(object):
+    '''
+    Description:
+        When testing the http object does not exists. This class provides
+        test methods that could be preformed when doing UNITTESTing.
+    '''
     class HttpUnitTestResponse(object):
+        '''
+        Description:
+            When testing the http object does not exists. This class
+            provides the test method response that could be preformed
+            when doing UNITTESTing.
+        '''
         def __init__(self, status):
             self.status = status
         def status(self):
@@ -515,12 +526,6 @@ class HttpUnitTest(object):
     # simple HTTP Response with 200 status code
     ok_response = HttpUnitTestResponse(200)
 
-    '''
-    Description:
-        When testing the http object does not exists.
-        This class provides test methods that could be preformed when doing
-        UNITTESTing.
-    '''
     def request(self, url, method='GET', body=None, headers=None):
         if method == 'GET' and url.find('/configs/') > -1:
             body = "|classes&c1&c2|parameters|param1&%s|param2&%s" % \
@@ -532,13 +537,12 @@ class HttpUnitTest(object):
         return HttpUnitTest.ok_response, body
 
 class CSClient(object):
-
     '''
     Description:
         Client interface to Config Server (CS)
     '''
 
-    def __init__(self, UNITTEST =  False):
+    def __init__(self, UNITTEST=False):
         '''
         Description:
             Set initial state so it can be tracked. Valuable for
@@ -604,21 +608,24 @@ class CSClient(object):
             except:
                 _raise_ASError('Failed accessing EC2 user data.')
 
-        elif 'FALCON' in cloud_type:
+        elif 'CONDORCLOUD' in cloud_type:
             #
-            # If on Falcon (condor-cloud), the user data will be in smbios
-            # Uses dmidecode to access smbios information
+            # If on Condor Cloud, the user data will be in smbios
+            # Uses the dmi files to access the stored smbios information.
             #
-            import dmidecode
-            self.cloud_type = 'FALCON'
+            self.cloud_type = 'CONDORCLOUD'
             try:
-                system_data = dmidecode.system()['0x0100']['data']
-                self.cs_addr, self.cs_port = system_data['Manufacturer'].split(':')
-                self.cs_UUID = system_data['Product Name']
-                self.config_serv = "%s:%s:%s" % (self.cs_addr, self.cs_port,
-                        self.cs_UUID)
+                # Sometimes the string http:// is appended to the
+                # Condfig Server (CS) address:port.
+                with open(CONDORCLOUD_CS_ADDR, 'r') as f:
+                   self.cs_addr, self.cs_port = \
+                       f.read()[:-1].lstrip('http://').split(':')
+
+                with open(CONDORCLOUD_CS_UUID, 'r') as f:
+                   self.cs_UUID = f.read()[:-1]
+
             except:
-                _raise_ASError('Failed accessing Falcon user data.')
+                _raise_ASError('Failed accessing Config Server data.')
 
         elif 'UNITTEST' in cloud_type:
             #
@@ -665,9 +672,17 @@ class CSClient(object):
             str(self.cs_configs)))
 
     def _get(self, url, headers=None):
+        '''
+        Description:
+            Issue the http get to the the Config Server.
+        '''
         return self.http.request(url, 'GET', headers=headers)
 
     def _put(self, url, body=None, headers=None):
+        '''
+        Description:
+            Issue the http put to the the Config Server.
+        '''
         return self.http.request(url, 'PUT', body=body, headers=headers)
 
     # Public interfaces
@@ -750,10 +765,9 @@ def audrey_script_main():
         cs_client.put_cs_params_values(params_values)
 
         #
-        # Finish processing when the HTTP status from the get_cs_configs and the
-        # get_cs_params both return 200
+        # Finish processing when the HTTP status from the get_cs_configs
+        # and the get_cs_params both return 200
         finished = (config_status == 200) and (param_status == 200)
-
 
 if __name__ == '__main__':
 
