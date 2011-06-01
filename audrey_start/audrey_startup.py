@@ -39,6 +39,13 @@ PARAM_TAG = '|parameters'
 CONDORCLOUD_CS_ADDR='/sys/devices/virtual/dmi/id/sys_vendor'
 CONDORCLOUD_CS_UUID='/sys/devices/virtual/dmi/id/product_name'
 
+# When running on RHEV-m, the Config Server (CS) contact
+# information will be stored in a file built into the image
+# and the UUID will be stored in the smbios.
+# These are the dmi files where the smbios information is stored.
+RHEV_CS_ADDR='/opt/redhat/cloudengine/rhevm_config_server'
+RHEV_CS_UUID='/sys/devices/virtual/dmi/id/product_uuid'
+
 #
 # Error Handling methods:
 #
@@ -319,7 +326,6 @@ def generate_yaml(src, yaml_file=PUPPET_YAML_FILE):
     syslog.syslog('Invoked generate_yaml()')
 
     params_list, classes_list = _parse_require_config(src)
-
 
     # If both classes or parameters are missing treat as no required
     # configuration parameters are needed. Simply return False
@@ -627,6 +633,24 @@ class CSClient(object):
             except:
                 _raise_ASError('Failed accessing Config Server data.')
 
+        elif 'RHEV-M' in cloud_type:
+            #
+            # If on Condor Cloud, the user data will be in smbios
+            # Uses the dmi files to access the stored smbios information.
+            #
+            self.cloud_type = 'RHEV-M'
+            try:
+                # Condfig Server (CS) address:port.
+                with open(RHEV_CS_ADDR, 'r') as f:
+                   self.cs_addr, self.cs_port = \
+                       f.read()[:-1].split(':')
+
+                with open(RHEV_CS_UUID, 'r') as f:
+                   self.cs_UUID = f.read()[:-1]
+
+            except:
+                _raise_ASError('Failed accessing Config Server data.')
+
         elif 'UNITTEST' in cloud_type:
             #
             # For testing from UNITTEST
@@ -732,10 +756,16 @@ def audrey_script_main():
         instance based on Cloud Engine configuration supplied at
         launch time in the user data.
 
+        Config Server Status:
+        200 HTTP OK - Success and no more data of this type
+        202 HTTP Accepted - Success and more data of this type
+        404 HTTP Not Found - This may be temporary so try again 
     '''
     syslog.syslog('Invoked audrey_script_main')
 
     finished = False
+    not_found = False
+    max_retry = 5
 
     while not finished:
 
@@ -745,30 +775,50 @@ def audrey_script_main():
         # Get the Required Configs from the Config Server
         config_status, configs = cs_client.get_cs_configs()
 
-        # Generate the YAML file using the provided required configs
-        generate_yaml(configs)
+        # Configure the system with the provided Required Configs
+        if (config_status == 200) or (config_status == 202):
 
-        # Exercise Puppet using the generated YAML
-        #
-        # Exercise puppet to configure the system using the user
-        # specified puppet input.
-        #
-        invoke_puppet()
+            # Generate the YAML file using the provided required configs
+            generate_yaml(configs)
+
+            # Exercise Puppet using the generated YAML
+            #
+            # Exercise puppet to configure the system using the user
+            # specified puppet input.
+            #
+            invoke_puppet()
 
         # Get the requested provides from the Config Server
         param_status, params = cs_client.get_cs_params()
 
-        # Generate the values for the requested provides parameters.
-        params_values = generate_provides(params)
+        # Gather the values from the system for the requested provides
+        if (param_status == 200) or (param_status == 202):
+
+            # Generate the values for the requested provides parameters.
+            params_values = generate_provides(params)
+
+        else:
+
+            # Return empty params values string even if the status code
+            # is not success.
+            # This will provide the Config Server with the IP Address
+            # and UUID for this instance.
+            params_values = "||"
 
         # Put the requested provides with values to the Config Server
         cs_client.put_cs_params_values(params_values)
 
-        #
         # Finish processing when the HTTP status from the get_cs_configs
         # and the get_cs_params both return 200
         finished = (config_status == 200) and (param_status == 200)
 
+
+        # Retry a number of times if 404 HTTP Not Found is returned.
+        if (config_status == 404) or (param_status == 404):
+            max_retry -= 1
+            if max_retry < 0:
+                finished = True
+        
 if __name__ == '__main__':
 
     audrey_script_main()

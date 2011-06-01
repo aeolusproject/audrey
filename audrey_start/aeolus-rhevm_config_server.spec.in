@@ -1,21 +1,22 @@
-%define app_root /usr/bin
+%define app_root /opt/redhat/cloudengine
 
-Name:		aeolus-audrey_startup
+Name:		aeolus-rhevm_config_server
 Version:	@VERSION@
 Release:	0%{?dist}%{?extra_release}
 
-Summary:	The Aeolus Audrey Startup Script
+Summary:	The Aeolus RHEV-m Config Server
 BuildArch:	noarch
 
 Group:		Applications/System
 License:	GPLv2+ and MIT and BSD
 URL:		http://aeolusproject.org
-Source0:	aeolus-audrey_startup-%{version}.tar.gz
+Source0:	aeolus-rhevm_config_server-%{version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
-The Aeolus Audrey Startup script runs on a instances in a cloud at boot and
-contacts an Aeolus Config Server to retrieve post-boot configuration data.
+The Aeolus Audrey Startup script needs a way to discover the Config Server.
+For RHEV-m there is currently no good way to pass this data to a launching
+instance. So it must be built into the image.
 
 %prep
 %setup -q
@@ -26,8 +27,8 @@ contacts an Aeolus Config Server to retrieve post-boot configuration data.
 rm -rf $RPM_BUILD_ROOT
 %{__mkdir} -p %{buildroot}%{app_root}
 
-# copy over the startup script
-%{__cp} audrey_startup.py %{buildroot}%{app_root}/audrey
+# copy over the RHEV-m Config Server data file
+%{__cp} rhevm_config_server %{buildroot}%{app_root}
 
 chmod a+x %{buildroot}%{app_root}
 echo %{buildroot}%{app_root}
@@ -40,8 +41,8 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(744,root,root,-)
-%{app_root}/audrey
+%{app_root}/rhevm_config_server
 
 %changelog
-* Wed May 18 2011 Joe VLcek <joev@redhat.com> 0.0.1-1
+* Wed Jun 1 2011 Joe VLcek <joev@redhat.com> 0.0.1-1
 - Initial build.

@@ -1,19 +1,13 @@
 Requirements:
 * Puppet client package
 
-How to use:
-
-git clone git://git.engineering.redhat.com/users/olevy/puppet-imagebuilder/.git
-cd puppet-imagebuilder
-
-Execute ./run
-
-This will execute puppet and apply the default configuration (as defined in nodes/default)
-You may create another yaml file (which match to the output of facter fqdn) and adjust accordingly
-
-
 How it works:
 
-Puppet executes the node script, which in turn reads the yaml file based on the fqdn.
-The node script, can be changed to query from any source (such as a web api, db etc).
+Puppet executes the node script, which in turn reads the yaml file based
+on the fqdn.  The node script, can be changed to query from any source
+(such as a web api, db etc).
+
+Test with:
+
+The puppet modules can be exercised with the "run" test script.
 

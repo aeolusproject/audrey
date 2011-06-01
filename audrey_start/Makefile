@@ -40,14 +40,21 @@ dist:
 	cp -a aeolus-audrey_startup.spec COPYING Makefile audrey_startup.py \
 		dist/aeolus-audrey_startup-$(VERSION)
 	tar -C dist -zcvf aeolus-audrey_startup-$(VERSION).tar.gz aeolus-audrey_startup-$(VERSION)
+	sed -e 's/@VERSION@/$(VERSION)/' aeolus-rhevm_config_server.spec.in > aeolus-rhevm_config_server.spec
+	mkdir -p dist/aeolus-rhevm_config_server-$(VERSION)
+	cp -a aeolus-rhevm_config_server.spec COPYING Makefile rhevm_config_server \
+		dist/aeolus-rhevm_config_server-$(VERSION)
+	tar -C dist -zcvf aeolus-rhevm_config_server-$(VERSION).tar.gz aeolus-rhevm_config_server-$(VERSION)
 
 rpms: dist
 	rpmbuild -ta aeolus-audrey_startup-$(VERSION).tar.gz
+	rpmbuild -ta aeolus-rhevm_config_server-$(VERSION).tar.gz
 
 srpms: dist
 	rpmbuild -ts aeolus-audrey_startup-$(VERSION).tar.gz
+	rpmbuild -ts aeolus-rhevm_config_server-$(VERSION).tar.gz
 
 clean:
-	rm -rf dist aeolus-audrey_startup-$(VERSION).tar.gz aeolus-audrey_startup.spec
+	rm -rf dist aeolus-audrey_startup-$(VERSION).tar.gz aeolus-audrey_startup.spec dist aeolus-rhevm_config_server-$(VERSION).tar.gz aeolus-rhevm_config_server.spec
 
 .PHONY: dist rpms srpms
