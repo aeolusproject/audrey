@@ -6,44 +6,34 @@
  Test program for audrey_startup
 '''
 
-import array
 import base64
-import fcntl
-import filecmp
-import fnmatch
-import inspect
 import os
 import os.path
-import re
-import shutil
-import subprocess
-import sys
-import syslog
 import tempfile
-import traceback
 import unittest
 
 from audrey_startup import *
 from audrey_startup import _parse_provides_params
 from audrey_startup import _parse_require_config 
-from audrey_startup import _run_cmd
 
-'''
-Class for exercising the parsing of the Required Configs from the CS.
-'''
 class TestAudreyStartupRequiredConfig(unittest.TestCase):
+    '''
+    Class for exercising the parsing of the Required Configs from the CS.
+    '''
 
-    def test_success_classes_and_parameters(self):
+    def test_success_class_n_params(self):
         '''
         Success case:
         - Exercise _parse_require_config() with valid input
         '''
  
+        print 'JJV 01 hi'
+ 
         # Establish valid test data:
         src = '|classes&ssh::server&apache2::common' \
             '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
             '|apache_port&' + base64.b64encode('<b64/8081>') + '|'
-        print '\nTest name: test_success_classes_and_parameters()'
+        print '\nTest Name: test_success_class_n_params()'
         print 'Test input:\n' + src
         print 'Expect: _parse_require_config() success'
         print 'Expect: generate_yaml() True'
@@ -63,7 +53,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
             print 'generate_yaml returned: ' + str(generate_yaml(src,
                 yaml_file=tmpf.name))
 
-    def test_success_no_classes_and_parameters(self):
+    def test_success_empty_class_n_params(self):
         '''
         Success case:
         - Exercise _parse_require_config() with valid empty input
@@ -71,7 +61,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
  
         # Establish valid test data:
         src = '||'
-        print '\nTest name: test_success_no_classes_and_parameters()'
+        print '\nTest Name: test_success_empty_class_n_params()'
         print 'Test input:\n' + src
         print 'Expect: _parse_require_config() success'
         print 'Expect: generate_yaml() False'
@@ -88,10 +78,10 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
 
         # this is only safe on unix filesystems
         with tempfile.NamedTemporaryFile() as tmpf:
-            print 'generate_yaml returned: ' + str(generate_yaml(src, 
+            print 'generate_yaml returned: ' + str(generate_yaml(src,
                 yaml_file=tmpf.name))
 
-    def test_success_empty_classes_and_parameters(self):
+    def test_success_no_class_n_params(self):
         '''
         Success case:
         - Exercise _parse_require_config() with valid input
@@ -99,7 +89,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
  
         # Establish valid test data:
         src = '|classes|parameters|'
-        print '\nTest name: test_success_empty_classes_and_parameters()'
+        print '\nTest Name: test_success_no_class_n_params()'
         print 'Test input:\n' + src
         print 'Expect: _parse_require_config() success'
         print 'Expect: generate_yaml() False'
@@ -115,7 +105,8 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         self.assertEqual(classes_list, expected_classes_list)
 
         with tempfile.NamedTemporaryFile() as tmpf:
-            print 'generate_yaml returned: ' + str(generate_yaml(src, yaml_file=tmpf.name))
+            print 'generate_yaml returned: ' + \
+                str(generate_yaml(src, yaml_file=tmpf.name))
 
     def test_failure_empty_classes(self):
         '''
@@ -127,7 +118,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         src = '|classes' \
             '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
             '|apache_port&' + base64.b64encode('<b64/8081>') + '|'
-        print '\nTest name: test_failure_empty_classes()'
+        print '\nTest Name: test_failure_empty_classes()'
         print 'Test input:\n' + src
         print 'Expect: _parse_require_config() success'
         print 'Expect: generate_yaml() ASError'
@@ -155,7 +146,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
  
         # Establish valid test data:
         src = '|classes&ssh::server&apache2::common|parameters|'
-        print '\nTest name: test_failure_empty_parameters()'
+        print '\nTest Name: test_failure_empty_parameters()'
         print 'Test input:\n' + src
         print 'Expect: _parse_require_config() success'
         print 'Expect: generate_yaml() ASError'
@@ -174,7 +165,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         with self.assertRaises(ASError):
             print 'generate_yaml returned: ' + str(generate_yaml(src))
 
-    def test_failure_missing_leading_and_trailing_delimiter(self):
+    def test_failure_missing_delimeters(self):
         '''
         Failure case:
         - missing either or both leading and trailing '|'
@@ -185,8 +176,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         src = 'classes&ssh::server&apache2::common' \
             '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
             '|apache_port&' + base64.b64encode('<b64/8081>') + '|'
-        print '\nTest name: ' \
-            'test_failure_missing_leading_and_trailing_delimiter() -0A0-'
+        print '\nTest Name: test_failure_missing_delimeters() -0A0-'
         print 'Test input:\n' + src
         print 'Expect: _parse_require_config() ASError'
         print 'Expect: generate_yaml() ASError'
@@ -202,8 +192,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         src = '|classes&ssh::server&apache2::common' \
             '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
             '|apache_port&' + base64.b64encode('<b64/8081>')
-        print '\nTest name: ' \
-            'test_failure_missing_leading_and_trailing_delimiter() -0B0-'
+        print '\nTest Name: test_failure_missing_delimeters() -0B0-'
         print 'Test input:\n' + src
         print 'Expect: _parse_require_config() ASError'
         print 'Expect: generate_yaml() ASError'
@@ -219,8 +208,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         src = 'classes&ssh::server&apache2::common' \
             '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
             '|apache_port&' + base64.b64encode('<b64/8081>')
-        print '\nTest name: ' \
-            'test_failure_missing_leading_and_trailing_delimiter() -0C0-'
+        print '\nTest Name: test_failure_missing_delimeters() -0C0-'
         print 'Test input:\n' + src
         print 'Expect: _parse_require_config() ASError'
         print 'Expect: generate_yaml() ASError'
@@ -231,7 +219,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         with self.assertRaises(ASError):
             print 'generate_yaml returned: ' + str(generate_yaml(src))
 
-    def test_failure_incorrect_tag_placement(self):
+    def test_failure_bad_tag_placement(self):
         '''
         Failure case:
         - Incorrect placement |classes and |parameters tags.
@@ -243,7 +231,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         src = '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
             '|apache_port&' + base64.b64encode('<b64/8081>') + \
             '|classes&ssh::server&apache2::common|'
-        print '\nTest name: test_failure_incorrect_tag_placement()'
+        print '\nTest Name: test_failure_bad_tag_placement()'
         print 'Test input:\n' + src
         print 'Expect: _parse_require_config() ASError'
         print 'Expect: generate_yaml() ASError'
@@ -254,10 +242,11 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         with self.assertRaises(ASError):
             print 'generate_yaml returned: ' + str(generate_yaml(src))
 
-'''
-Class for exercising the parsing of the Provides ParametersConfigs from the CS.
-'''
 class TestAudreyStartupProvidesParameters(unittest.TestCase):
+    '''
+    Class for exercising the parsing of the Provides ParametersConfigs
+    from the CS.
+    '''
 
     def test_success_parameters(self):
         '''
@@ -269,7 +258,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         # Establish valid test data:
         src = '|operatingsystem&is_virtual|'
 
-        print '\nTest name: test_success_parameters()'
+        print '\nTest Name: test_success_parameters()'
         print 'Test input:\n' + src
         print 'Expect: _parse_provides_params() success'
         
@@ -293,7 +282,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         for param in expected_params_list:
             self.assertTrue('%7C' + str(param) in provides)
 
-    def test_success_unavailable_parameter(self):
+    def test_success_no_params(self):
         '''
         Success case:
         - Exercise _parse_provides_params() and generate_provides()
@@ -304,7 +293,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         # Establish valid test data:
         src = '|uptime_days&unavailable_dogs&ipaddress|'
 
-        print '\nTest name: test_success_parameters()'
+        print '\nTest Name: test_success_no_params()'
         print 'Test input:\n' + src
         print 'Expect: _parse_provides_params() success'
         
@@ -340,7 +329,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         # Establish valid test data:
         src = '|uptime_days|'
 
-        print '\nTest name: test_success_parameters()'
+        print '\nTest Name: test_success_parameters()'
         print 'Test input:\n' + src
         print 'Expect: _parse_provides_params() success'
         
@@ -362,7 +351,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         for param in expected_params_list:
             self.assertTrue('%7C' + str(param) in provides)
 
-    def test_success_one_unavailable_parameter(self):
+    def test_success_one_parameter(self):
         '''
         Success case:
         - Exercise _parse_provides_params() and generate_provides()
@@ -373,7 +362,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         # Establish valid test data:
         src = '|unavailable_dogs|'
 
-        print '\nTest name: test_success_parameters()'
+        print '\nTest Name: test_success_one_parameter()'
         print 'Test input:\n' + src
         print 'Expect: _parse_provides_params() success'
         
@@ -398,7 +387,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         # Confirm unavailable parameters return an empty string.
         self.assertTrue('%7C' + 'unavailable_dogs' + '%26%7C' in provides)
 
-    def test_failure_missing_a_delimiter(self):
+    def test_failure_missing_delimiter(self):
         '''
         Failure case:
         - Exercise _parse_provides_params() and generate_provides()
@@ -409,7 +398,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         # Establish valid test data:
         src = 'unavailable_dogs|'
 
-        print '\nTest name: test_success_parameters()'
+        print '\nTest Name: test_failure_missing_delimiter()'
         print 'Test input:\n' + src
         print 'Expect: _parse_require_config() ASError'
         print 'Expect: generate_yaml() ASError'
@@ -423,10 +412,10 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         with self.assertRaises(ASError):
             provides = generate_provides(src)
 
-'''
-Class for exercising the gets and put to and from the CS
-'''
 class TestConfigServerClient(unittest.TestCase):
+    '''
+    Class for exercising the gets and put to and from the CS
+    '''
 
     def setUp(self):
         '''
@@ -435,18 +424,22 @@ class TestConfigServerClient(unittest.TestCase):
         of the code without having to be running in a cloud VM.
         '''
         if os.path.exists('/etc/sysconfig/cloud-info'):
-            self.cs_client_UNITTEST = False
+            self.cs_client_unittest = False
         else:
-            self.cs_client_UNITTEST = True
+            self.cs_client_unittest = True
 
         # Create the client Object
-        self.cs_client = CSClient(self.cs_client_UNITTEST)
+        self.cs_client = CSClient(self.cs_client_unittest)
 
     def tearDown(self):
         pass
 
-    def test_success_CSClient_init(self):
-        print '\n\n--- TEST NAME: test_success_CSClient_init ---'
+    def test_success_csclient_init(self):
+        '''
+        Success case:
+        - Exercise cs_client __init__ method
+        '''
+        print '\n\n--- Test Name: test_success_csclient_init ---'
 
         print 'self.cs_client : START \n' + str(self.cs_client) + \
             '\nself.cs_client : END'
@@ -457,14 +450,16 @@ class TestConfigServerClient(unittest.TestCase):
         #print 'EFFECTIVE_URL: ' + \
             #str(self.cs_client.curlp.getinfo(pycurl.EFFECTIVE_URL))
 
-        if self.cs_client_UNITTEST:
+        if self.cs_client_unittest:
             self.assertEqual(self.cs_client.ec2_user_data_url, \
                 'http://169.254.169.254/2009-04-04/user-data')
             self.assertEqual(self.cs_client.cloud_type,  'UNITTEST')
             self.assertEqual(self.cs_client.cs_addr, 'csAddr')
             self.assertEqual(self.cs_client.cs_port, 'csPort')
             self.assertEqual(self.cs_client.cs_UUID, 'csUUID')
-            self.assertEqual(self.cs_client.config_serv, 'csAddr:csPort:csUUID')
+            self.assertEqual(self.cs_client.cs_pw, 'csPW')
+            self.assertEqual(self.cs_client.config_serv, \
+                'csAddr:csPort:csUUID:csPW')
         else:
             self.assertEqual(self.cs_client.ec2_user_data_url, \
                 'http://169.254.169.254/2009-04-04/user-data')
@@ -474,10 +469,15 @@ class TestConfigServerClient(unittest.TestCase):
             self.assertNotEqual(self.cs_client.cs_addr, '')
             self.assertNotEqual(self.cs_client.cs_port, '')
             self.assertNotEqual(self.cs_client.cs_UUID, '')
+            self.assertNotEqual(self.cs_client.cs_pw, '')
             self.assertNotEqual(self.cs_client.config_serv, '')
 
     def test_success_get_cs_configs(self):
-        print '\n\n--- TEST NAME: test_success_get_cs_configs ---'
+        '''
+        Success case:
+        - Exercise get_cs_configs()
+        '''
+        print '\n\n--- Test Name: test_success_get_cs_configs ---'
 
         self.cs_client.get_cs_configs()
 
@@ -486,7 +486,11 @@ class TestConfigServerClient(unittest.TestCase):
             '\nself.cs_client : END'
 
     def test_success_get_cs_params(self):
-        print '\n\n--- TEST NAME: test_success_get_cs_params ---'
+        '''
+        Success case:
+        - Exercise get_cs_params()
+        '''
+        print '\n\n--- Test Name: test_success_get_cs_params ---'
 
         self.cs_client.get_cs_params()
 
@@ -494,9 +498,12 @@ class TestConfigServerClient(unittest.TestCase):
         print 'self.cs_client : START \n' + str(self.cs_client) + \
             '\nself.cs_client : END'
 
-
-    def test_success_get_cs_configs_and_params(self):
-        print '\n\n--- TEST NAME: test_success_get_cs_configs_and_params ---'
+    def test_success_get_cs_confs_n_params(self):
+        '''
+        Success case:
+        - Exercise get_cs_configs() and get_cs_params()
+        '''
+        print '\n\n--- Test Name: test_success_get_cs_confs_and_params ---'
 
         self.cs_client.get_cs_configs()
         self.cs_client.get_cs_params()
@@ -505,10 +512,10 @@ class TestConfigServerClient(unittest.TestCase):
         print 'self.cs_client : START \n' + str(self.cs_client) + \
             '\nself.cs_client : END'
 
-'''
-Class for exercising the full audrey script functionality
-'''
 class TestAudreyScript(unittest.TestCase):
+    '''
+    Class for exercising the full audrey script functionality
+    '''
 
     def setUp(self):
         '''
@@ -519,18 +526,18 @@ class TestAudreyScript(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def audrey_script_main(self):
+    def test_audrey_script_main(self):
         '''
         Perform what the audrey script will do.
         This test has been added as a diagnostic aid.
         '''
-        print '\n\n--- TEST NAME: audrey_script_main  ---'
+        print '\n\n--- Test Name: test_audrey_script_main  ---'
 
         # Only run this test on a cloud VM were the cloud-info file has
         # been built into this image.
         if not os.path.exists('/etc/sysconfig/cloud-info'):
-            pass
-        
+            return
+
         # Create the client Object
         self.cs_client = CSClient()
 
@@ -566,5 +573,7 @@ class TestAudreyScript(unittest.TestCase):
 
 if __name__ == '__main__':
 
+    print 'JJV 01 hi'
     unittest.main()
+    print 'JJV 02 bye'
 

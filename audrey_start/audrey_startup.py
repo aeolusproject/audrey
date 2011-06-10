@@ -36,15 +36,15 @@ PARAM_TAG = '|parameters'
 # When running on condor-cloud, the Config Server (CS) contact
 # information will be stored in the smbios.
 # These are the dmi files where the smbios information is stored.
-CONDORCLOUD_CS_ADDR='/sys/devices/virtual/dmi/id/sys_vendor'
-CONDORCLOUD_CS_UUID='/sys/devices/virtual/dmi/id/product_name'
+CONDORCLOUD_CS_ADDR = '/sys/devices/virtual/dmi/id/sys_vendor'
+CONDORCLOUD_CS_UUID = '/sys/devices/virtual/dmi/id/product_name'
 
 # When running on RHEV-m, the Config Server (CS) contact
 # information will be stored in a file built into the image
 # and the UUID will be stored in the smbios.
 # These are the dmi files where the smbios information is stored.
-RHEV_CS_ADDR='/opt/redhat/cloudengine/rhevm_config_server'
-RHEV_CS_UUID='/sys/devices/virtual/dmi/id/product_uuid'
+RHEV_CS_ADDR = '/opt/redhat/cloudengine/rhevm_config_server'
+RHEV_CS_UUID = '/sys/devices/virtual/dmi/id/product_uuid'
 
 #
 # Error Handling methods:
@@ -527,12 +527,18 @@ class HttpUnitTest(object):
         def __init__(self, status):
             self.status = status
         def status(self):
+            '''
+            return status when not running live but in test environment.
+            '''
             return self.status
 
     # simple HTTP Response with 200 status code
     ok_response = HttpUnitTestResponse(200)
 
     def request(self, url, method='GET', body=None, headers=None):
+        '''
+        Handle request when not running live but in test environment.
+        '''
         if method == 'GET' and url.find('/configs/') > -1:
             body = "|classes&c1&c2|parameters|param1&%s|param2&%s" % \
                     (base64.b64encode('value1'), base64.b64encode('value2'))
@@ -542,13 +548,19 @@ class HttpUnitTest(object):
             body = ""
         return HttpUnitTest.ok_response, body
 
+    def add_credentials(self, usernme, password):
+        '''
+        Handle add_credentials when not running live but in test environment.
+        '''
+        pass
+
 class CSClient(object):
     '''
     Description:
         Client interface to Config Server (CS)
     '''
 
-    def __init__(self, UNITTEST=False):
+    def __init__(self, unittest=False):
         '''
         Description:
             Set initial state so it can be tracked. Valuable for
@@ -560,6 +572,7 @@ class CSClient(object):
         self.cs_addr = ''
         self.cs_port = ''
         self.cs_UUID = ''
+        self.cs_pw = ''
         self.ec2_user_data_url = 'http://169.254.169.254/2009-04-04/user-data'
         self.config_serv = ''
         self.cs_params = ''
@@ -573,10 +586,10 @@ class CSClient(object):
         # NOTE: Currently only EC2 is supported.
         #
         self.cloud_info_file = '/etc/sysconfig/cloud-info'
-        if not UNITTEST:
+        if not unittest:
             try:
-                with open(self.cloud_info_file, 'r') as f:
-                    read_data = f.read()
+                with open(self.cloud_info_file, 'r') as fp:
+                    read_data = fp.read()
             except IOError:
                 _raise_ASError(('Failed accessing file %s') % \
                     (self.cloud_info_file))
@@ -609,7 +622,7 @@ class CSClient(object):
                             exceeded.')
 
                 self.config_serv = base64.b64decode(body)
-                self.cs_addr, self.cs_port, self.cs_UUID = \
+                self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
                         self.config_serv.split(':')
             except:
                 _raise_ASError('Failed accessing EC2 user data.')
@@ -623,12 +636,12 @@ class CSClient(object):
             try:
                 # Sometimes the string http:// is appended to the
                 # Condfig Server (CS) address:port.
-                with open(CONDORCLOUD_CS_ADDR, 'r') as f:
-                   self.cs_addr, self.cs_port = \
-                       f.read()[:-1].lstrip('http://').split(':')
+                with open(CONDORCLOUD_CS_ADDR, 'r') as fp:
+                    self.cs_addr, self.cs_port, self.cs_pw = \
+                        fp.read()[:-1].lstrip('http://').split(':')
 
-                with open(CONDORCLOUD_CS_UUID, 'r') as f:
-                   self.cs_UUID = f.read()[:-1]
+                with open(CONDORCLOUD_CS_UUID, 'r') as fp:
+                    self.cs_UUID = fp.read()[:-1]
 
             except:
                 _raise_ASError('Failed accessing Config Server data.')
@@ -641,12 +654,13 @@ class CSClient(object):
             self.cloud_type = 'RHEV-M'
             try:
                 # Condfig Server (CS) address:port.
-                with open(RHEV_CS_ADDR, 'r') as f:
-                   self.cs_addr, self.cs_port = \
-                       f.read()[:-1].split(':')
+                with open(RHEV_CS_ADDR, 'r') as fp:
+                    # Password, cs_pw, not supported yet on RHEV-M
+                    self.cs_addr, self.cs_port, self.cs_pw = \
+                        fp.read()[:-1].split(':')
 
-                with open(RHEV_CS_UUID, 'r') as f:
-                   self.cs_UUID = f.read()[:-1]
+                with open(RHEV_CS_UUID, 'r') as fp:
+                    self.cs_UUID = fp.read()[:-1]
 
             except:
                 _raise_ASError('Failed accessing Config Server data.')
@@ -657,15 +671,24 @@ class CSClient(object):
             # Populate self.cloud_info_file with UNITTEST
             #
             self.cloud_type = 'UNITTEST'
-            self.config_serv = 'csAddr:csPort:csUUID'
+            self.config_serv = 'csAddr:csPort:csUUID:csPW'
             self.cs_addr = self.config_serv.split(':')[0]
             self.cs_port = self.config_serv.split(':')[1]
             self.cs_UUID = self.config_serv.split(':')[2]
+            self.cs_pw   = self.config_serv.split(':')[3]
             self.http = HttpUnitTest()
 
         else:
             _raise_ASError(('Unrecognized Cloud Type: %s') % \
                 (self.cloud_type))
+
+        # Add username and password credentials to the httplib2.Http object.
+        #
+        # Until this point the httplib2.Http object had been used to gather
+        # user data when running on EC2 with no username/passwod. From
+        # this point on the httplib2.Http object is only used to
+        # communicate with the config server which requires credentials. 
+        self.http.add_credentials(self.cs_UUID, self.cs_pw)
 
     def __str__(self):
         '''
@@ -681,6 +704,7 @@ class CSClient(object):
                'Config Server Addr: %s\n' \
                'Config Server Port: %s\n' \
                'Config Server UUID: %s\n' \
+               'Config Server Password: %s\n' \
                'Config Server Params: %s\n' \
                'Config Server Configs: %s\n' \
                'eot>' %
@@ -692,6 +716,7 @@ class CSClient(object):
             str(self.cs_addr),
             str(self.cs_port),
             str(self.cs_UUID),
+            str(self.cs_pw),
             str(self.cs_params),
             str(self.cs_configs)))
 
@@ -716,7 +741,7 @@ class CSClient(object):
             get the required configuration from the Config Server.
         '''
         syslog.syslog('Invoked CSClient.get_cs_configs()')
-        url = 'http://' + self.cs_addr + ':' + self.cs_port + \
+        url = 'https://' + self.cs_addr + ':' + self.cs_port + \
             '/configs/' + str(self.version) + '/' + self.cs_UUID
         headers = {'Accept': 'text/plain'}
 
@@ -729,7 +754,7 @@ class CSClient(object):
             get the provides parameters from the Config Server.
         '''
         syslog.syslog('Invoked CSClient.get_cs_params()')
-        url = 'http://' + self.cs_addr + ':' + self.cs_port + \
+        url = 'https://' + self.cs_addr + ':' + self.cs_port + \
             '/params/' + str(self.version) + '/' + self.cs_UUID
         headers = {'Accept': 'text/plain'}
 
@@ -742,7 +767,7 @@ class CSClient(object):
             put the provides parameters to the Config Server.
         '''
         syslog.syslog('Invoked CSClient.put_cs_params_values()')
-        url = 'http://' + self.cs_addr + ':' + self.cs_port + \
+        url = 'https://' + self.cs_addr + ':' + self.cs_port + \
             '/params/' + str(self.version) + '/' + self.cs_UUID
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
@@ -764,7 +789,6 @@ def audrey_script_main():
     syslog.syslog('Invoked audrey_script_main')
 
     finished = False
-    not_found = False
     max_retry = 5
 
     while not finished:
