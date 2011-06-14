@@ -573,6 +573,7 @@ class CSClient(object):
         self.cs_port = ''
         self.cs_UUID = ''
         self.cs_pw = ''
+        self.cs_proto = 'https'
         self.ec2_user_data_url = 'http://169.254.169.254/2009-04-04/user-data'
         self.config_serv = ''
         self.cs_params = ''
@@ -652,11 +653,12 @@ class CSClient(object):
             # Uses the dmi files to access the stored smbios information.
             #
             self.cloud_type = 'RHEV-M'
+            self.cs_proto = 'http'
             try:
                 # Condfig Server (CS) address:port.
                 with open(RHEV_CS_ADDR, 'r') as fp:
-                    # Password, cs_pw, not supported yet on RHEV-M
-                    self.cs_addr, self.cs_port, self.cs_pw = \
+                    # Authentication password not supported yet on RHEV-M
+                    self.cs_addr, self.cs_port = \
                         fp.read()[:-1].split(':')
 
                 with open(RHEV_CS_UUID, 'r') as fp:
@@ -682,13 +684,17 @@ class CSClient(object):
             _raise_ASError(('Unrecognized Cloud Type: %s') % \
                 (self.cloud_type))
 
-        # Add username and password credentials to the httplib2.Http object.
-        #
-        # Until this point the httplib2.Http object had been used to gather
-        # user data when running on EC2 with no username/passwod. From
-        # this point on the httplib2.Http object is only used to
-        # communicate with the config server which requires credentials. 
-        self.http.add_credentials(self.cs_UUID, self.cs_pw)
+        
+        if 'RHEV-M' not in self.cloud_type:
+            # Authentication password not yet supported on RHEV-M.
+            # 
+            # Add username and password credentials to the httplib2.Http
+            # object.
+            # Until this point the httplib2.Http object had been used to gather
+            # user data when running on EC2 with no username/passwod. From
+            # this point on the httplib2.Http object is only used to
+            # communicate with the config server which requires credentials. 
+            self.http.add_credentials(self.cs_UUID, self.cs_pw)
 
     def __str__(self):
         '''
@@ -705,6 +711,7 @@ class CSClient(object):
                'Config Server Port: %s\n' \
                'Config Server UUID: %s\n' \
                'Config Server Password: %s\n' \
+               'Config Server Protocol: %s\n' \
                'Config Server Params: %s\n' \
                'Config Server Configs: %s\n' \
                'eot>' %
@@ -717,6 +724,7 @@ class CSClient(object):
             str(self.cs_port),
             str(self.cs_UUID),
             str(self.cs_pw),
+            str(self.cs_proto),
             str(self.cs_params),
             str(self.cs_configs)))
 
@@ -741,7 +749,7 @@ class CSClient(object):
             get the required configuration from the Config Server.
         '''
         syslog.syslog('Invoked CSClient.get_cs_configs()')
-        url = 'https://' + self.cs_addr + ':' + self.cs_port + \
+        url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
             '/configs/' + str(self.version) + '/' + self.cs_UUID
         headers = {'Accept': 'text/plain'}
 
@@ -754,7 +762,7 @@ class CSClient(object):
             get the provides parameters from the Config Server.
         '''
         syslog.syslog('Invoked CSClient.get_cs_params()')
-        url = 'https://' + self.cs_addr + ':' + self.cs_port + \
+        url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
             '/params/' + str(self.version) + '/' + self.cs_UUID
         headers = {'Accept': 'text/plain'}
 
@@ -767,7 +775,7 @@ class CSClient(object):
             put the provides parameters to the Config Server.
         '''
         syslog.syslog('Invoked CSClient.put_cs_params_values()')
-        url = 'https://' + self.cs_addr + ':' + self.cs_port + \
+        url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
             '/params/' + str(self.version) + '/' + self.cs_UUID
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
