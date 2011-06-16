@@ -647,10 +647,12 @@ class CSClient(object):
             except:
                 _raise_ASError('Failed accessing Config Server data.')
 
-        elif 'RHEV-M' in cloud_type:
+        elif 'RHEV-M' in cloud_type or 'VMWARE' in cloud_type:
             #
-            # If on Condor Cloud, the user data will be in smbios
-            # Uses the dmi files to access the stored smbios information.
+            # User data can not be passed to a launching RHEV-M or VMWare
+            # instance.
+            # Treat them both the same. Expect the user data to be baked
+            # in to the image.
             #
             self.cloud_type = 'RHEV-M'
             self.cs_proto = 'http'
@@ -682,7 +684,7 @@ class CSClient(object):
 
         else:
             _raise_ASError(('Unrecognized Cloud Type: %s') % \
-                (self.cloud_type))
+                (str(cloud_type)))
 
         
         if 'RHEV-M' not in self.cloud_type:
