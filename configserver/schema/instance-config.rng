@@ -2,6 +2,9 @@
   <attribute name="id"><text/></attribute>
   <attribute name="type"><text/></attribute>
   <attribute name="name"><text/></attribute>
+  <optional>
+    <attribute name="password"><text/></attribute>
+  </optional>
   <element name="deployable">
     <attribute name="name"><text/></attribute>
     <attribute name="id"><text/></attribute>

@@ -11,7 +11,7 @@ module ApplicationHelper
     ConfigServer::Model.instance_config_schema_location =
       settings.instance_config_rng
 
-    @configs ||= ConfigServer::InstanceConfigs.new
+    @configs ||= ConfigServer::InstanceConfigs.new(settings)
   end
 
   #def deployables

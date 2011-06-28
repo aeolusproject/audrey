@@ -34,8 +34,9 @@ module ConfigServer
 
   class InstanceConfigs
     attr_reader :version
-    def initialize(version="0.0.3")
-      @version = version
+    def initialize(settings)
+      @settings = settings
+      @version = @settings.version || "0.2.0"
     end
 
     def exists?(uuid)
@@ -95,7 +96,8 @@ module ConfigServer
 
     def create(uuid, data)
       xml = Model::Instance.validate(uuid, data)
-      Model::Instance.new(uuid, xml)
+      instance = Model::Instance.new(uuid, xml)
+      register_with_proxy(instance)
     end
 
     def update(uuid, data, ip, options={})
@@ -156,6 +158,17 @@ module ConfigServer
           "|" + provides.join('&') + "|"
         else
           ""
+      end
+    end
+
+    def register_with_proxy(instance)
+      if "apache" == @settings.proxy_type
+        username = instance.uuid
+        if password = instance.password
+          File.open(@settings.proxy_auth_file, File::WRONLY|FILE::APPEND) do |f|
+            f.puts "#{username}:#{password}"
+          end if File.exists?(@settings.proxy_auth_file)
+        end
       end
     end
   end

@@ -9,6 +9,7 @@
 #
 
 [ -r /etc/sysconfig/aeolus-configserver ] && . /etc/sysconfig/aeolus-configserver
+[ -r /etc/sysconfig/aeolus-configserver-proxy ] && . /etc/sysconfig/aeolus-configserver-proxy
 
 RACK_ENV="${RACK_ENV:-production}"
 CONFIG_SERVER_DIR="${CONFIG_SERVER_DIR:-/usr/share/aeolus-configserver}"
@@ -32,6 +33,8 @@ start() {
 
     export STORAGE_DIR="${STORAGE_DIR:-/var/lib/aeolus-configserver/configs}"
     export INSTANCE_CONFIG_RNG="${INSTANCE_CONFIG_RNG:-/var/lib/aeolus-configserver/schema/instance-config.rng}"
+    export PROXY_TYPE="${PROXY_TYPE:-}"
+    export PROXY_AUTH_FILE="${PROXY_AUTH_FILE:-}"
 
     $THIN_PROG start -c $CONFIG_SERVER_DIR -l $THIN_LOG -P $THIN_PID \
 	-a $ADDR -e $RACK_ENV --user $AEOLUS_USER --group $AEOLUS_GROUP \
