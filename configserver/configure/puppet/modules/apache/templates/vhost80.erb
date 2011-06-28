@@ -1,0 +1,15 @@
+NameVirtualHost *:80
+<VirtualHost *:80>
+
+  ErrorLog /etc/httpd/logs/error_log
+  TransferLog /etc/httpd/logs/access_log
+  LogLevel warn
+
+  ProxyRequests off
+
+  ProxyPass / http://localhost:4567/
+  ProxyPassReverse / http://localhost:4567/
+
+  Include conf.d/cs80/*.conf
+
+</VirtualHost>

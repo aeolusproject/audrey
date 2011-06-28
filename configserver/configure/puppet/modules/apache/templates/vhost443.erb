@@ -1,0 +1,20 @@
+NameVirtualHost *:443
+<VirtualHost *:443>
+
+  SSLEngine On
+  SSLCertificateFile <%= cert_file %>
+  SSLCertificateKeyFile <%= pk_file %>
+  RequestHeader set X_FORWARDED_PROTO 'https'
+
+  ErrorLog /etc/httpd/logs/ssl_error_log
+  TransferLog /etc/httpd/logs/ssl_access_log
+  LogLevel <%= scope.lookupvar("apache::variables::httpd_log_level") %>
+
+  ProxyRequests off
+
+  ProxyPass /<%= scope.lookupvar("apache::variables::config_server_context") %> <%= scope.lookupvar("apache::variables::config_server_url") %>
+  ProxyPassReverse /<%= scope.lookupvar("apache::variables::config_server_context") %> <%= scope.lookupvar("apache::variables::config_server_url") %>
+
+  Include conf.d/cs443/*.conf
+
+</VirtualHost>

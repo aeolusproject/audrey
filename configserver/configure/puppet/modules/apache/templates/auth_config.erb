@@ -1,0 +1,7 @@
+<Location />
+AuthType Basic
+AuthName "Config Server"
+AuthBasicProvider file
+AuthUserFile <%= scope.lookupvar("apache::variables::htpasswd_file") %>
+Require valid-user
+</Location>

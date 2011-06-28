@@ -25,7 +25,9 @@ PKG_FILES = FileList[
   "Rakefile", "COPYING",
   "schema/*.rng",
   "src/**/*.*",
-  "conf/**/*",
+  "conf/*",
+  "client/*",
+  "configure/**/*",
 ]
 
 DIST_FILES = FileList[

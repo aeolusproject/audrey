@@ -23,20 +23,37 @@ Requires(prerun): chkconfig
 Requires(prerun): initscripts
 
 
-
 %description
 The Aeolus Config Server, a service for storing and retrieving VM
 configurations.
 
+##
+## aeolus-configserver-proxy package
+##
+%package proxy
+Summary:    Proxy support for Aeolus Config Server
+Group:      Application/System
+Requires:   aeolus-configserver
+Requires:   httpd
+Requires:   puppet
+License:    GPLv2+ and MIT and BSD
+URL:        http://aeolusproject.org
+
+%description proxy
+The Aeolus Config Server proxy provides a script to configure ProxyPass, SSL
+Termination, and Basic Authentication.
+
 %prep
 %setup -q
 
-
 #%build
-
 
 %install
 rm -rf $RPM_BUILD_ROOT
+
+##
+# aeolus-configserver
+##
 %{__mkdir} -p %{buildroot}
 %{__mkdir} -p %{buildroot}%{app_root}
 %{__mkdir} -p %{buildroot}%{_initrddir}
@@ -55,6 +72,18 @@ rm -rf $RPM_BUILD_ROOT
 
 # copy relaxNG schema files
 %{__cp} schema/*.rng %{buildroot}%{_localstatedir}/lib/%{name}/schema/
+
+##
+# proxy
+##
+%{__mkdir} -p %{buildroot}%{app_root}/configure
+%{__mkdir} -p %{buildroot}%{_bindir}
+
+# copy over all puppet scripts and bin files
+%{__cp} -R configure/puppet %{buildroot}%{app_root}/configure/
+%{__cp} configure/bin/config_httpd.sh %{buildroot}%{_bindir}/aeolus-configserver-setup-httpd
+%{__cp} conf/%{name}-proxy.sysconf %{buildroot}%{_sysconfdir}/sysconfig/%{name}-proxy
+
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -90,8 +119,18 @@ fi
 %attr(-, aeolus, aeolus) %{_localstatedir}/log/%{name}
 %doc COPYING
 
+%files proxy
+%defattr(-, root, root, -)
+%{_bindir}/aeolus-configserver-setup-httpd
+%{_sysconfdir}/sysconfig/%{name}-proxy
+%{app_root}/configure
+
 
 %changelog
+* Mon Jun 27 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.0-1
+- Add the "proxy" sub-package
+* Thu May 26 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.2-2
+- Kludge release that allows guests to PUT to invalid UUIDs (RHEV-M)
 * Mon May 09 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.2-1
 - Fixed POST bug that allowed POSTing no data
 * Wed May 04 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.1-3

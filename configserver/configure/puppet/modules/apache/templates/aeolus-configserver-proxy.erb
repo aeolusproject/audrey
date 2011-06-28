@@ -1,0 +1,12 @@
+## DO NOT EDIT.  This file is controlled by puppet ##
+
+# Settings overrides for /etc/init.d/aeolus-configserver
+# Defaults shown for each config option
+
+# Identifies the type of proxy running in front of the config server
+# Valid values are: <empty>, "apache"
+PROXY_TYPE="<%= scope.lookupvar("apache::variables::proxy_type") %>"
+
+# Identifies the location of the proxy's authentication file
+# Currently, this is very basic-auth specific
+PROXY_AUTH_FILE="<%= scope.lookupvar("apache::variables::htpasswd_file") %>"
