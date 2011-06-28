@@ -22,6 +22,10 @@ error 400 do
   "Could not parse the given XML document.\n"
 end
 
+get '/version' do
+  version
+end
+
 
 get '/ip/:version/:uuid', :provides => ['text', 'html'] do
   configs.exists?(params[:uuid]) ?

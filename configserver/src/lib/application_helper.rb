@@ -14,7 +14,7 @@ module ApplicationHelper
     @configs ||= ConfigServer::InstanceConfigs.new(settings)
   end
 
-  #def deployables
-    #ConfigServer::Deployables.new()
-  #end
+  def version
+    settings.version
+  end
 end

@@ -2,6 +2,7 @@
 
 export STORAGE_DIR="/tmp/audrey"
 export INSTANCE_CONFIG_RNG="../schema/instance-config.rng"
+export AEOLUS_CONFSERVER_VERSION="0.2.0"
 
 cd src
 
