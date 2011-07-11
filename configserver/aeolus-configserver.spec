@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	1%{?dist}%{?extra_release}
+Release:	4%{?dist}%{?extra_release}
 Summary:	The Aeolus Config Server
 BuildArch:  noarch
 
@@ -127,6 +127,8 @@ fi
 
 
 %changelog
+* Tue Jul 12 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.1-4
+- Adding ability to upload and download a tarball for instances
 * Mon Jun 27 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.0-1
 - Add the "proxy" sub-package
 * Thu May 26 2011 Greg Blomquist <gblomqui@redhat.com> 0.1.2-2

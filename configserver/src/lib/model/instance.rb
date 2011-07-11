@@ -239,6 +239,27 @@ module ConfigServer
         services
       end
 
+      def has_file?
+        File.exists?(get_file)
+      end
+
+      def file
+        path = get_path("#{@uuid}.tgz")
+        return (File.exists?(path)) ? path : nil
+      end
+
+      def file=(file)
+        if file.nil?
+          return nil
+        else
+          path = get_path("#{@uuid}.tgz")
+          File.open(path, "wb") do |f|
+            f.write(file[:tempfile].read)
+          end
+          return path
+        end
+      end
+
       private
       alias config instance_config
 

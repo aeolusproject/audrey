@@ -136,6 +136,20 @@ module ConfigServer
       process_provides(parameters, options)
     end
 
+    def get_file(uuid)
+      if exists?(uuid)
+        instance = Model::Instance.find(uuid)
+        instance.file
+      end
+    end
+
+    def save_file(uuid, file)
+      if exists?(uuid)
+        instance = Model::Instance.find(uuid)
+        instance.file = file
+      end
+    end
+
     private
     def parse_audrey_data(data)
       return {} if data.nil?

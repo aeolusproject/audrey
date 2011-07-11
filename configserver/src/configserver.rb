@@ -58,6 +58,27 @@ get '/configs/:version/:uuid', :provides => 'text' do
     not_found
 end
 
+get '/files/:version/:uuid' do
+  file = configs.get_file(params[:uuid])
+  if file.nil?
+    not_found
+  else
+    send_file file,
+      :filename => "#{params[:uuid]}.tgz",
+      :type => "application/x-tar"
+  end
+end
+
+put '/files/:version/:uuid' do
+  uuid = params[:uuid]
+  if configs.exists?(uuid)
+    file = params[:file]
+    configs.save_file(uuid, file)
+  else
+    not_found
+  end
+end
+
 
 ## GET request
 # Matches GET /params/0.0.1/123
