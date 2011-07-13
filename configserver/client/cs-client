@@ -2,13 +2,18 @@
 
 PROGNAME=`basename $0`
 USAGE=$(cat <<END_OF_USAGE
-  Usage: $0 {-s server_host} {-p server_port} [post|put|get] {options}
-    
+  Usage: $0 {-e server_endpoint} {-u user} [post|put|get] {options}
+
+    -e    server_endpoint is the fully qualified URL for the config server;
+          this includes the scheme, host, and port,
+          ex: https://configserver.org:443/
+    -u    user is the username for authenticated config servers; curl will
+          request the password from the user
+
     post: $PROGNAME post \$uuid [\$filename]
           \$uuid: the instance indentifier for this data
           \$filename: (optional) the file where the data can be found
                       if empty, then the file called ./\$uuid is used
-                      if -, then stdin is used
      get: $PROGNAME get \$data \$uuid
           \$data: either "configs", "params", or "ip";
                   when "configs", retrieves the configs for the \$uuid
@@ -19,9 +24,10 @@ USAGE=$(cat <<END_OF_USAGE
           \$data: key/value pairs of data in HTTP GET format
                   (i.e., key1=value1&key2=value2)
 
-   Advanced:  Use cs-input to generate a bare-bones instance-config document.
-     $> ./cs-input \$UUID | $0 post \$UUID -
-     
+    Advanced:  Use cs-input to generate a bare-bones instance-config document.
+    Example:
+    $> ./cs-input \$UUID | $0 post \$UUID -
+
      * cs-input will generate an XML document to stdout
      * cs-client will read the XML document on POST from stdin when the last arg
        is "-"
@@ -29,16 +35,15 @@ END_OF_USAGE
 )
 
 
-VALID_VERBS=(POST PUT GET DELETE)
+VALID_VERBS=(POST PUT GET DELETE VERSION FILE)
 
-SERVER="localhost"
-PORT="4567"
+ENDPOINT="http://localhost:4567"
 VERBOSE=false
-while getopts "vhs:p:" opt; do
+while getopts "vhe:u:" opt; do
   case $opt in
     v) VERBOSE=true;;
-    s) SERVER=$OPTARG;;
-    p) PORT=$OPTARG;;
+    e) ENDPOINT=$OPTARG;;
+    u) HTTP_USER=$OPTARG;;
     h) echo "$USAGE"
        exit 0;;
     *) echo "$USAGE"
@@ -46,6 +51,30 @@ while getopts "vhs:p:" opt; do
   esac
 done
 shift $((OPTIND-1))
+
+CURL=`which curl`
+function call_curl {
+  args=( "$@" )
+  args=( "-w" "\n\nHTTP_CODE: %{http_code}\n" "${args[@]}" )
+  if [ "x$HTTP_USER" != "x" ]; then
+    # include user argument, and curl with prompt for password
+    args=( "-u" "$HTTP_USER" "${args[@]}" )
+  fi
+  if [[ $ENDPOINT == https* ]]; then
+    # ignore cert verification on https requests
+    args=( "-k" "${args[@]}" )
+  fi
+
+  # make sure this check stays last...
+  # since it not only adds the verbose flag to curl,
+  # but also prints out the curl command
+  if [ $VERBOSE == true ]; then
+    args=( "-v" "${args[@]}" )
+    echo "$CURL ${args[*]}"
+  fi
+
+  $CURL "${args[@]}"
+}
 
 ## Validate the argument against the list of VALID_VERBS
 function validate_verb {
@@ -69,12 +98,10 @@ function post {
   if [ ! -f $fname ]; then
     echo "Could not find file $fname to submit instance config to config server"
     return 1
-  fi 
-  echo "Using $fname for the data"
-  if [ $VERBOSE == true ]; then
-    echo "curl -X POST -w \"\\nHTTP_CODE: %{http_code}\\n\" --data-urlencode \"data@$fname\" http://$SERVER:$PORT/configs/0/$uuid"
   fi
-  curl -X POST -w "\nHTTP_CODE: %{http_code}\n" --data-urlencode "data@$fname" http://$SERVER:$PORT/configs/0/$uuid
+  echo "Using $fname for the data"
+  args=("-X" "POST" "--data-urlencode" "data@$fname" "$ENDPOINT/configs/0/$uuid")
+  call_curl "${args[@]}"
 }
 
 function format_put_params {
@@ -85,8 +112,8 @@ function format_put_params {
       v=${param#*=}
       b64=`echo -n $v | base64 -w 0 -`
       data="${data}${k}&${b64}|"
-    done 
-  done <<< "$1" 
+    done
+  done <<< "$1"
   if [ "$data" == "|" ]; then
     data="||"
   fi
@@ -96,10 +123,8 @@ function format_put_params {
 function put {
   uuid="$1"
   data=$(format_put_params "$2")
-  if [ $VERBOSE == true ]; then
-    echo "curl -X PUT -w \"\\n\\nHTTP_CODE: %{http_code}\\n\" --data-urlencode \"audrey_data=$data\" http://$SERVER:$PORT/params/0/$uuid"
-  fi
-  curl -X PUT -w "\n\nHTTP_CODE: %{http_code}\n" --data-urlencode "audrey_data=$data" http://$SERVER:$PORT/params/0/$uuid
+  args=("-X" "PUT" "--data-urlencode" "audrey_data=$data" "$ENDPOINT/params/0/$uuid")
+  call_curl "${args[@]}"
 }
 
 function format_get_output {
@@ -109,10 +134,19 @@ function format_get_output {
 function get {
   what="$1"
   uuid="$2"
-  if [ $VERBOSE == true ]; then
-    echo "curl -H \"Accept: text/plain\" -w \"\\n\\nHTTP_CODE: %{http_code}\\n\" http://$SERVER:$PORT/$what/0/$uuid"
-  fi
-  curl -H "Accept: text/plain" -w "\n\nHTTP_CODE: %{http_code}\n" http://$SERVER:$PORT/$what/0/$uuid
+  args=("-H" "Accept: text/plain" "$ENDPOINT/$what/0/$uuid")
+  call_curl "${args[@]}"
+}
+
+function file {
+  uuid="$1"
+  args=("-O" "-J" "$ENDPOINT/files/0/$uuid")
+  call_curl "${args[@]}"
+}
+
+function version {
+  args=("-H" "Accept: text/plain" "$ENDPOINT/version")
+  call_curl "${args[@]}"
 }
 
 VERB=`echo $1 | tr '[:lower:]' '[:upper:]'`
@@ -126,8 +160,10 @@ fi
 shift
 case $VERB in
   "POST"    ) post "$@";;
-  "PUT"     ) put "$@";; 
+  "PUT"     ) put "$@";;
   "GET"     ) get "$@";;
+  "VERSION" ) version "$@";;
+  "FILE"    ) file "$@";;
   *         ) echo "Unsupported for now.";;
 esac
 
