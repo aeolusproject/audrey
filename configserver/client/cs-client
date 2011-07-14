@@ -2,27 +2,36 @@
 
 PROGNAME=`basename $0`
 USAGE=$(cat <<END_OF_USAGE
-  Usage: $0 {-e server_endpoint} {-u user} [post|put|get] {options}
+  Usage: $0 {-e server_endpoint} {-u user} [-vV] [post|put|get] {arguments}
 
     -e    server_endpoint is the fully qualified URL for the config server;
           this includes the scheme, host, and port,
           ex: https://configserver.org:443/
     -u    user is the username for authenticated config servers; curl will
           request the password from the user
+    -v    verbose (output the curl command that will be called)
+    -V    very verbose (include verbose output from curl); implies -v
 
-    post: $PROGNAME post \$uuid [\$filename]
+    post: $PROGNAME {options} post \$uuid [\$filename]
           \$uuid: the instance indentifier for this data
           \$filename: (optional) the file where the data can be found
                       if empty, then the file called ./\$uuid is used
-     get: $PROGNAME get \$data \$uuid
-          \$data: either "configs", "params", or "ip";
-                  when "configs", retrieves the configs for the \$uuid
-                  when "params", retrieves the "provides" parameters for the \$uuid
+     get: $PROGNAME {options} get \$what \$uuid
+          \$what: either "configs", "params", "ip", or "files";
+                  * when "configs", retrieves the configs for the \$uuid
+                  * when "params", retrieves the "provides" parameters for the \$uuid
+                  * when "ip", retrieves the ip reported by the instance
+                  * when "files", retrieves the tarball associated with the
+                    instance, if any
           \$uuid: the instance identifier
-     put: $PROGNAME put \$uuid \$data
-          \$uuid: the instance identifier for this data
-          \$data: key/value pairs of data in HTTP GET format
-                  (i.e., key1=value1&key2=value2)
+     put: $PROGNAME {options} put \$what \$uuid \$data
+          \$what: either "params" or "files";
+          \$uuid: the instance identifier
+          \$data: when \$what is "params": key/value pairs of data in query
+                  string format (i.e., key1=value1&key2=value2)
+                  when \$what is "files": a filename
+ version: $PROGNAME {options} version
+          retrieves the version reported by the config server
 
     Advanced:  Use cs-input to generate a bare-bones instance-config document.
     Example:
@@ -35,13 +44,15 @@ END_OF_USAGE
 )
 
 
-VALID_VERBS=(POST PUT GET DELETE VERSION FILE)
+VALID_VERBS=(POST PUT GET DELETE VERSION)
 
 ENDPOINT="http://localhost:4567"
 VERBOSE=false
-while getopts "vhe:u:" opt; do
+VERY_VERBOSE=false
+while getopts "vVhe:u:" opt; do
   case $opt in
     v) VERBOSE=true;;
+    V) VERY_VERBOSE=true; VERBOSE=true;;
     e) ENDPOINT=$OPTARG;;
     u) HTTP_USER=$OPTARG;;
     h) echo "$USAGE"
@@ -68,8 +79,10 @@ function call_curl {
   # make sure this check stays last...
   # since it not only adds the verbose flag to curl,
   # but also prints out the curl command
-  if [ $VERBOSE == true ]; then
+  if [ $VERY_VERBOSE == true ]; then
     args=( "-v" "${args[@]}" )
+  fi
+  if [ $VERBOSE == true ]; then
     echo "$CURL ${args[*]}"
   fi
 
@@ -121,9 +134,22 @@ function format_put_params {
 }
 
 function put {
-  uuid="$1"
-  data=$(format_put_params "$2")
-  args=("-X" "PUT" "--data-urlencode" "audrey_data=$data" "$ENDPOINT/params/0/$uuid")
+  what="$1"
+  uuid="$2"
+  if [ "$what" == "params" ]; then
+    data=$(format_put_params "$3")
+    args=("-X" "PUT" "--data-urlencode" "audrey_data=$data" "$ENDPOINT/params/0/$uuid")
+  elif [ "$what" == "files" ]; then
+    if [ ! -f "$3" ]; then
+      err1="Valid filename required:  $0 put $what $uuid"
+      err_length=${#err}
+      err2=""
+      echo "Valid filename required:  $0 put $what $uuid $3"
+      echo "                                             ^ invalid filename"
+      exit 1
+    fi
+    args=("-X" "PUT" "-F" "file=@$3" "$ENDPOINT/files/0/$uuid")
+  fi
   call_curl "${args[@]}"
 }
 
@@ -134,13 +160,10 @@ function format_get_output {
 function get {
   what="$1"
   uuid="$2"
-  args=("-H" "Accept: text/plain" "$ENDPOINT/$what/0/$uuid")
-  call_curl "${args[@]}"
-}
-
-function file {
-  uuid="$1"
-  args=("-O" "-J" "$ENDPOINT/files/0/$uuid")
+  case $what in
+    files) args=("-O" "-J" "$ENDPOINT/files/0/$uuid");;
+        *) args=("-H" "Accept: text/plain" "$ENDPOINT/$what/0/$uuid");;
+  esac
   call_curl "${args[@]}"
 }
 
@@ -163,7 +186,6 @@ case $VERB in
   "PUT"     ) put "$@";;
   "GET"     ) get "$@";;
   "VERSION" ) version "$@";;
-  "FILE"    ) file "$@";;
   *         ) echo "Unsupported for now.";;
 esac
 
