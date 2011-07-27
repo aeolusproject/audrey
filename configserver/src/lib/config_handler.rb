@@ -51,25 +51,52 @@ module ConfigServer
         configs = case options[:as]
           when :xml
             "<node-config ver='#{@version}'>\n" +
-            instance.services.map do |s|
-              s[:classes].map {|c| "  <class name='#{c}'>"}.join("\n") +
+            "  <services>\n" +
+            instance.services.map do |name, params|
+              "    <service name='#{name}'>\n" +
+              "      <parameters>\n" +
+              params.map do |pname, val|
+                "        <parameter name='#{pname}'>\n" +
+                "          <value><![CDATA[#{val}]]></value>\n" +
+                "        </parameter>"
+              end.join("\n") +
               "\n" +
-              s[:parameters].map do |p|
-                "  <parameter name='#{p['name']}'>\n" +
-                "    <value><![CDATA[#{p['value']}'></value>\n" +
-                "  </parameter>"
-              end.join("\n")
+              "      </parameters>\n" +
+              "    </service>\n"
             end.join +
-            "\n</node-config>\n"
+            "  </services>\n" +
+            "</node-config>\n"
           when :text
-            classes, params = instance.services(:flat => true)
-            "|classes" +
-            classes.map {|c| "&#{c}"}.join +
-            "|parameters" +
-            params.map do |p|
-              value = p[1].to_s
-              "|#{p[0]}&#{value.to_b64}"
-            end.join + "|"
+            services = instance.services
+            puts "uuid: #{uuid}"
+            puts "services: #{services.inspect}"
+            "|" +
+            services.map do |svc_name,params|
+              "service|#{svc_name}" +
+              if not params.empty?
+                "|parameters|" +
+                params.map do |p_name,value|
+                  "#{p_name}&" + [value].pack("m0").delete("\n")
+                end.join("|")
+              else
+                ""
+              end
+            end.join("|") +
+            "|" 
+          when :textold
+            #old format for now
+            #|classes&service_name&service_name|parameters|param1&b64(va11)|param2&b64(val2)|
+            #new format soon
+            #|service&<s1>|parameters|<p1name>&b64(<v1>)|<p2name>&b64(<v2>)|service&<s2>|parameters|<p1name>&b64(<v1>)|<p2name>&b64(<v2>)|
+            "|classes&" +
+	    instance.services.keys.join("&") + 
+            "|parameters|" +
+            instance.services.values.map do |params|
+              params.map do |pname, val|
+                "#{pname}&" + [val].pack("m0").delete("\n")
+              end.join("|")
+            end.join("|") +
+            "|" 
           else
             ""
         end
@@ -152,6 +179,7 @@ module ConfigServer
 
     private
     def parse_audrey_data(data)
+      puts "parse_audrey_data(#{data})"
       return {} if data.nil?
       (data.split "|").map do |d|
         next if d.nil? or d.empty?
@@ -179,7 +207,7 @@ module ConfigServer
       if "apache" == @settings.proxy_type
         username = instance.uuid
         if password = instance.password
-          File.open(@settings.proxy_auth_file, File::WRONLY|FILE::APPEND) do |f|
+          File.open(@settings.proxy_auth_file, File::WRONLY|File::APPEND) do |f|
             f.puts "#{username}:#{password}"
           end if File.exists?(@settings.proxy_auth_file)
         end

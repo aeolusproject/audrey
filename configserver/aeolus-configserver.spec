@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	4%{?dist}%{?extra_release}
+Release:	1%{?dist}%{?extra_release}
 Summary:	The Aeolus Config Server
 BuildArch:  noarch
 
@@ -18,6 +18,8 @@ Requires:	    ruby >= 1.8.1
 Requires:       ruby-nokogiri
 Requires:       rubygem(sinatra)
 Requires:       rubygem(thin)
+requires:       rubygem(archive-tar-minitar)
+requires:       rubygem(activesupport)
 Requires(post): chkconfig
 Requires(prerun): chkconfig
 Requires(prerun): initscripts
@@ -127,7 +129,12 @@ fi
 
 
 %changelog
-* Tue Jul 12 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.1-4
+* Tue Aug 16 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-1
+- Updated data format for Config Server -> Audrey client API
+* Wed Jul 27 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.2-3
+- Ability to read tarball from instance-config
+- Added minitar dependency
+* Tue Jul 12 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.1-5
 - Adding ability to upload and download a tarball for instances
 * Mon Jun 27 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.0-1
 - Add the "proxy" sub-package

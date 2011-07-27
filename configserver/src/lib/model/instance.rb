@@ -1,8 +1,37 @@
 require 'fileutils'
+require 'tmpdir'
 require 'nokogiri'
 require 'open-uri'
 
+require 'net/http'
+require 'net/https'
+
+require 'active_support/ordered_hash'
+
+require 'zlib'
+require 'archive/tar/minitar'
+include Archive::Tar
+
 require 'lib/model/base'
+
+class Dir
+  class << self
+    @@dirstack = []
+    def pushd(dir, &block)
+      @@dirstack.unshift(Dir.pwd)
+      Dir.chdir(dir)
+      if block_given?
+        yield
+        popd
+      end
+      return @@dirstack
+    end
+    def popd
+      Dir.chdir(@@dirstack.shift) unless @@dirstack.empty?
+      return @@dirstack
+    end
+  end
+end
 
 module ConfigServer
   module Model
@@ -37,7 +66,7 @@ module ConfigServer
       # Nokogiri XML validator
       @@validator = nil
 
-      attr_reader :instance_config, :ip, :password
+      attr_reader :instance_config, :ip, :password, :uuid
 
       def self.exists?(uuid)
         File.exist?(File.join(storage_path, uuid))
@@ -218,23 +247,16 @@ module ConfigServer
         end
       end
 
-      def services(opts={})
-        services = opts[:flat] ? [[], {}] : []
+      def services
+        services = ActiveSupport::OrderedHash.new
         (config / '//service').each do |s|
           name = s["name"]
-          scripts = (s / './/script').map {|c| c["name"] } || []
-          params_with_values = (s / './parameter/value/..') +
+          params_with_values = (s / './parameters/parameter/value/..') +
             (rp / "//required-parameter[@service='#{name}']/value/..")
           parameters = (params_with_values.map do |p|
             {p["name"] => (p % 'value').content}
           end || []).inject(:merge) || {}
-          if opts[:flat]
-            services[0] += scripts
-            services[1].merge!(parameters)
-          else
-            services << {:name => name,
-              :classes => scripts, :parameters => parameters}
-          end
+          services[name] = parameters
         end
         services
       end
@@ -310,6 +332,8 @@ module ConfigServer
         replace_provided_parameters
         replace_required_parameters
 
+        replace_tarball
+
         @password = get_crypted_password
 
         deployable
@@ -357,12 +381,12 @@ module ConfigServer
       def replace_required_parameters
         file = get_path(@@REQUIRED_PARAMS_FILE)
         # grab all the services with reference parameters
-        services = config / '//service/parameter/reference/../..'
+        services = config / '//service/parameters/parameter/reference/../../..'
         if not services.empty?
           xml = "<required-parameters>\n"
           services.each do |s|
             xml += "  <required-parameter service='#{s['name']}'"
-            (services / './parameter/reference/..').each do |p|
+            (services / './parameters/parameter/reference/..').each do |p|
               xml += " name='#{p['name']}'"
               ref = p % 'reference'
               xml += " assembly='#{ref['assembly']}'"
@@ -380,6 +404,74 @@ module ConfigServer
           File.delete(file) if File.exists?(file)
           @required_parameters = nil
         end
+      end
+
+      def replace_tarball
+        # mk a tmpdir
+        Dir.mktmpdir do |dir|
+          # download all the executable files
+          download_files(dir, :type => :executable)
+          # download all the general files
+          download_files(dir, :type => :file)
+
+          # tar the contents of the tmpdir
+          Dir.pushd(dir) do
+            tar = File.open(get_path("#{@uuid}.tgz"), 'wb') do |f|
+              tgz = Zlib::GzipWriter.new(f)
+              Minitar.pack('.', tgz)
+            end
+          end
+        # unlink the tmpdir
+        end
+      end
+
+      def download_files(dir, opts={})
+        type = opts[:type] || :executable
+        if not [:executable, :file].include? type
+          raise RuntimeError, "unknown download file type #{type.to_s}"
+        end
+        (config / type.to_s).each do |node|
+          download_dir = dir
+          parent = (:file == type) ? node.parent.parent : node.parent
+          if "service" == parent.name
+            svc_name = parent['name']
+            download_dir = "#{dir}/#{svc_name}"
+            Dir.mkdir download_dir if not File.exists? download_dir
+          end
+          download = download_file(node['url'])
+          if "200" == download[:code]
+            puts "Downloaded file #{node['url']}: #{download[:body].size}b"
+            filename = (:file == type) ? download[:name] : "start"
+            if type == :executable
+              open("#{download_dir}/#{filename}", 'wb', 0777) do |file|
+                file << download[:body]
+              end
+            else
+              open("#{download_dir}/#{filename}", 'wb') do |file|
+                file << download[:body]
+              end
+            end
+          else
+            puts "ERROR(#{download[:code]}): could not download file #{node['url']}"
+            # TODO: log that the config server could not download the file...
+            # bundle up errors to return...
+          end
+        end
+      end
+
+      def download_file(url)
+        result = {}
+        uri = URI.parse(url)
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = uri.port == 443
+        request = Net::HTTP::Get.new(uri.path)
+        response = http.start {|h| h.request(request) }
+        result[:code] = response.code
+        if "200" == response.code.to_s
+          result[:name] = uri.path.split('/').last
+          result[:body] = response.body
+        end
+        result
       end
 
       def pending_required_params?(service=nil)
