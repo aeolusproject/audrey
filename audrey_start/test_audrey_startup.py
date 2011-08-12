@@ -13,126 +13,120 @@ import tempfile
 import unittest
 
 from audrey_startup import *
-from audrey_startup import _parse_provides_params
-from audrey_startup import _parse_require_config 
+from audrey_startup import parse_provides_params
+from audrey_startup import parse_require_config 
+from audrey_startup import _run_cmd
 
 class TestAudreyStartupRequiredConfig(unittest.TestCase):
     '''
     Class for exercising the parsing of the Required Configs from the CS.
     '''
 
-    def test_success_class_n_params(self):
+    def test_success_service_n_params(self):
         '''
         Success case:
-        - Exercise _parse_require_config() with valid input
+        - Exercise parse_require_config() with valid input
         '''
- 
-        print 'JJV 01 hi'
- 
         # Establish valid test data:
-        src = '|classes&ssh::server&apache2::common' \
-            '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
-            '|apache_port&' + base64.b64encode('<b64/8081>') + '|'
-        print '\nTest Name: test_success_class_n_params()'
-        print 'Test input:\n' + src
-        print 'Expect: _parse_require_config() success'
-        print 'Expect: generate_yaml() True'
-        
-        expected_params_list = ['ssh_port&' + base64.b64encode('<b64/22>'),
-            'apache_port&' + base64.b64encode('<b64/8081>')]
-        expected_classes_list = ['ssh::server', 'apache2::common']
 
+        src = '|service|jon_agent_1' + \
+            '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
+            '|jon_server_ip_2&' + base64.b64encode('192.168.1.2') + \
+            '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
+            '|service|jon_agent_2|'
+
+
+        '''
+        src = '|service|ssh::server' + \
+            '|parameters|ssh_port&' + base64.b64encode('22') + \
+            '|service|apache2::common' \
+            '|apache_port&' + base64.b64encode('8081') + '|'
+        '''
+
+        validation_dict = {'jon_server_ip' : '192.168.1.1',
+            'jon_server_ip_2' : '192.168.1.2',
+            'jon_server_ip_3' : '192.168.1.3' }
+
+        print '\nTest Name: test_success_service_n_params()'
+        print 'Test input:\n' + src
+        print 'Expect: parse_require_config() success'
+        
         # Exersise code segment
-        params_list, classes_list = _parse_require_config(src)
+        services = parse_require_config(src)
 
         # Validate results
-        self.assertEqual(params_list, expected_params_list)
-        self.assertEqual(classes_list, expected_classes_list)
+        self.assertEqual(services[0].name, 'jon_agent_1')
+        self.assertEqual(services[1].name, 'jon_agent_2')
 
-        with tempfile.NamedTemporaryFile() as tmpf:
-            print 'generate_yaml returned: ' + str(generate_yaml(src,
-                yaml_file=tmpf.name))
+        for param in services[0].params:
+            name_val = param.split('&')
+            cmd = ['/usr/bin/printenv', 'AUDREY_VAR_' + name_val[0]]
+            ret = _run_cmd(cmd)
+            print name_val[0]
+            print 'JJV -012- gen_env ret[out]: ' + str(ret['out'][:-1])
+            self.assertEqual(ret['out'][:-1], validation_dict[name_val[0]])
 
-    def test_success_empty_class_n_params(self):
+    def test_success_empty_service_n_params(self):
         '''
         Success case:
-        - Exercise _parse_require_config() with valid empty input
+        - Exercise parse_require_config() with valid empty input
         '''
  
         # Establish valid test data:
         src = '||'
-        print '\nTest Name: test_success_empty_class_n_params()'
+        print '\nTest Name: test_success_empty_service_n_params()'
         print 'Test input:\n' + src
-        print 'Expect: _parse_require_config() success'
-        print 'Expect: generate_yaml() False'
+        print 'Expect: parse_require_config() success'
         
-        expected_params_list = ['']
-        expected_classes_list = ['']
-
         # Exersise code segment
-        params_list, classes_list = _parse_require_config(src)
+        services = parse_require_config(src)
+        print 'services: ' + str(services)
 
         # Validate results
-        self.assertEqual(params_list, expected_params_list)
-        self.assertEqual(classes_list, expected_classes_list)
+        self.assertEqual(services, [])
 
-        # this is only safe on unix filesystems
-        with tempfile.NamedTemporaryFile() as tmpf:
-            print 'generate_yaml returned: ' + str(generate_yaml(src,
-                yaml_file=tmpf.name))
-
-    def test_success_no_class_n_params(self):
+    def test_failure_no_service_name(self):
         '''
         Success case:
-        - Exercise _parse_require_config() with valid input
+        - Exercise parse_require_config() with valid input
         '''
  
         # Establish valid test data:
-        src = '|classes|parameters|'
-        print '\nTest Name: test_success_no_class_n_params()'
+        src = '|service|parameters|'
+        print '\nTest Name: test_success_no_service_n_params()'
         print 'Test input:\n' + src
-        print 'Expect: _parse_require_config() success'
-        print 'Expect: generate_yaml() False'
-
-        expected_params_list = ['']
-        expected_classes_list = ['']
+        print 'Expect: parse_require_config() ASError'
 
         # Exersise code segment
-        params_list, classes_list = _parse_require_config(src)
+        with self.assertRaises(ASError):
+            print 'parse_require_config returned: ' + \
+                str(parse_require_config(src))
 
-        # Validate results
-        self.assertEqual(params_list, expected_params_list)
-        self.assertEqual(classes_list, expected_classes_list)
-
-        with tempfile.NamedTemporaryFile() as tmpf:
-            print 'generate_yaml returned: ' + \
-                str(generate_yaml(src, yaml_file=tmpf.name))
-
-    def test_failure_empty_classes(self):
+    def test_failure_empty_services(self):
         '''
         Failure case:
-        - Exercise _parse_require_config() with valid input
+        - Exercise parse_require_config() with valid input
         '''
  
         # Establish valid test data:
-        src = '|classes' \
-            '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
-            '|apache_port&' + base64.b64encode('<b64/8081>') + '|'
-        print '\nTest Name: test_failure_empty_classes()'
+        src = '|services' \
+            '|parameters|ssh_port&' + base64.b64encode('22') + \
+            '|apache_port&' + base64.b64encode('8081') + '|'
+        print '\nTest Name: test_failure_empty_services()'
         print 'Test input:\n' + src
-        print 'Expect: _parse_require_config() success'
+        print 'Expect: parse_require_config() success'
         print 'Expect: generate_yaml() ASError'
         
-        expected_params_list = ['ssh_port&' + base64.b64encode('<b64/22>'),
-            'apache_port&' + base64.b64encode('<b64/8081>')]
-        expected_classes_list = ['']
+        expected_params_list = ['ssh_port&' + base64.b64encode('22'),
+            'apache_port&' + base64.b64encode('8081')]
+        expected_services_list = ['']
 
         # Exersise code segment
-        params_list, classes_list = _parse_require_config(src)
+        params_list, services_list = parse_require_config(src)
 
         # Validate results
         self.assertEqual(params_list, expected_params_list)
-        self.assertEqual(classes_list, expected_classes_list)
+        self.assertEqual(services_list, expected_services_list)
 
         # Exersise code segment
         with self.assertRaises(ASError):
@@ -141,25 +135,25 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
     def test_failure_empty_parameters(self):
         '''
         Failure case:
-        - Exercise _parse_require_config() with valid input
+        - Exercise parse_require_config() with valid input
         '''
  
         # Establish valid test data:
-        src = '|classes&ssh::server&apache2::common|parameters|'
+        src = '|JJV TBD services|ssh::server&apache2::common|parameters|'
         print '\nTest Name: test_failure_empty_parameters()'
         print 'Test input:\n' + src
-        print 'Expect: _parse_require_config() success'
+        print 'Expect: parse_require_config() success'
         print 'Expect: generate_yaml() ASError'
         
         expected_params_list = ['']
-        expected_classes_list = ['ssh::server', 'apache2::common']
+        expected_services_list = ['ssh::server', 'apache2::common']
 
         # Exersise code segment
-        params_list, classes_list = _parse_require_config(src)
+        params_list, services_list = parse_require_config(src)
 
         # Validate results
         self.assertEqual(params_list, expected_params_list)
-        self.assertEqual(classes_list, expected_classes_list)
+        self.assertEqual(services_list, expected_services_list)
 
         # Exersise code segment
         with self.assertRaises(ASError):
@@ -173,48 +167,48 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
  
         # Establish invalid test data:
         # missing leading '|'
-        src = 'classes&ssh::server&apache2::common' \
-            '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
-            '|apache_port&' + base64.b64encode('<b64/8081>') + '|'
+        src = 'JJV TBD services|ssh::server&apache2::common' \
+            '|parameters|ssh_port&' + base64.b64encode('22') + \
+            '|apache_port&' + base64.b64encode('8081') + '|'
         print '\nTest Name: test_failure_missing_delimeters() -0A0-'
         print 'Test input:\n' + src
-        print 'Expect: _parse_require_config() ASError'
+        print 'Expect: parse_require_config() ASError'
         print 'Expect: generate_yaml() ASError'
 
         with self.assertRaises(ASError):
-            params_list, classes_list = _parse_require_config(src)
+            params_list, services_list = parse_require_config(src)
 
         with self.assertRaises(ASError):
             print 'generate_yaml returned: ' + str(generate_yaml(src))
 
         # Establish invalid test data:
         # missing trailing '|'
-        src = '|classes&ssh::server&apache2::common' \
-            '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
-            '|apache_port&' + base64.b64encode('<b64/8081>')
+        src = '|JJV TBD services|ssh::server&apache2::common' \
+            '|parameters|ssh_port&' + base64.b64encode('22') + \
+            '|apache_port&' + base64.b64encode('8081')
         print '\nTest Name: test_failure_missing_delimeters() -0B0-'
         print 'Test input:\n' + src
-        print 'Expect: _parse_require_config() ASError'
+        print 'Expect: parse_require_config() ASError'
         print 'Expect: generate_yaml() ASError'
 
         with self.assertRaises(ASError):
-            params_list, classes_list = _parse_require_config(src)
+            params_list, services_list = parse_require_config(src)
 
         with self.assertRaises(ASError):
             print 'generate_yaml returned: ' + str(generate_yaml(src))
 
         # Establish invalid test data:
         # missing both leading and trailing '|'
-        src = 'classes&ssh::server&apache2::common' \
-            '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
-            '|apache_port&' + base64.b64encode('<b64/8081>')
+        src = 'JJV TBD services|ssh::server&apache2::common' \
+            '|parameters|ssh_port&' + base64.b64encode('22') + \
+            '|apache_port&' + base64.b64encode('8081')
         print '\nTest Name: test_failure_missing_delimeters() -0C0-'
         print 'Test input:\n' + src
-        print 'Expect: _parse_require_config() ASError'
+        print 'Expect: parse_require_config() ASError'
         print 'Expect: generate_yaml() ASError'
 
         with self.assertRaises(ASError):
-            params_list, classes_list = _parse_require_config(src)
+            params_list, services_list = parse_require_config(src)
 
         with self.assertRaises(ASError):
             print 'generate_yaml returned: ' + str(generate_yaml(src))
@@ -222,22 +216,22 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
     def test_failure_bad_tag_placement(self):
         '''
         Failure case:
-        - Incorrect placement |classes and |parameters tags.
-          |classes must be at src[0]
+        - Incorrect placement |services and |parameters tags.
+          |services must be at src[0]
         '''
  
         # Establish invalid test data:
-        # Incorrect classes tag placement
-        src = '|parameters|ssh_port&' + base64.b64encode('<b64/22>') + \
-            '|apache_port&' + base64.b64encode('<b64/8081>') + \
-            '|classes&ssh::server&apache2::common|'
+        # Incorrect services tag placement
+        src = '|parameters|ssh_port&' + base64.b64encode('22') + \
+            '|apache_port&' + base64.b64encode('8081') + \
+            '|JJV TBD services|ssh::server&apache2::common|'
         print '\nTest Name: test_failure_bad_tag_placement()'
         print 'Test input:\n' + src
-        print 'Expect: _parse_require_config() ASError'
+        print 'Expect: parse_require_config() ASError'
         print 'Expect: generate_yaml() ASError'
 
         with self.assertRaises(ASError):
-            params_list, classes_list = _parse_require_config(src)
+            params_list, services_list = parse_require_config(src)
 
         with self.assertRaises(ASError):
             print 'generate_yaml returned: ' + str(generate_yaml(src))
@@ -251,7 +245,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
     def test_success_parameters(self):
         '''
         Success case:
-        - Exercise _parse_provides_params() and generate_provides()
+        - Exercise parse_provides_params() and generate_provides()
           with valid input
         '''
  
@@ -260,12 +254,12 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
 
         print '\nTest Name: test_success_parameters()'
         print 'Test input:\n' + src
-        print 'Expect: _parse_provides_params() success'
+        print 'Expect: parse_provides_params() success'
         
         expected_params_list = ['operatingsystem', 'is_virtual']
 
         # Exersise code segment
-        params_list = _parse_provides_params(src)
+        params_list = parse_provides_params(src)
         provides = generate_provides(src)
         print 'JJV -010- src: ' + str(src)
         print 'JJV -011- params_list: ' + str(params_list)
@@ -285,7 +279,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
     def test_success_no_params(self):
         '''
         Success case:
-        - Exercise _parse_provides_params() and generate_provides()
+        - Exercise parse_provides_params() and generate_provides()
           with valid input
         - Containging an unavailable parameter
         '''
@@ -295,12 +289,12 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
 
         print '\nTest Name: test_success_no_params()'
         print 'Test input:\n' + src
-        print 'Expect: _parse_provides_params() success'
+        print 'Expect: parse_provides_params() success'
         
         expected_params_list = ['uptime_days', 'unavailable_dogs', 'ipaddress']
 
         # Exersise code segment
-        params_list = _parse_provides_params(src)
+        params_list = parse_provides_params(src)
         provides = generate_provides(src)
         print 'JJV -010- src: ' + str(src)
         print 'JJV -011- params_list: ' + str(params_list)
@@ -321,7 +315,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
     def test_success_one_parameters(self):
         '''
         Success case:
-        - Exercise _parse_provides_params() and generate_provides()
+        - Exercise parse_provides_params() and generate_provides()
           with valid input
         - with only one parameter
         '''
@@ -331,12 +325,12 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
 
         print '\nTest Name: test_success_parameters()'
         print 'Test input:\n' + src
-        print 'Expect: _parse_provides_params() success'
+        print 'Expect: parse_provides_params() success'
         
         expected_params_list = ['uptime_days']
 
         # Exersise code segment
-        params_list = _parse_provides_params(src)
+        params_list = parse_provides_params(src)
         provides = generate_provides(src)
         print 'JJV -010- src: ' + str(src)
         print 'JJV -011- params_list: ' + str(params_list)
@@ -354,7 +348,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
     def test_success_one_parameter(self):
         '''
         Success case:
-        - Exercise _parse_provides_params() and generate_provides()
+        - Exercise parse_provides_params() and generate_provides()
           with valid input
         - With only one parameter which is unavailable
         '''
@@ -364,12 +358,12 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
 
         print '\nTest Name: test_success_one_parameter()'
         print 'Test input:\n' + src
-        print 'Expect: _parse_provides_params() success'
+        print 'Expect: parse_provides_params() success'
         
         expected_params_list = ['unavailable_dogs']
 
         # Exersise code segment
-        params_list = _parse_provides_params(src)
+        params_list = parse_provides_params(src)
         provides = generate_provides(src)
         print 'JJV -010- src: ' + str(src)
         print 'JJV -011- params_list: ' + str(params_list)
@@ -390,7 +384,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
     def test_failure_missing_delimiter(self):
         '''
         Failure case:
-        - Exercise _parse_provides_params() and generate_provides()
+        - Exercise parse_provides_params() and generate_provides()
           with invalid input
         - missing leading delimiter
         '''
@@ -400,14 +394,14 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
 
         print '\nTest Name: test_failure_missing_delimiter()'
         print 'Test input:\n' + src
-        print 'Expect: _parse_require_config() ASError'
+        print 'Expect: parse_require_config() ASError'
         print 'Expect: generate_yaml() ASError'
         
         expected_params_list = ['unavailable_dogs']
 
         # Exersise code segment and validate results
         with self.assertRaises(ASError):
-            params_list = _parse_provides_params(src)
+            params_list = parse_provides_params(src)
 
         with self.assertRaises(ASError):
             provides = generate_provides(src)

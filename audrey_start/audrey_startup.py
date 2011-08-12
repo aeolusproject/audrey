@@ -19,19 +19,27 @@ Algorithim:
 
 '''
 
+import argparse
 import base64
+from collections import deque
 import httplib2
+import logging
+from optparse import OptionParser
+import os
+import shutil
+import sys
 import syslog
 from subprocess import Popen, PIPE
+import tarfile as tf # To simplify exception names.
+import tarfile
+import tempfile
 import urllib
 
-LOG = '/var/log/audrey.log'
-PUPPET_ROOT = '/usr/share/puppet/cloud_engine/audrey_puppet'
-PUPPET_YAML_FILE = str(PUPPET_ROOT) + '/nodes/default'
-PUPPET_EXT_NODE = str(PUPPET_ROOT) + '/node'
+# Location of the config tooling.
+TOOLING_DIR = '/var/audrey/tooling/'
 
-CLASS_TAG = '|classes'
-PARAM_TAG = '|parameters'
+# Log file
+LOG = '/var/log/audrey.log'
 
 # When running on condor-cloud, the Config Server (CS) contact
 # information will be stored in the smbios.
@@ -73,7 +81,7 @@ class _run_cmd_return_subproc():
 #
 # Misc. Supporting Methods
 #
-def _run_cmd(cmd):
+def _run_cmd(cmd, my_cwd=None):
     '''
     Description:
         Run a command given by a dictionary, check for stderr output,
@@ -117,7 +125,7 @@ def _run_cmd(cmd):
     ret = {'subproc' : None, 'err' : '' , 'out' : ''}
 
     try:
-        ret['subproc'] = Popen(cmd, stdout=PIPE, stderr=PIPE)
+        ret['subproc'] = Popen(cmd, cwd=my_cwd, stdout=PIPE, stderr=PIPE)
 
     # unable to find command will result in an OSError
     except OSError, err:
@@ -212,6 +220,34 @@ def _run_pipe_cmd(cmd1, cmd2):
 
     return ret
 
+class Service_Params(object):
+    '''
+    Description:
+        Used for storing a service and all of it's associated parameters
+        as provided by the Config Server in the "required" parameters
+        API message.
+
+        services = [
+                Service_Params('serviceA', ['n&v', 'n&v', 'n&v',...]),
+                Service_Params('serviceB', ['n&v', 'n&v', 'n&v',...]),
+                Service_Params('serviceB', ['n&v', 'n&v', 'n&v',...]),
+        ]
+
+        This structure aids in tracking the parsed required config
+        parameters which is useful when doing UNITTESTing.
+
+    '''
+    def __init__(self, name=None):
+        self.name = name # string
+        self.params = [] # start with an empty list
+    def set_name(self, name):
+        self.name = name
+    def add_param(self, param):
+        self.params.append(param)
+    def __repr__(self):
+        return repr((self.name, self.params))
+
+
 #
 # Methods used to parse the CS<->AS text based API
 #
@@ -223,167 +259,136 @@ def _common_validate_message(src):
     if not src.startswith('|') or not src.endswith('|'):
         raise ASError(('Invalid start and end characters: %s') % (src))
 
-def _parse_require_config(src):
+def gen_env(srv, param_val):
+    '''
+    Description:
+        Generate the os environment variables from the required config string.
+
+    Input:
+        A service name
+        A parameter name&val pair. The value is base64 encoded. 
+
+        e.g.:
+        jon_agent_config
+        jon_server_ip&MTkyLjE2OC4wLjE=
+
+    Output:
+        Set environment variables of the form:
+        <name>=<value>
+
+        e.g.:
+        jon_server_ip=base64.b64decode('MTkyLjE2OC4wLjE=')
+        jon_server_ip='192.168.0.1
+
+    Raises ASError when encountering an error.
+
+    '''
+    syslog.syslog('Invoked gen_env()')
+
+    # If either service name or param_val are missing treat as an exception.
+    if param_val == [''] or srv == ['']:
+        _raise_ASError(('Missing service name: %s or parameters. %s') % \
+            (str(srv), str(param_val)))
+
+    name_val = param_val.split('&')
+    var_name = 'AUDREY_VAR_' + srv + '_' + name_val[0]
+    os.environ[var_name] = \
+        base64.b64decode(name_val[1])
+
+    # Get what was set and log it.
+    cmd = ['/usr/bin/printenv', var_name]
+    ret = _run_cmd(cmd)
+    syslog.syslog(var_name + '=' + str(ret['out'][:-1]))
+
+def parse_require_config(src):
     '''
     Description:
         Parse the required config text message sent from the Config Server.
 
     Input:
-        The required config string obtained from the Config Server.
-    The delimiters will be an | and an &
+        The required config string obtained from the Config Server,
+        delimited by an | and an &
 
-        Two tags will mark the sections of the data. Each tag will be precede
-        with an |:
-
-        |classes
-        |parameters
+        Two tags will mark the sections of the data, 
+        '|service|' and  '|parameters|'
 
         To ensure all the data was received the entire string will be
         terminated with an "|".
 
-        The string "|classes" will precede the class names. I don't think
-        the class names need to be base64 encoded.
+        The string "|service|" will precede a service names.
 
-        The string "|parameters" will precede the parameter parameter
-        names&<b64 encoded values>.
+        The string "|parameters|" will precede the parameters for
+        the preceeding service, in the form: names&<b64 encoded values>.
 
     This will be a continuous text string (no CR or New Line).
 
-        Format:
+        Format (repeating for each service):
 
-        |classes&<c1>&<c2>...&<cN>
-            |parameters|name1&<b64val>|name2&<b64val>...|nameN&<b64v>|
+        |service|<s1>|parameters|name1&<b64val>|name2&<b64val>...|nameN&<b64v>|
+
 
         e.g.:
-        |classes&ssh::server&apache2::common
-            |parameters|ssh_port&<b64/22>|apache_port&<b64/8081>|
+        |service|ssh::server|parameters|ssh_port&<b64('22')>
+        |service|apache2::common|apache_port&<b64('8081')>|
 
     Returns:
-        - a list of classes
-        - a name&value list of parameters.
+        - A list of Service_Params objects.
     '''
+
+    services = []
+    new = None
 
     _common_validate_message(src)
 
     # Message specific validation
     if src == '||':
         # special case indicating no required config needed.
-        return [''], ['']
+        return []
 
-    if src.find('|classes') != 0:
-        _raise_ASError(('|classes not the first tag found. %s') % (src))
+    if src.find('|service|') != 0:
+        _raise_ASError(('|service| is not the first tag found. %s') % (src))
 
-    if src.find('|parameters') <= 0:
-        _raise_ASError(('|parameters not found after |classes. %s')
-             % (src))
 
-    params_str = src[src.find('|parameters'):len(src)-1]
-    classes_str = src[src.find('|classes'):src.find('|parameters')]
+    src_q = deque(src.split('|'))
 
-    return params_str[len('|parameters')+1:].split('|'), \
-        classes_str[len('|classes')+1:].split('&')
+    # remove leading and trailing elements from the src_q since they are
+    # empty strings generated by the split('|') because of the leading
+    # and trailing '|'
+    token = src_q.popleft() 
+    token = src_q.pop()
 
-def generate_yaml(src, yaml_file=PUPPET_YAML_FILE):
-    '''
-    Description:
-        Generate the Puppet input YAML file.
-        Uses _parse_require_config()
-
-    Input:
-        The required config string obtained from the Config Server.
-
-        Allow for an alternate puppet YAML file for unit testing.
-
-    Output:
-        The Puppet YAML file.
-            The YAML file format:
-                ---
-                parameters:
-                  <p1>: <v1>
-                  <p2>: <v2>
-                ...
-                <pN>: <vN>
-                classes:
-                - <name1::type1>
-                - <name2::type2>
-                ...
-                - <nameN::typeN>
-
-            e.g.:
-                ---
-                parameters:
-                  ssh_port: 22
-                  apache_port: 8081
-                classes:
-                - ssh::server
-                - apache2::common
-
-    Returns:
-        False - If the Puppet YAML file was not created. This could happen
-                if no required parametes or classes were provided.
-        True  - If the Puppet YAML file was created.
-    '''
-    syslog.syslog('Invoked generate_yaml()')
-
-    params_list, classes_list = _parse_require_config(src)
-
-    # If both classes or parameters are missing treat as no required
-    # configuration parameters are needed. Simply return False
-    if params_list == [''] and classes_list == ['']:
-        return False
-
-    # If both classes or parameters are missing treat as an exception.
-    if params_list == [''] or classes_list == ['']:
-        _raise_ASError(('Missing classes or parameters. %s') % (src))
-
-    with open(yaml_file, 'w') as yaml_fp:
-        yaml_fp.writelines('---\n')
-        yaml_fp.writelines('parameters:\n')
+    while True:
         try:
-            for param in params_list:
-                name_val = param.split('&')
-                yaml_fp.writelines('  ' + str(name_val[0]))
-                yaml_fp.writelines(': ' + \
-                    base64.b64decode(str(name_val[1])) + '\n')
+            token = src_q.popleft()
+            if token == 'service':
+                token = src_q.popleft() # next token is service name
+
+                # Raise an error if the service name is invalid.
+                if token.find('&') != -1 or \
+                    token == 'service' or \
+                    token == 'parameters' or \
+                    token == '':
+                    _raise_ASError(('ERROR invalid service name: %s') % \
+                       (str(token)))
+
+                new = Service_Params(token)
+                services.append(new)
+            elif token == 'parameters' or token == '':
+                pass
+            else: # token is a name&value pair.
+                if token.find('&') == -1:
+                    _raise_ASError(('ERROR name&val: %s missing delimiter') % \
+                       (str(token)))
+                if new:
+                    new.add_param(token)
+                    gen_env(new.name, token)
+                else:
+                    _raise_ASError(('ERROR missing service tag %s') % \
+                         (str(src)))
         except IndexError:
-            _raise_ASError(('Missing parameter value. %s') % (src))
+            break
 
-        yaml_fp.writelines('classes:\n')
-        for classes in classes_list:
-            yaml_fp.writelines('- ' + str(classes) + '\n')
-
-    return True
-
-def invoke_puppet():
-    '''
-    Description:
-        Run the puppet command using the generated Puppet input YAML file.
-        Uses _run_pipe_cmd()
-
-    Input:
-        The Puppet input YAML file must exist.
-
-    Returns:
-        None
-
-    On Failure:
-        Raise ASError
-
-    '''
-    syslog.syslog('Invoked invoke_puppet()')
-
-    cmd1 = ['/bin/echo']
-
-    cmd2 = ['/usr/bin/puppet', '--verbose', '--manifest', \
-        str(PUPPET_ROOT) + '/manifests/defaults.pp', \
-        '--modulepath', str(PUPPET_ROOT) + '/modules', \
-        '--external_nodes', str(PUPPET_EXT_NODE), \
-        '--node_terminus', 'exec', '--no-report', '>>', str(LOG), '2>&1']
-
-    ret = _run_pipe_cmd(cmd1, cmd2)
-    if ret['subproc'].returncode != 0:
-        _raise_ASError(('Failed Puppet command: %s Error: %s') % \
-            (str(cmd2), str(ret)))
+    return services
 
 def _get_system_info():
     '''
@@ -414,7 +419,7 @@ def _get_system_info():
 
     return facts
 
-def _parse_provides_params(src):
+def parse_provides_params(src):
     '''
     Description:
         Parse the provides parameters text message sent from the
@@ -455,7 +460,7 @@ def generate_provides(src):
     '''
     Description:
         Generate the provides parameters list.
-        Uses _parse_provides_params()
+        Uses parse_provides_params()
 
     Input:
         The provides parameters string obtained from the Config Server.
@@ -485,7 +490,7 @@ def generate_provides(src):
     syslog.syslog('Invoked generate_provides()')
 
     provides_dict = {}
-    params_list = _parse_provides_params(src)
+    params_list = parse_provides_params(src)
 
     system_info_dict = _get_system_info()
 
@@ -506,6 +511,62 @@ def generate_provides(src):
     provides_list.append('')
 
     return urllib.urlencode({'audrey_data':'|'.join(provides_list)})
+
+#
+# Methods used to access any user provided configuration tooling.
+#
+
+#
+# Methods used to untar the user provided tarball
+#
+def unpack_tooling(tarball, dest_path=TOOLING_DIR + 'user/'):
+    '''
+    Perform validation of the text message sent from the Config Server.
+    Validate, open and write out the contents of the user provided
+    tarball.
+    '''
+    syslog.syslog('Invoked unpack_tooling() with: ' + str(tarball) + \
+        ' ' + str(dest_path))
+
+    print('Invoked unpack_tooling() with: ' + str(tarball) + \
+        ' ' + str(dest_path))
+
+    # Validate the specified tarfile.
+    try:
+        if not tarfile.is_tarfile(tarball):
+            # If file exists but is not a tar file force IOError.
+            raise IOError
+    except IOError, (errno, strerror):
+        raise ASError(('File was not found or is not a tar file: %s ' + \
+                'Error: %s') % (tarball, strerror))
+
+    # Create the extraction destination
+    try:
+        os.makedirs(dest_path)
+    except OSError, (errno, strerror):
+        if errno is 17: # File exists
+            pass
+        else:
+            raise ASError(('Failed to create destination directory %s. ' + \
+                'Error: %s') % (dest_path, strerror))
+
+    # Attempt to extract the contents from the specified tarfile.
+    #
+    # If tarfile access or content is bad report to the user to aid
+    # problem resolution.
+    try:
+        tarf = tarfile.open(tarball)
+        tarf.extractall(path=dest_path)
+        tarf.close()
+    except IOError, (errno, strerror):
+        raise ASError(('Failed to access tar file %s. Error: %s') %  \
+            (tarball, strerror))
+    # Capture and report errors with the tarfile
+    except (tf.TarError, tf.ReadError, tf.CompressionError, \
+        tf.StreamError, tf.ExtractError), (strerror):
+
+        raise ASError(('Failed to access tar file %s. Error: %s') %  \
+            (tarball, strerror))
 
 #
 # Classes and methods to perform the get and put to and from
@@ -540,7 +601,7 @@ class HttpUnitTest(object):
         Handle request when not running live but in test environment.
         '''
         if method == 'GET' and url.find('/configs/') > -1:
-            body = "|classes&c1&c2|parameters|param1&%s|param2&%s" % \
+            body = '|service|s1|parameters|param1&%s|param2&%s' % \
                     (base64.b64encode('value1'), base64.b64encode('value2'))
         elif (method == 'GET') and (url.find('/params/') > -1):
             body = "|param1&param2|"
@@ -553,6 +614,200 @@ class HttpUnitTest(object):
         Handle add_credentials when not running live but in test environment.
         '''
         pass
+
+class Config_Tooling(object):
+    '''
+    TBD - Consider making this class derived from dictionary or a mutable
+    mapping.
+
+    Description:
+        Interface to configuration tooling:
+        - Getting optional user supplied tooling from CS
+        - Verify and Unpack optional user supplied tooling retrieved
+          from CS
+        - Is tooling for a given service user supplied
+        - Is tooling for a given service Red Hat supplied
+        - Find tooling for a given service Red Hat supplied
+        - List tooling for services and indicate if it is user or Red
+          Hat supplied.
+    '''
+
+    def __init__(self, unittest=False, tool_dir=TOOLING_DIR):
+        '''
+        Description:
+            Set initial state so it can be tracked. Valuable for
+            testing and debugging.
+        '''
+        self.tool_dir = tool_dir
+        self.log = tool_dir + 'log'
+        self.tarball = ''
+
+       
+        # set up logging
+        LOG_FORMAT = ('%(asctime)s - %(levelname)-8s: '
+            '%(filename)s:%(lineno)d %(message)s')
+        LOG_LEVEL_INPUT = 5
+        LOG_NAME_INPUT = 'INPUT'
+
+        # TBD - Consider using syslog syslog NG for this.
+        logging.basicConfig(filename=self.log,
+            level=logging.DEBUG, filemode='w', format=LOG_FORMAT)
+
+        logging.addLevelName(LOG_LEVEL_INPUT, LOG_NAME_INPUT)
+
+    def __str__(self):
+        '''
+        Description:
+            Called by the str() function and by the print statement to
+            produce the informal string representation of an object.
+        '''
+        return('<Instance of: %s\n' \
+               'Tooling Dir: %s\n' \
+               'Log File: %s\n' \
+               'tarball Name: %s\n' \
+               'eot>' %
+            (self.__class__.__name__,
+            str(self.tool_dir),
+            str(self.log),
+            str(self.tarball),
+            ))
+
+    def log_info(self, log_str):
+        '''
+        Description:
+            Used for logging the commands that have been executed
+            along with their output and return codes.
+
+            Simply logs the provided input string.
+        '''
+        logging.info(log_str)
+
+    def log_error(self, log_str):
+        '''
+        Description:
+            Used for logging errors encountered when attempting to
+            execute the service the command.
+
+            Simply logs the provided input string.
+        '''
+        logging.error(log_str)
+
+    def invoke_service(self, service_name='NONE'):
+        '''
+        Description:
+            Invoke the configuration tooling for the specified service.
+        '''
+
+        '''
+            TBD
+            Will eventually run the script associated with the specified
+            service name.
+        '''
+        pass
+
+    def list_services(self):
+        '''
+        Description:
+            List all available service tooling and return the path
+            to the service "start" executable.
+
+            If configuration tooling has been provided by both Red Hat
+            and the user then the user supplied tooling is referenced
+            and the Red Hat tooling is ignored.
+
+            A special case tooling type: AUDREY_TOP, if found is the only
+            thing returned as it's existance  indicates configuration
+            for all services is to be handled by a single start
+            executable.
+            
+            Return Examples:
+      
+            e.g.:
+            If a AUDREY_TOP level start executable is found:
+            {'AUDREY_TOP' : 'self.tool_dir + 'user/start'}
+
+
+            If user provided toolins is found for JON and only
+            Red Hat provided toolins is found for HTTP and SSH:
+
+            {'JON' : 'self.tool_dir + 'user/JON/start', \
+             'HTTP' : 'self.tool_dir + 'REDHAT/http/start' \
+             'SSH' : 'self.tool_dir + 'REDHAT/ssh/start'}
+
+            If no valid tooling is found return an empty dict
+
+        '''
+
+        '''
+        TBD - In planning but not yet fully implemented
+        '''
+        
+        return_dict = {}
+        return return_dict
+
+    def is_user_supplied(self, service_name):
+        '''
+        Description:
+            Is the the configuration tooling for the specified service
+            supplied by the user?
+        '''
+        return True
+
+    def is_rh_supplied(self, service_name):
+        '''
+        Description:
+            Is the the configuration tooling for the specified service
+            supplied by Red Hat?
+        '''
+        return False 
+
+    def find_tooling(self, service_name):
+        '''
+        Description:
+            Given a service name return the path to the configuration
+            tooling.
+
+            Search for the service start executable in the user
+            tooling directory.
+                self.tool_dir + '/user/<service name>/start'
+
+            If not found there search for the it in the documented directory
+            where built in tooling should be placed.
+                self.tool_dir + '/AUDREY_TOOLING/<service name>/start'
+
+            If not found there search for the it in the Red Hat tooling
+            directory.
+                self.tool_dir + '/REDHAT/<service name>/start'
+
+           If not found there raise an error.
+
+        Returns:
+            return 1 - True if top level tooling found, False otherwise.
+            return 2 - path to tooling
+        '''
+
+        top_path = self.tool_dir + 'user/start'
+        if os.access(top_path, os.X_OK):
+            return True, top_path
+
+        service_user_path = self.tool_dir + 'user/' + \
+            service_name + '/start'
+        if os.access(service_user_path, os.X_OK):
+            return False, service_user_path
+
+        service_redhat_path = self.tool_dir + 'AUDREY_TOOLING/' + \
+            service_name + '/start'
+        if os.access(service_redhat_path, os.X_OK):
+            return False, service_redhat_path
+
+        service_redhat_path = self.tool_dir + 'REDHAT/' + \
+            service_name + '/start'
+        if os.access(service_redhat_path, os.X_OK):
+            return False, service_redhat_path
+
+        # No tooling found. Treat as a fatal error. TBD - revisit later.
+        _raise_ASError(('No configuration tooling found for service: %s') % \
+            (service_name))
 
 class CSClient(object):
     '''
@@ -578,13 +833,139 @@ class CSClient(object):
         self.config_serv = ''
         self.cs_params = ''
         self.cs_configs = ''
+        self.tmpdir = ''
+        self.tarball = ''
 
+        # Construct the libhttp object
+        self.http = httplib2.Http()
+
+        # Discover the Config Server access info.
+        # It could have been passed on command line
+        # If not discover it using the cloud provider specific method.
+        if not self._parse_args():
+            self._discover_config_server(unittest)
+
+        if 'RHEV-M' not in self.cloud_type:
+            # Authentication password not yet supported on RHEV-M.
+            # 
+            # Add username and password credentials to the httplib2.Http
+            # object.
+            # Until this point the httplib2.Http object had been used to gather
+            # user data when running on EC2 with no username/passwod. From
+            # this point on the httplib2.Http object is only used to
+            # communicate with the config server which requires credentials. 
+            self.http.add_credentials(self.cs_UUID, self.cs_pw)
+
+    def __del__(self):
+        '''
+        Description:
+            Class destructor
+        '''
+        try:
+            shutil.rmtree(self.tmpdir)
+        except OSError:
+            pass # ignore any errors when attempting to remove the temp dir.
+
+ 
+    def __str__(self):
+        '''
+        Description:
+            Called by the str() function and by the print statement to
+            produce the informal string representation of an object.
+        '''
+        return('<Instance of: %s\n' \
+               'Version: %s\n' \
+               'EC2 User Data URL: %s\n' \
+               'Cloud Type: %s\n' \
+               'Config Server: %s\n' \
+               'Config Server Addr: %s\n' \
+               'Config Server Port: %s\n' \
+               'Config Server UUID: %s\n' \
+               'Config Server Password: %s\n' \
+               'Config Server Protocol: %s\n' \
+               'Config Server Params: %s\n' \
+               'Config Server Configs: %s\n' \
+               'Temporary Directory: %s\n' \
+               'Tarball Name: %s\n' \
+               'eot>' %
+            (self.__class__.__name__,
+            str(self.version),
+            str(self.ec2_user_data_url),
+            str(self.cloud_type),
+            str(self.config_serv),
+            str(self.cs_addr),
+            str(self.cs_port),
+            str(self.cs_UUID),
+            str(self.cs_pw),
+            str(self.cs_proto),
+            str(self.cs_params),
+            str(self.cs_configs),
+            str(self.tmpdir),
+            str(self.tarball)
+            ))
+
+    def _parse_args(self):
+        '''
+        Description:
+            Gather any Config Server access info optionally passed
+            on the command line. If being provided on the command
+            line all of it must be provided.
+
+            Config Server Access Info is:
+              cs_addr - IP Address or hostname
+              cs_port - Port where Config Server is listening
+              cs_UUID - Instance UUID
+              cs_pw   - Password
+        Return:
+            True - if all Config Server info was provided on command line
+            False - otherwise
+
+
+
+        '''
+
+        print '\n*** called CSClient._parse_args() ***'
+    
+        parser = argparse.ArgumentParser(description='Audrey Start')
+        parser.add_argument('-a', '--addr', dest='addr', \
+            required=False, help='Config Server IP Addr')
+        parser.add_argument('-p', '--port', dest='port', \
+            required=False, help='Config Server IP Port')
+        parser.add_argument('-u', '--UUID', dest='UUID', \
+            required=False, help='Instance UUID')
+        parser.add_argument('-P', '--pw', dest='pw', \
+            required=False, help='Config Server IP password')
+        args = parser.parse_args()
+
+        # If not all of the items were provided on the command line
+        # ignore them all by returning False.
+        if not (args.addr and args.port  and args.UUID):
+            return False
+
+        # If a password is not provided assume http.
+        if not args.pw:
+            self.cs_proto = 'http'
+        else:
+            self.cs_proto = 'https'
+
+        self.cs_addr = args.addr
+        self.cs_port = args.port
+        self.cs_UUID = args.UUID
+        self.cs_pw = args.pw
+
+        return True
+
+    def _discover_config_server(self, unittest):
+        '''
+        Description:
+            Discover the Config Server access info.
+            If not discover it using the cloud provider specific method.
+        '''
         #
         # What Cloud Backend?
         #
         # Read the file populated with Cloud back end type.
         # e.g.: CLOUD_TYPE="EC2"
-        # NOTE: Currently only EC2 is supported.
         #
         self.cloud_info_file = '/etc/sysconfig/cloud-info'
         if not unittest:
@@ -596,8 +977,6 @@ class CSClient(object):
                     (self.cloud_info_file))
         else:
             read_data = 'UNITTEST'
-
-        self.http = httplib2.Http()
 
         #
         # Discover the Config Server access info.
@@ -686,50 +1065,6 @@ class CSClient(object):
             _raise_ASError(('Unrecognized Cloud Type: %s') % \
                 (str(cloud_type)))
 
-        
-        if 'RHEV-M' not in self.cloud_type:
-            # Authentication password not yet supported on RHEV-M.
-            # 
-            # Add username and password credentials to the httplib2.Http
-            # object.
-            # Until this point the httplib2.Http object had been used to gather
-            # user data when running on EC2 with no username/passwod. From
-            # this point on the httplib2.Http object is only used to
-            # communicate with the config server which requires credentials. 
-            self.http.add_credentials(self.cs_UUID, self.cs_pw)
-
-    def __str__(self):
-        '''
-        Description:
-            Called by the str() function and by the print statement to
-            produce the informal string representation of an object.
-        '''
-        return('<Instance of: %s\n' \
-               'Version: %s\n' \
-               'EC2 User Data URL: %s\n' \
-               'Cloud Type: %s\n' \
-               'Config Server: %s\n' \
-               'Config Server Addr: %s\n' \
-               'Config Server Port: %s\n' \
-               'Config Server UUID: %s\n' \
-               'Config Server Password: %s\n' \
-               'Config Server Protocol: %s\n' \
-               'Config Server Params: %s\n' \
-               'Config Server Configs: %s\n' \
-               'eot>' %
-            (self.__class__.__name__,
-            str(self.version),
-            str(self.ec2_user_data_url),
-            str(self.cloud_type),
-            str(self.config_serv),
-            str(self.cs_addr),
-            str(self.cs_port),
-            str(self.cs_UUID),
-            str(self.cs_pw),
-            str(self.cs_proto),
-            str(self.cs_params),
-            str(self.cs_configs)))
-
     def _get(self, url, headers=None):
         '''
         Description:
@@ -784,6 +1119,40 @@ class CSClient(object):
         response, body = self._put(url, body=params_values, headers=headers)
         return response.status, body
 
+    def get_cs_tooling(self):
+        '''
+        Description:
+            get any optional user supplied tooling which is
+            provided as a tarball
+        '''
+        syslog.syslog('Invoked CSClient.get_cs_tooling()')
+        url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
+            '/files/' + str(self.version) + '/' + self.cs_UUID
+        headers = {'Accept': 'content-disposition'}
+
+        tarball = ''
+        response, body = self._get(url, headers=headers)
+
+        # Parse the file name burried in the response header
+        # at: response['content-disposition']
+        # as: 'attachment; tarball="tarball.tgz"'
+        if (response.status == 200) or (response.status == 202):
+            tarball = response['content-disposition']. \
+                lstrip('attachment; filename=').replace('"','')
+
+            # Create the temporary tarfile
+            try:
+                self.tmpdir = tempfile.mkdtemp()
+                self.tarball = self.tmpdir + '/' + tarball
+                f  = open(self.tarball, 'w')
+                f.write(body)
+                f.close()
+            except IOError, (errno, strerror):
+                raise ASError(('File not found or not a tar file: %s ' + \
+                        'Error: %s') % (self.tarball, strerror))
+
+        return response.status, self.tarball
+
 def audrey_script_main():
     '''
     Description:
@@ -800,27 +1169,56 @@ def audrey_script_main():
 
     finished = False
     max_retry = 5
+    services = {}
 
+    # Create the Client Object
+    cs_client = CSClient()
+    syslog.syslog(str(cs_client))
+
+    syslog.syslog('Get optional tooling from the Config Server')
+    # Get any optional tooling from the Config Server
+    config_status, tarball = cs_client.get_cs_tooling()
+    if (config_status == 200) or (config_status == 202):
+        unpack_tooling(tarball)
+            
+    tooling = Config_Tooling()
+
+    print 'Process the Requires and Provides parameters'
+    syslog.syslog('Process the Requires and Provides parameters')
+
+    # Process the Requires and Provides parameters
     while not finished:
-
-        # Create the Client Object
-        cs_client = CSClient()
 
         # Get the Required Configs from the Config Server
         config_status, configs = cs_client.get_cs_configs()
 
         # Configure the system with the provided Required Configs
         if (config_status == 200) or (config_status == 202):
+            services = parse_require_config(configs)
 
-            # Generate the YAML file using the provided required configs
-            generate_yaml(configs)
+            # For now invoke them all. Later versions will invoke the service
+            # based on the required params from the Config Server.
+            for service in services:
+                top_level, tooling_path = tooling.find_tooling(service.name)
+                cmd = [tooling_path]
+                ret = _run_cmd(cmd, os.path.dirname(tooling_path))
+                tooling.log_info('*** executing command: ***')
+                tooling.log_info(' '.join(cmd))
 
-            # Exercise Puppet using the generated YAML
-            #
-            # Exercise puppet to configure the system using the user
-            # specified puppet input.
-            #
-            invoke_puppet()
+                retcode = ret['subproc'].returncode
+                if retcode == 0:
+                    # Command successed, log the output.
+                    tooling.log_info('return code: ' + str(retcode))
+                    tooling.log_info('Output: \n' +  str(ret['out']))
+                else:
+                    # Command failed, log the errors.
+                    tooling.log_error('error code: ' + str(retcode))
+                    tooling.log_error('error msg:  ' + str(ret['err']))
+
+                # If tooling was provided at the top level only run it once
+                # for all services listed in the required config params.
+                if top_level:
+                    break
 
         # Get the requested provides from the Config Server
         param_status, params = cs_client.get_cs_params()
