@@ -157,8 +157,8 @@ yaml"""
 echo "$manifest" > $manifest_file
 chmod 755 $manifest_file
 
-echo "running: $PUPPET --modulepath $MODULE_PATH --external_nodes $manifest_file\
- --node_terminus exec --manifest /dev/null -"
+echo "running: echo | $PUPPET --modulepath $MODULE_PATH --external_nodes $manifest_file\
+ --node_terminus exec"
 
-$PUPPET --modulepath $MODULE_PATH --external_nodes $manifest_file \
- --node_terminus exec --manifest /dev/null -
+echo | $PUPPET --modulepath $MODULE_PATH --external_nodes $manifest_file \
+ --node_terminus exec
