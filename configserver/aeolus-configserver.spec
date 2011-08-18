@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	1%{?dist}%{?extra_release}
+Release:	2%{?dist}%{?extra_release}
 Summary:	The Aeolus Config Server
 BuildArch:  noarch
 
@@ -21,8 +21,8 @@ Requires:       rubygem(thin)
 requires:       rubygem(archive-tar-minitar)
 requires:       rubygem(activesupport)
 Requires(post): chkconfig
-Requires(prerun): chkconfig
-Requires(prerun): initscripts
+Requires(preun): chkconfig
+Requires(preun): initscripts
 
 
 %description
@@ -129,6 +129,8 @@ fi
 
 
 %changelog
+* Thu Aug 18 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-2
+- Fix syntax in spec
 * Tue Aug 16 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-1
 - Updated data format for Config Server -> Audrey client API
 * Wed Jul 27 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.2-3
