@@ -29,8 +29,8 @@ import os
 import shutil
 import sys
 from subprocess import Popen, PIPE
-import tarfile as tf # To simplify exception names.
 import tarfile
+import tarfile as tf # To simplify exception names.
 import tempfile
 import urllib
 
@@ -38,8 +38,9 @@ import urllib
 TOOLING_DIR = '/var/audrey/tooling/'
 
 # Log file
-LOG = '/var/log/audrey'
-logger = None
+LOG = '/var/log/audrey.log'
+LOGGER = None
+CS_API_VER = 1
 
 # When running on condor-cloud, the Config Server (CS) contact
 # information will be stored in the smbios.
@@ -68,7 +69,7 @@ def _raise_ASError(err_msg):
     '''
     Log an error message and raise ASError
     '''
-    logger.error(err_msg)
+    LOGGER.error(err_msg)
     raise ASError(err_msg)
 
 class _run_cmd_return_subproc():
@@ -286,7 +287,7 @@ def gen_env(serv_name, param_val):
     Raises ASError when encountering an error.
 
     '''
-    logger.debug('Invoked gen_env()')
+    LOGGER.debug('Invoked gen_env()')
 
     # If the param_val is missing treat as an exception.
     if param_val == '':
@@ -306,7 +307,7 @@ def gen_env(serv_name, param_val):
     # Get what was set and log it.
     cmd = ['/usr/bin/printenv', var_name]
     ret = _run_cmd(cmd)
-    logger.debug(var_name + '=' + str(ret['out'][:-1]))
+    LOGGER.debug(var_name + '=' + str(ret['out'][:-1]))
 
 def parse_require_config(src):
     '''
@@ -494,7 +495,7 @@ def generate_provides(src):
 
 
     '''
-    logger.info('Invoked generate_provides()')
+    LOGGER.info('Invoked generate_provides()')
 
     provides_dict = {}
     params_list = parse_provides_params(src)
@@ -662,8 +663,8 @@ class Config_Tooling(object):
 
         # For now invoke them all. Later versions will invoke the service
         # based on the required params from the Config Server.
-        logger.debug('Invoked Config_Tooling.invoke_tooling()')
-        logger.debug(str(services))
+        LOGGER.debug('Invoked Config_Tooling.invoke_tooling()')
+        LOGGER.debug(str(services))
         for service in services:
 
             try:
@@ -687,6 +688,10 @@ class Config_Tooling(object):
                     '\n\t<<< End Output')
             else:
                 # Command failed, log the errors.
+                self.log_info('\n\tStart Output of: ' + ' '.join(cmd) + \
+                    ' >>>\n' +  \
+                    str(ret['out']) + \
+                    '\n\t<<< End Output')
                 self.log_error('error code: ' + str(retcode))
                 self.log_error('error msg:  ' + str(ret['err']))
 
@@ -704,8 +709,8 @@ class Config_Tooling(object):
             Config Server. Validate, open and write out the contents
             of the user provided tarball.
         '''
-        logger.info('Invoked unpack_tooling()')
-        logger.debug('tarball: ' + str(tarball) + \
+        LOGGER.info('Invoked unpack_tooling()')
+        LOGGER.debug('tarball: ' + str(tarball) + \
             'Target Direcory: ' + str(self.user_dir))
 
         self.tarball = tarball
@@ -814,7 +819,7 @@ class CSClient(object):
             testing and debugging.
         '''
 
-        self.version = 1
+        self.version = CS_API_VER
         self.cloud_type = 'UNKNOWN'
         self.cs_addr = ''
         self.cs_port = ''
@@ -827,15 +832,30 @@ class CSClient(object):
         self.cs_configs = ''
         self.tmpdir = ''
         self.tarball = ''
+        self.log_level = 'INFO'
 
         # Construct the libhttp object
         self.http = httplib2.Http()
 
-        # Discover the Config Server access info.
-        # It could have been passed on command line
-        # If not discover it using the cloud provider specific method.
-        if not self.parse_args():
-            self._discover_config_server(unittest)
+        # If not running unit testing (python -m unittest) then
+        # Discover the Config Server access info which could have
+        # been passed on command line. If not then discover it
+        # using the cloud provider specific method.
+        if unittest:
+            #
+            # For testing from UNITTEST
+            # Populate self.cloud_info_file with UNITTEST
+            #
+            self.cloud_type = 'UNITTEST'
+            self.config_serv = 'csAddr:csPort:csUUID:csPW'
+            self.cs_addr = self.config_serv.split(':')[0]
+            self.cs_port = self.config_serv.split(':')[1]
+            self.cs_UUID = self.config_serv.split(':')[2]
+            self.cs_pw   = self.config_serv.split(':')[3]
+            self.http = HttpUnitTest()
+
+        elif not self.parse_args():
+            self._discover_config_server()
 
         if 'RHEV-M' not in self.cloud_type:
             # Authentication password not yet supported on RHEV-M.
@@ -922,7 +942,7 @@ class CSClient(object):
 
         '''
 
-        logger.debug('Invoked CSClient.parse_args()')
+        LOGGER.debug('Invoked CSClient.parse_args()')
     
         parser = argparse.ArgumentParser(description='Audrey Start')
         parser.add_argument('-a', '--addr', dest='addr', \
@@ -946,7 +966,8 @@ class CSClient(object):
 
         # If a logging level was provided reset from the default.
         if args.log_level:
-            logger.setLevel(args.log_level)
+            self.log_level = args.log_level
+            LOGGER.setLevel(self.log_level)
 
         # If a password is not provided assume http.
         if not args.pw:
@@ -958,11 +979,10 @@ class CSClient(object):
         self.cs_port = args.port
         self.cs_UUID = args.UUID
         self.cs_pw = args.pw
-        self.log_level = args.log_level
 
         return True
 
-    def _discover_config_server(self, unittest):
+    def _discover_config_server(self):
         '''
         Description:
             Discover the Config Server access info.
@@ -975,15 +995,12 @@ class CSClient(object):
         # e.g.: CLOUD_TYPE="EC2"
         #
         self.cloud_info_file = '/etc/sysconfig/cloud-info'
-        if not unittest:
-            try:
-                with open(self.cloud_info_file, 'r') as fp:
-                    read_data = fp.read()
-            except IOError:
-                _raise_ASError(('Failed accessing file %s') % \
-                    (self.cloud_info_file))
-        else:
-            read_data = 'UNITTEST'
+        try:
+            with open(self.cloud_info_file, 'r') as fp:
+                read_data = fp.read()
+        except IOError:
+            _raise_ASError(('Failed accessing file %s') % \
+                (self.cloud_info_file))
 
         #
         # Discover the Config Server access info.
@@ -1055,19 +1072,6 @@ class CSClient(object):
             except:
                 _raise_ASError('Failed accessing Config Server data.')
 
-        elif 'UNITTEST' in cloud_type:
-            #
-            # For testing from UNITTEST
-            # Populate self.cloud_info_file with UNITTEST
-            #
-            self.cloud_type = 'UNITTEST'
-            self.config_serv = 'csAddr:csPort:csUUID:csPW'
-            self.cs_addr = self.config_serv.split(':')[0]
-            self.cs_port = self.config_serv.split(':')[1]
-            self.cs_UUID = self.config_serv.split(':')[2]
-            self.cs_pw   = self.config_serv.split(':')[3]
-            self.http = HttpUnitTest()
-
         else:
             _raise_ASError(('Unrecognized Cloud Type: %s') % \
                 (str(cloud_type)))
@@ -1092,7 +1096,7 @@ class CSClient(object):
         Description:
             get the required configuration from the Config Server.
         '''
-        logger.info('Invoked CSClient.get_cs_configs()')
+        LOGGER.info('Invoked CSClient.get_cs_configs()')
         url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
             '/configs/' + str(self.version) + '/' + self.cs_UUID
         headers = {'Accept': 'text/plain'}
@@ -1107,7 +1111,7 @@ class CSClient(object):
         Description:
             get the provides parameters from the Config Server.
         '''
-        logger.info('Invoked CSClient.get_cs_params()')
+        LOGGER.info('Invoked CSClient.get_cs_params()')
         url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
             '/params/' + str(self.version) + '/' + self.cs_UUID
         headers = {'Accept': 'text/plain'}
@@ -1122,7 +1126,7 @@ class CSClient(object):
         Description:
             put the provides parameters to the Config Server.
         '''
-        logger.info('Invoked CSClient.put_cs_params_values()')
+        LOGGER.info('Invoked CSClient.put_cs_params_values()')
         url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
             '/params/' + str(self.version) + '/' + self.cs_UUID
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
@@ -1136,7 +1140,7 @@ class CSClient(object):
             get any optional user supplied tooling which is
             provided as a tarball
         '''
-        logger.info('Invoked CSClient.get_cs_tooling()')
+        LOGGER.info('Invoked CSClient.get_cs_tooling()')
         url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
             '/files/' + str(self.version) + '/' + self.cs_UUID
         headers = {'Accept': 'content-disposition'}
@@ -1164,13 +1168,13 @@ class CSClient(object):
 
         return response.status, self.tarball
 
-def setup_logging(level=logging.INFO):
+def setup_logging(level=logging.INFO, logfile_name=LOG):
     '''
     Description:
         Establish the output logging.
     '''
 
-    global logger
+    global LOGGER
 
     # set up logging
     LOG_FORMAT = ('%(asctime)s - %(levelname)-8s: '
@@ -1178,12 +1182,12 @@ def setup_logging(level=logging.INFO):
     LOG_LEVEL_INPUT = 5
     LOG_NAME_INPUT = 'INPUT'
 
-    logging.basicConfig(filename=LOG,
+    logging.basicConfig(filename=logfile_name,
         level=level, filemode='w', format=LOG_FORMAT)
 
     logging.addLevelName(LOG_LEVEL_INPUT, LOG_NAME_INPUT)
 
-    logger = logging.getLogger('Audrey')
+    LOGGER = logging.getLogger('Audrey')
 
 def audrey_script_main():
     '''
@@ -1199,7 +1203,7 @@ def audrey_script_main():
     '''
     setup_logging()
 
-    logger.info('Invoked audrey_script_main')
+    LOGGER.info('Invoked audrey_script_main')
 
     config_status = 0
     param_status = 0
@@ -1209,20 +1213,20 @@ def audrey_script_main():
 
     # Create the Client Object
     cs_client = CSClient()
-    logger.info(str(cs_client))
+    LOGGER.info(str(cs_client))
 
-    logger.debug('Get optional tooling from the Config Server')
+    LOGGER.debug('Get optional tooling from the Config Server')
     # Get any optional tooling from the Config Server
     tooling = Config_Tooling()
     tooling_status, tarball = cs_client.get_cs_tooling()
     if (tooling_status == 200) or (tooling_status == 202):
         tooling.unpack_tooling(tarball)
     else:
-        logger.info('No optional config tooling provided. status: ' + \
+        LOGGER.info('No optional config tooling provided. status: ' + \
                 str(tooling_status))
-    logger.debug(str(tooling))
+    LOGGER.debug(str(tooling))
 
-    logger.debug('Process the Requires and Provides parameters')
+    LOGGER.debug('Process the Requires and Provides parameters')
 
     # Process the Requires and Provides parameters until the HTTP status
     # from the get_cs_configs and the get_cs_params both return 200
@@ -1237,7 +1241,7 @@ def audrey_script_main():
             tooling.invoke_tooling(services)
 
         else:
-            logger.info('No configuration parameters provided. status: ' + \
+            LOGGER.info('No configuration parameters provided. status: ' + \
                 str(config_status))
 
         # Get the requested provides from the Config Server
@@ -1261,10 +1265,10 @@ def audrey_script_main():
 
         # Retry a number of times if 404 HTTP Not Found is returned.
         if (config_status > 202) or (param_status > 202):
-            logger.error('Requiest to Config Server failed.')
-            logger.error('Required Config Parameter status: ' + \
+            LOGGER.error('Requiest to Config Server failed.')
+            LOGGER.error('Required Config Parameter status: ' + \
                 str(config_status))
-            logger.error('Return Parameter status: ' + str(param_status))
+            LOGGER.error('Return Parameter status: ' + str(param_status))
 
             max_retry -= 1
             if max_retry < 0:
