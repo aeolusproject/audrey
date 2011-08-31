@@ -514,7 +514,6 @@ def generate_provides(src):
     # Create string to send to Config Server
     provides_list = ['']
     for key in provides_dict.keys():
-        print str(key) + '&' + str(provides_dict[key])
         provides_list.append(str(key) + '&' + str(provides_dict[key]))
     provides_list.append('')
 
@@ -1230,10 +1229,11 @@ def audrey_script_main():
 
     # Process the Requires and Provides parameters until the HTTP status
     # from the get_cs_configs and the get_cs_params both return 200
-    while (config_status != 200) and (param_status != 200):
+    while (config_status != 200) or (param_status != 200):
 
         # Get the Required Configs from the Config Server
-        config_status, configs = cs_client.get_cs_configs()
+        if (config_status != 200):
+            config_status, configs = cs_client.get_cs_configs()
 
         # Configure the system with the provided Required Configs
         if (config_status == 200) or (config_status == 202):
@@ -1245,7 +1245,8 @@ def audrey_script_main():
                 str(config_status))
 
         # Get the requested provides from the Config Server
-        param_status, params = cs_client.get_cs_params()
+        if (param_status != 200):
+            param_status, params = cs_client.get_cs_params()
 
         # Gather the values from the system for the requested provides
         if (param_status == 200) or (param_status == 202):
@@ -1263,12 +1264,13 @@ def audrey_script_main():
         # Put the requested provides with values to the Config Server
         cs_client.put_cs_params_values(params_values)
 
-        # Retry a number of times if 404 HTTP Not Found is returned.
-        if (config_status > 202) or (param_status > 202):
-            LOGGER.error('Requiest to Config Server failed.')
-            LOGGER.error('Required Config Parameter status: ' + \
+        # Retry a number of times if both configs and params don't return:
+        # 202 HTTP Accepted - Success and more data of this type
+        if (config_status != 202) or (param_status != 202):
+            LOGGER.info('Requiest to Config Server failed or more to come.')
+            LOGGER.info('Required Config Parameter status: ' + \
                 str(config_status))
-            LOGGER.error('Return Parameter status: ' + str(param_status))
+            LOGGER.info('Return Parameter status: ' + str(param_status))
 
             max_retry -= 1
             if max_retry < 0:
