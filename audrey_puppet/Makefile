@@ -17,7 +17,7 @@
 
 AUDREY_PUPPET_CACHE_DIR	?= $(HOME)/audrey_puppet-cache
 
-VERSION = 0.3.0
+VERSION = 0.3.1
 
 # For Release: 0..., set _audrey_puppet_dev=1 so that we get extra_release.GIT-
 # annotated rpm version strings.

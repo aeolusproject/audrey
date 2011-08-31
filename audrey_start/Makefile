@@ -17,7 +17,7 @@
 
 AUDREY_STARTUP_CACHE_DIR	?= $(HOME)/audrey_startup-cache
 
-VERSION = 0.3.0
+VERSION = 0.3.1
 
 # For Release: 0..., set _audrey_startup_dev=1 so that we get extra_release.GIT-
 # annotated rpm version strings.
