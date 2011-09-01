@@ -1089,6 +1089,20 @@ class CSClient(object):
         '''
         return self.http.request(url, 'PUT', body=body, headers=headers)
 
+    def _validate_http_status(self, status):
+        '''
+        Description:
+            Confirm the http status is one of:
+            200 HTTP OK - Success and no more data of this type
+            202 HTTP Accepted - Success and more data of this type
+            404 HTTP Not Found - This may be temporary so try again 
+        '''
+        print 'JJV _validate_http_status -010- status: ' + str(status)
+        if (status != 200) and (status != 202) and (status != 404):
+            _raise_ASError(('Invalid HTTP status code: %s') % \
+                (str(status)))
+        print 'JJV _validate_http_status -012- status: ' + str(status)
+
     # Public interfaces
     def get_cs_configs(self):
         '''
@@ -1102,6 +1116,7 @@ class CSClient(object):
 
         response, body = self._get(url, headers=headers)
         self.cs_configs = body
+        self._validate_http_status(response.status)
 
         return response.status, body
 
@@ -1117,6 +1132,7 @@ class CSClient(object):
 
         response, body = self._get(url, headers=headers)
         self.cs_params = body
+        self._validate_http_status(response.status)
 
         return response.status, body
 
@@ -1146,6 +1162,7 @@ class CSClient(object):
 
         tarball = ''
         response, body = self._get(url, headers=headers)
+        self._validate_http_status(response.status)
 
         # Parse the file name burried in the response header
         # at: response['content-disposition']
@@ -1264,11 +1281,10 @@ def audrey_script_main():
         # Put the requested provides with values to the Config Server
         cs_client.put_cs_params_values(params_values)
 
-        # Retry a number of times if both configs and params don't return:
-        # 202 HTTP Accepted - Success and more data of this type
-        if (config_status != 202) or (param_status != 202):
-            LOGGER.info('Requiest to Config Server failed or more to come.')
-            LOGGER.info('Required Config Parameter status: ' + \
+        # Retry a number of times if 404 HTTP Not Found is returned.
+        if (config_status == 404) or (param_status == 404):
+            LOGGER.error('Requiest to Config Server failed or more to come.')
+            LOGGER.error('Required Config Parameter status: ' + \
                 str(config_status))
             LOGGER.info('Return Parameter status: ' + str(param_status))
 
