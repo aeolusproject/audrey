@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	2%{?dist}%{?extra_release}
+Release:	3%{?dist}%{?extra_release}
 Summary:	The Aeolus Config Server
 BuildArch:  noarch
 
@@ -129,6 +129,8 @@ fi
 
 
 %changelog
+* Wed Sep 07 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-3
+- Fix service to return 202 when configs are not complete
 * Thu Aug 18 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-2
 - Fix syntax in spec
 * Tue Aug 16 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-1
