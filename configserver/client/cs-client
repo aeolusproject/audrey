@@ -43,6 +43,7 @@ USAGE=$(cat <<END_OF_USAGE
 END_OF_USAGE
 )
 
+API_VERSION="1"
 
 VALID_VERBS=(POST PUT GET DELETE VERSION)
 
@@ -113,7 +114,8 @@ function post {
     return 1
   fi
   echo "Using $fname for the data"
-  args=("-X" "POST" "--data-urlencode" "data@$fname" "$ENDPOINT/configs/0/$uuid")
+  args=("-X" "POST" "--data-urlencode" "data@$fname"
+  "$ENDPOINT/configs/$API_VERSION/$uuid")
   call_curl "${args[@]}"
 }
 
@@ -138,7 +140,7 @@ function put {
   uuid="$2"
   if [ "$what" == "params" ]; then
     data=$(format_put_params "$3")
-    args=("-X" "PUT" "--data-urlencode" "audrey_data=$data" "$ENDPOINT/params/0/$uuid")
+    args=("-X" "PUT" "--data-urlencode" "audrey_data=$data" "$ENDPOINT/params/$API_VERSION/$uuid")
   elif [ "$what" == "files" ]; then
     if [ ! -f "$3" ]; then
       err1="Valid filename required:  $0 put $what $uuid"
@@ -148,7 +150,7 @@ function put {
       echo "                                             ^ invalid filename"
       exit 1
     fi
-    args=("-X" "PUT" "-F" "file=@$3" "$ENDPOINT/files/0/$uuid")
+    args=("-X" "PUT" "-F" "file=@$3" "$ENDPOINT/files/$API_VERSION/$uuid")
   fi
   call_curl "${args[@]}"
 }
@@ -161,8 +163,8 @@ function get {
   what="$1"
   uuid="$2"
   case $what in
-    files) args=("-O" "-J" "$ENDPOINT/files/0/$uuid");;
-        *) args=("-H" "Accept: text/plain" "$ENDPOINT/$what/0/$uuid");;
+    files) args=("-O" "-J" "$ENDPOINT/files/$API_VERSION/$uuid");;
+        *) args=("-H" "Accept: text/plain" "$ENDPOINT/$what/$API_VERSION/$uuid");;
   esac
   call_curl "${args[@]}"
 }
