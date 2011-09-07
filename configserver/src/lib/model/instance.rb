@@ -261,6 +261,10 @@ module ConfigServer
         services
       end
 
+      def required_parameters_remaining?
+        (rp / "//required-parameter[not(value)]").size > 0
+      end
+
       def has_file?
         File.exists?(get_file)
       end

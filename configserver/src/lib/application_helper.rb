@@ -1,17 +1,16 @@
-module ConfigServer
-  require 'logger'
-  def logger
-    @logger ||= Logger.new(settings.log_dir || STDOUT)
-  end
-end
+use Rack::Logger
 
 module ApplicationHelper
+  def logger
+    request.logger
+  end
+
   def configs
     ConfigServer::Model.storage_dir = settings.storage_dir
     ConfigServer::Model.instance_config_schema_location =
       settings.instance_config_rng
 
-    @configs ||= ConfigServer::InstanceConfigs.new(settings)
+    @configs ||= ConfigServer::InstanceConfigs.new(settings, request.logger)
   end
 
   def app_version

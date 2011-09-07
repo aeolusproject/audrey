@@ -5,6 +5,8 @@ require 'open-uri'
 
 require 'lib/model'
 
+use Rack::Logger
+
 class String
   require 'base64'
   def to_b64
@@ -18,6 +20,12 @@ class String
 end
 
 module ConfigServer
+
+  class MyStupidLogger
+    def info(msg); puts msg; end
+    def debug(msg); info msg; end
+    def error(msg); info msg; end
+  end
 
   class InvalidInstanceConfigError < StandardError
     attr_reader :errors
@@ -34,8 +42,13 @@ module ConfigServer
 
   class InstanceConfigs
     attr_reader :version
-    def initialize(settings)
+    def initialize(settings, logger=nil)
       @settings = settings
+      if not logger.nil?
+        @logger = logger
+      else
+        @logger = MyStupidLogger.new
+      end
       @version = @settings.version || "0.2.0"
     end
 
@@ -68,8 +81,8 @@ module ConfigServer
             "</node-config>\n"
           when :text
             services = instance.services
-            puts "uuid: #{uuid}"
-            puts "services: #{services.inspect}"
+            log "uuid: #{uuid}"
+            log "services: #{services.inspect}"
             "|" +
             services.map do |svc_name,params|
               "service|#{svc_name}" +
@@ -100,8 +113,8 @@ module ConfigServer
           else
             ""
         end
+	return configs, instance.required_parameters_remaining?
       end
-      return configs
     end
 
     def get_provides(uuid, options={})
@@ -129,6 +142,7 @@ module ConfigServer
 
     def update(uuid, data, ip, options={})
       return nil if not exists?(uuid)
+      log "update #{uuid} with #{ip} and #{data}"
 
       instance = Model::Instance.find(uuid)
       instance.ip = ip
@@ -139,18 +153,19 @@ module ConfigServer
       provided_params = instance.provided_parameters(
         :only_with_values => true,
         :include_values => true)
-      puts "provided_params: #{provided_params.inspect}"
+      log "provided_params: #{provided_params.inspect}"
 
       dep = instance.deployable
-      asy = instance.assembly_name
-      dep.instances_with_assembly_dependencies(asy).each do |uuid|
-        puts "found a dependency"
+      assembly_identifiers = [instance.uuid, instance.assembly_name] 
+      dep.instances_with_assembly_dependencies(assembly_identifiers).each do |uuid|
+        log "found a dependency"
         other = Model::Instance.find(uuid)
         params = {}
         required_params = other.required_parameters(:raw => true)
-        puts "required_params: #{required_params.to_xml}"
-        required_params.xpath("//required-parameter[@assembly='#{asy}']").each do |p|
-          puts "found a required param match: #{p.to_xml}"
+        log "required_params: #{required_params.to_xml}"
+        match_string = assembly_identifiers.map {|id| "(@assembly='#{id}')"}.join("or")
+        required_params.xpath("//required-parameter[#{match_string}]").each do |p|
+          log "found a required param match: #{p.to_xml}"
           if provided_params.key?(p['parameter'])
             params[p['name']] = provided_params[p['parameter']]
           end
@@ -176,11 +191,19 @@ module ConfigServer
         instance.file = file
       end
     end
-
+    
     private
+    def logger
+      @logger
+    end
+
+    def log(msg)
+      logger.info msg
+    end
+
     def parse_audrey_data(data)
-      puts "parse_audrey_data(#{data})"
-      return {} if data.nil?
+      return {} if data.nil? or "|&|" == data
+      log "parse_audrey_data(#{data})"
       (data.split "|").map do |d|
         next if d.nil? or d.empty?
         k, v = d.split "&"

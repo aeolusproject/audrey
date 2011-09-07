@@ -26,6 +26,7 @@ get '/version', :provides => ['text', 'xml'] do
 end
 
 get '/version', :provides => 'html' do
+  "<config-server>\n" +
   "Application Version: #{app_version}<br/>\n" +
   "API Version: #{api_version}<br/>\n"
 end
@@ -41,12 +42,25 @@ end
 
 ## GET /configs/
 # Retrieve the configuration information for an instance
+get '/configs/:version/:uuid', :provides => 'text' do
+  if not api_version_valid?(request, params[:version]) or
+      not configs.exists?(params[:uuid])
+    not_found
+  else
+    confs, more_configs = configs.get_configs(params[:uuid], :as => :text)
+    status = more_configs ? 202 : 200
+    [status, confs]
+  end
+end
+
 get '/configs/:version/:uuid', :provides => 'xml' do
   if not api_version_valid?(request, params[:version]) or
       not configs.exists?(params[:uuid])
     not_found
   else
-    configs.get_configs(params[:uuid], :as => :xml)
+    confs, more_configs = configs.get_configs(params[:uuid], :as => :xml)
+    status = more_configs ? 202 : 200
+    [status, confs]
   end
 end
 
@@ -55,16 +69,9 @@ get '/configs/:version/:uuid' do
       not configs.exists?(params[:uuid])
     not_found
   else
-    configs.get_configs(params[:uuid], :as => :xml)
-  end
-end
-
-get '/configs/:version/:uuid', :provides => 'text' do
-  if not api_version_valid?(request, params[:version]) or
-      not configs.exists?(params[:uuid])
-    not_found
-  else
-    configs.get_configs(params[:uuid], :as => :text)
+    confs, more_configs = configs.get_configs(params[:uuid], :as => :xml)
+    status = more_configs ? 202 : 200
+    [status, confs]
   end
 end
 
@@ -77,6 +84,7 @@ post '/configs/:version/:uuid' do
   #if not api_version_valid?(request, params[:version])
     #not_found
   #else
+    logger.debug("Post data: #{params[:data]}")
     begin
       configs.create(params[:uuid], params[:data])
     rescue ConfigServer::InvalidInstanceConfigError
@@ -123,21 +131,25 @@ end
 
 ## GET /params/
 # Retrieve the list of "return" parameters names for an instance
-get '/params/:version/:uuid', :provides => 'xml' do
-  if not api_version_valid?(request, params[:version]) or
-      not configs.exists?(params[:uuid])
-    not_found
-  else
-    configs.get_provides(params[:uuid], :as => :xml)
-  end
-end
-
 get '/params/:version/:uuid', :provides => 'text' do
   if not api_version_valid?(request, params[:version]) or
       not configs.exists?(params[:uuid])
     not_found
   else
-    configs.get_provides(params[:uuid], :as => :text)
+    provides = configs.get_provides(params[:uuid], :as => :text)
+    logger.debug("GET params: #{provides}")
+    provides
+  end
+end
+
+get '/params/:version/:uuid', :provides => 'xml' do
+  if not api_version_valid?(request, params[:version]) or
+      not configs.exists?(params[:uuid])
+    not_found
+  else
+    provides = configs.get_provides(params[:uuid], :as => :xml)
+    logger.debug("GET params: #{provides}")
+    provides
   end
 end
 
@@ -148,6 +160,7 @@ put '/params/:version/:uuid' do
       not configs.exists?(params[:uuid])
     not_found
   else
+    logger.debug("PUT params: #{params[:audrey_data]}")
     configs.update(params[:uuid], params[:audrey_data], request.ip)
   end
 end

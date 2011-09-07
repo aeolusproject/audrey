@@ -11,6 +11,7 @@ proxy_type=ENV['PROXY_TYPE']
 proxy_auth_file = ENV['PROXY_AUTH_FILE']
 
 set :environment,         ENV['RACK_ENV'].to_sym
+set :logging,             true
 set :storage_dir,         storage_dir
 set :instance_config_rng, instance_config_rng
 set :root,                root_dir
