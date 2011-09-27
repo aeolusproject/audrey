@@ -77,7 +77,7 @@ GENERATED_FILES.each do |(source_file,is_packaged,block)|
     block.call(source_file, packaged_name, dependencies, p)
   else
     file "#{p.package_dir}/#{packaged_name}" => dependencies do
-      system("sed -e 's/@VERSION@/#{p.version}/' #{source_file} > #{p.package_dir}/#{packaged_name}")
+      system("sed -e 's/@VERSION@/#{version}/' #{source_file} > #{p.package_dir}/#{packaged_name}")
     end
   end
 
@@ -102,7 +102,7 @@ task :rpm => [ :package ] do |t|
     if $? != 0
       raise "Oops, no rpmbuild command found.  Please install the rpm-build package to run the rpm rake task."
     end
-    system("rpmbuild --define '_sourcedir #{dir}' -ba #{SPEC_FILE} > rpmbuild.log 2>&1")
+    system("rpmbuild --define '_sourcedir #{dir}' -ba #{SPEC_FILE} | tee rpmbuild.log 2>&1")
     if $? != 0
       raise "rpmbuild failed"
     end
