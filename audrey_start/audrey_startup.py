@@ -48,13 +48,6 @@ CS_API_VER = 1
 CONDORCLOUD_CS_ADDR = '/sys/devices/virtual/dmi/id/sys_vendor'
 CONDORCLOUD_CS_UUID = '/sys/devices/virtual/dmi/id/product_name'
 
-# When running on RHEV-m, the Config Server (CS) contact
-# information will be stored in a file built into the image
-# and the UUID will be stored in the smbios.
-# These are the dmi files where the smbios information is stored.
-RHEV_CS_ADDR = '/opt/redhat/cloudengine/rhevm_config_server'
-RHEV_CS_UUID = '/sys/devices/virtual/dmi/id/product_uuid'
-
 #
 # Error Handling methods:
 #
@@ -417,7 +410,8 @@ def _get_system_info():
     cmd = ['/usr/bin/facter']
     ret = _run_cmd(cmd)
     if ret['subproc'].returncode != 0:
-        _raise_ASError(('Failed command: %s Error: %s') % (str(cmd), str(ret)))
+        _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+            (' '.join(cmd), str(ret['err'])))
 
     facts = {}
     for fact in ret['out'].split('\n'):
@@ -644,7 +638,7 @@ class Config_Tooling(object):
         '''
         Description:
             Used for logging errors encountered when attempting to
-            execute the service the command.
+            execute the service command.
 
             Simply logs the provided input string.
         '''
@@ -825,7 +819,7 @@ class CSClient(object):
         self.cs_UUID = ''
         self.cs_pw = ''
         self.cs_proto = 'https'
-        self.ec2_user_data_url = 'http://169.254.169.254/2009-04-04/user-data'
+        self.ec2_user_data_url = 'http://169.254.169.254/latest/user-data'
         self.config_serv = ''
         self.cs_params = ''
         self.cs_configs = ''
@@ -856,16 +850,13 @@ class CSClient(object):
         elif not self.parse_args():
             self._discover_config_server()
 
-        if 'RHEV-M' not in self.cloud_type:
-            # Authentication password not yet supported on RHEV-M.
-            # 
-            # Add username and password credentials to the httplib2.Http
-            # object.
-            # Until this point the httplib2.Http object had been used to gather
-            # user data when running on EC2 with no username/passwod. From
-            # this point on the httplib2.Http object is only used to
-            # communicate with the config server which requires credentials. 
-            self.http.add_credentials(self.cs_UUID, self.cs_pw)
+        # Add username and password credentials to the httplib2.Http
+        # object.
+        # Until this point the httplib2.Http object had been used to gather
+        # user data when running on EC2 with no username/passwod. From
+        # this point on the httplib2.Http object is only used to
+        # communicate with the config server which requires credentials. 
+        self.http.add_credentials(self.cs_UUID, self.cs_pw)
 
     def __del__(self):
         '''
@@ -1049,31 +1040,91 @@ class CSClient(object):
             except:
                 _raise_ASError('Failed accessing Config Server data.')
 
-        elif 'RHEV-M' in cloud_type or 'VMWARE' in cloud_type:
+        elif 'RHEV' in cloud_type:
             #
-            # User data can not be passed to a launching RHEV-M or VMWare
-            # instance.
-            # Treat them both the same. Expect the user data to be baked
-            # in to the image.
+            # If on RHEV-M the user data will be contained on the
+            # floppy device in file deltacloud.txt.
+            # To access it:
+            #    modprobe floppy
+            #    mount /dev/fd0 /media
+            #    read /media/deltacloud.txt
             #
-            self.cloud_type = 'RHEV-M'
-            self.cs_proto = 'http'
+            self.cloud_type = 'RHEV'
+
+            #    modprobe floppy
+            cmd = ['/sbin/modprobe', 'floppy']
+            ret = _run_cmd(cmd)
+            if ret['subproc'].returncode != 0:
+                _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+                    (' '.join(cmd), str(ret['err'])))
+
+            cmd = ['/bin/mkdir', '/media']
+            ret = _run_cmd(cmd)
+            # If /media is already there (1) or any other error (0)
+            if (ret['subproc'].returncode != 1) and  \
+               (ret['subproc'].returncode != 0):
+                _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+                    (' '.join(cmd), str(ret['err'])))
+
+            cmd = ['/bin/mount', '/dev/fd0', '/media']
+            ret = _run_cmd(cmd)
+            # If /media is already mounted (32) or any other error (0)
+            if (ret['subproc'].returncode != 32) and  \
+               (ret['subproc'].returncode != 0):
+                _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+                    (' '.join(cmd), str(ret['err'])))
+
             try:
                 # Condfig Server (CS) address:port.
-                with open(RHEV_CS_ADDR, 'r') as fp:
-                    # Authentication password not supported yet on RHEV-M
-                    self.cs_addr, self.cs_port = \
+                with open('/media/deltacloud.txt', 'r') as fp:
+                    # Once available add base64.b64decode()
+                    # i.e.:
+                    # self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
+                    #     base64.b64decode(fp.read())[:-1].split(':')
+                    self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
+                    cs_addr, cs_port, cs_UUID, cs_pw = \
                         fp.read()[:-1].split(':')
-
-                with open(RHEV_CS_UUID, 'r') as fp:
-                    self.cs_UUID = fp.read()[:-1]
-
             except:
-                _raise_ASError('Failed accessing Config Server data.')
+                _raise_ASError('Failed accessing RHEVm user data.')
 
-        else:
-            _raise_ASError(('Unrecognized Cloud Type: %s') % \
-                (str(cloud_type)))
+        elif 'VSPHERE' in cloud_type:
+            #
+            # If on vSphere the user data will be contained on the
+            # floppy device in file deltacloud.txt.
+            # To access it:
+            #    mount /dev/fd0 /media
+            #    read /media/deltacloud.txt
+            #
+            self.cloud_type = 'VSPHERE'
+
+            cmd = ['/bin/mkdir', '/media']
+            ret = _run_cmd(cmd)
+            # If /media is already there (1) or any other error (0)
+            if (ret['subproc'].returncode != 1) and  \
+               (ret['subproc'].returncode != 0):
+                _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+                    (' '.join(cmd), str(ret['err'])))
+
+            cmd = ['/bin/mount', '/dev/fd0', '/media']
+            ret = _run_cmd(cmd)
+            # If /media is already mounted (32) or any other error (0)
+            if (ret['subproc'].returncode != 32) and  \
+               (ret['subproc'].returncode != 0):
+                _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+                    (' '.join(cmd), str(ret['err'])))
+
+            try:
+                # Condfig Server (CS) address:port.
+                with open('/media/deltacloud.txt', 'r') as fp:
+                    # Once available add base64.b64decode()
+                    # i.e.:
+                    # self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
+                    #     base64.b64decode(fp.read())[:-1].split(':')
+                    self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
+                    cs_addr, cs_port, cs_UUID, cs_pw = \
+                        fp.read()[:-1].split(':')
+            except:
+                _raise_ASError('Failed accessing RHEVm user data.')
 
     def _get(self, url, headers=None):
         '''
@@ -1097,11 +1148,9 @@ class CSClient(object):
             202 HTTP Accepted - Success and more data of this type
             404 HTTP Not Found - This may be temporary so try again 
         '''
-        print 'JJV _validate_http_status -010- status: ' + str(status)
         if (status != 200) and (status != 202) and (status != 404):
             _raise_ASError(('Invalid HTTP status code: %s') % \
                 (str(status)))
-        print 'JJV _validate_http_status -012- status: ' + str(status)
 
     # Public interfaces
     def get_cs_configs(self):
@@ -1247,6 +1296,9 @@ def audrey_script_main():
     # Process the Requires and Provides parameters until the HTTP status
     # from the get_cs_configs and the get_cs_params both return 200
     while (config_status != 200) or (param_status != 200):
+
+        LOGGER.debug('Config Parameter status: ' + str(config_status))
+        LOGGER.debug('Return Parameter status: ' + str(param_status))
 
         # Get the Required Configs from the Config Server
         if (config_status != 200):
