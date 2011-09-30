@@ -1082,7 +1082,6 @@ class CSClient(object):
                     # self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
                     #     base64.b64decode(fp.read())[:-1].split(':')
                     self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
-                    cs_addr, cs_port, cs_UUID, cs_pw = \
                         fp.read()[:-1].split(':')
             except:
                 _raise_ASError('Failed accessing RHEVm user data.')
@@ -1121,10 +1120,9 @@ class CSClient(object):
                     # self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
                     #     base64.b64decode(fp.read())[:-1].split(':')
                     self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
-                    cs_addr, cs_port, cs_UUID, cs_pw = \
                         fp.read()[:-1].split(':')
             except:
-                _raise_ASError('Failed accessing RHEVm user data.')
+                _raise_ASError('Failed accessing vSphere user data.')
 
     def _get(self, url, headers=None):
         '''
