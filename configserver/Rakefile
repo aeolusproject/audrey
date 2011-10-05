@@ -102,9 +102,12 @@ task :rpm => [ :package ] do |t|
     if $? != 0
       raise "Oops, no rpmbuild command found.  Please install the rpm-build package to run the rpm rake task."
     end
-    system("rpmbuild --define '_sourcedir #{dir}' -ba #{SPEC_FILE} | tee rpmbuild.log 2>&1")
-    if $? != 0
-      raise "rpmbuild failed"
+    # set pipefail so that is rpmbuild fails, its status is reported back to the rake task
+    puts "Running: set -o pipefail && rpmbuild --define '_sourcedir #{dir}' -ba #{SPEC_FILE} | tee rpmbuild.log 2>&1"
+    system("set -o pipefail && rpmbuild --define '_sourcedir #{dir}' -ba #{SPEC_FILE} | tee rpmbuild.log 2>&1")
+    rpmbuild_status = $?
+    if rpmbuild_status != 0
+      raise "rpmbuild failed (exit code: #{rpmbuild_status})"
     end
   end
 end
