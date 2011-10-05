@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	3%{?dist}%{?extra_release}
+Release:	4%{?extra_release}{?dist}
 Summary:	The Aeolus Config Server
 BuildArch:  noarch
 
@@ -129,6 +129,8 @@ fi
 
 
 %changelog
+* Wed Oct 05 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-4
+- Fix rakefile to build on f16, and fixup extrarelease and dist tags in the version
 * Wed Sep 07 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-3
 - Fix service to return 202 when configs are not complete
 * Thu Aug 18 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-2
