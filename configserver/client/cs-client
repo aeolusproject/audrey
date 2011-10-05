@@ -2,7 +2,7 @@
 
 PROGNAME=`basename $0`
 USAGE=$(cat <<END_OF_USAGE
-  Usage: $0 {-e server_endpoint} {-u user} [-vV] [post|put|get] {arguments}
+  Usage: $0 {-e server_endpoint} {-u user} [-vVd] [post|put|get] {arguments}
 
     -e    server_endpoint is the fully qualified URL for the config server;
           this includes the scheme, host, and port,
@@ -11,6 +11,7 @@ USAGE=$(cat <<END_OF_USAGE
           request the password from the user
     -v    verbose (output the curl command that will be called)
     -V    very verbose (include verbose output from curl); implies -v
+    -d    dry run
 
     post: $PROGNAME {options} post \$uuid [\$filename]
           \$uuid: the instance indentifier for this data
@@ -50,9 +51,11 @@ VALID_VERBS=(POST PUT GET DELETE VERSION)
 ENDPOINT="http://localhost:4567"
 VERBOSE=false
 VERY_VERBOSE=false
-while getopts "vVhe:u:" opt; do
+DRY_RUN=false
+while getopts "vVdhe:u:" opt; do
   case $opt in
     v) VERBOSE=true;;
+    d) DRY_RUN=true;;
     V) VERY_VERBOSE=true; VERBOSE=true;;
     e) ENDPOINT=$OPTARG;;
     u) HTTP_USER=$OPTARG;;
@@ -87,7 +90,9 @@ function call_curl {
     echo "$CURL ${args[*]}"
   fi
 
-  $CURL "${args[@]}"
+  if [ $DRY_RUN == false ]; then
+    $CURL "${args[@]}"
+  fi
 }
 
 ## Validate the argument against the list of VALID_VERBS
