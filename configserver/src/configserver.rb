@@ -2,8 +2,6 @@ require 'cgi'
 require 'sinatra'
 require 'rubygems'
 
-require 'ruby-debug'
-
 require 'lib/config_handler' # I don't like this name
 require 'lib/application_helper'
 
