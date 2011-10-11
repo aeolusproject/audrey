@@ -2,7 +2,7 @@
 
 Name:		aeolus-audrey_startup
 Version:	@VERSION@
-Release:	1%{?dist}%{?extra_release}
+Release:	2%{?dist}%{?extra_release}
 
 Summary:	The Aeolus Audrey Startup Script
 BuildArch:	noarch
@@ -43,6 +43,8 @@ rm -rf $RPM_BUILD_ROOT
 %{app_root}/audrey
 
 %changelog
+* Tue Oct 11 2011 Joe VLcek <joev@redhat.com> 0.3.1-2
+- RHEVm user data injection base64 encoded.
 * Fri Sep 30 2011 Joe VLcek <joev@redhat.com> 0.3.1-1
 - RHEVm user data injection.
 * Wed May 18 2011 Joe VLcek <joev@redhat.com> 0.0.1-1

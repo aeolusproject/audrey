@@ -1043,11 +1043,22 @@ class CSClient(object):
         elif 'RHEV' in cloud_type:
             #
             # If on RHEV-M the user data will be contained on the
-            # floppy device in file deltacloud.txt.
+            # floppy device in file deltacloud-user-data.txt.
             # To access it:
             #    modprobe floppy
             #    mount /dev/fd0 /media
-            #    read /media/deltacloud.txt
+            #    read /media/deltacloud-user-data.txt
+            #
+            # Note:
+            # On RHEVm the deltacloud drive had been delivering the user
+            # data base64 decoded at one point that changed such that the
+            # deltacloud drive leaves the date base64 encoded. This
+            # Code segment will handle both base64 encoded and decoded
+            # user data.
+            #
+            # Since ':' is used as a field delimiter in the user data
+            # and is not a valid base64 char, if ':' is found assume
+            # the data is already base64 decoded.
             #
             self.cloud_type = 'RHEV'
 
@@ -1076,23 +1087,36 @@ class CSClient(object):
 
             try:
                 # Condfig Server (CS) address:port.
-                with open('/media/deltacloud.txt', 'r') as fp:
-                    # Once available add base64.b64decode()
-                    # i.e.:
-                    # self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
-                    #     base64.b64decode(fp.read())[:-1].split(':')
-                    self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
-                        fp.read()[:-1].split(':')
+                with open('/media/deltacloud-user-data.txt', 'r') as fp:
+                    line = fp.read()
+                    if ':' in line:
+                        self.cs_addr, self.cs_port, self.cs_UUID, \
+                            self.cs_pw = line[:-1].split(':')
+                    else:
+                        self.cs_addr, self.cs_port, \
+                            self.cs_UUID, self.cs_pw = \
+                            base64.b64decode(line)[:-1].split(':')
             except:
                 _raise_ASError('Failed accessing RHEVm user data.')
 
         elif 'VSPHERE' in cloud_type:
             #
             # If on vSphere the user data will be contained on the
-            # floppy device in file deltacloud.txt.
+            # floppy device in file deltacloud-user-data.txt.
             # To access it:
             #    mount /dev/fd0 /media
-            #    read /media/deltacloud.txt
+            #    read /media/deltacloud-user-data.txt
+            #
+            # Note:
+            # On vSphere the deltacloud drive had been delivering the user
+            # data base64 decoded at one point that changed such that the
+            # deltacloud drive leaves the date base64 encoded. This
+            # Code segment will handle both base64 encoded and decoded
+            # user data.
+            #
+            # Since ':' is used as a field delimiter in the user data
+            # and is not a valid base64 char, if ':' is found assume
+            # the data is already base64 decoded.
             #
             self.cloud_type = 'VSPHERE'
 
@@ -1114,13 +1138,15 @@ class CSClient(object):
 
             try:
                 # Condfig Server (CS) address:port.
-                with open('/media/deltacloud.txt', 'r') as fp:
-                    # Once available add base64.b64decode()
-                    # i.e.:
-                    # self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
-                    #     base64.b64decode(fp.read())[:-1].split(':')
-                    self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
-                        fp.read()[:-1].split(':')
+                with open('/media/deltacloud-user-data.txt', 'r') as fp:
+                    line = fp.read()
+                    if ':' in line:
+                        self.cs_addr, self.cs_port, self.cs_UUID, \
+                            self.cs_pw = line[:-1].split(':')
+                    else:
+                        self.cs_addr, self.cs_port, \
+                            self.cs_UUID, self.cs_pw = \
+                            base64.b64decode(line)[:-1].split(':')
             except:
                 _raise_ASError('Failed accessing vSphere user data.')
 
