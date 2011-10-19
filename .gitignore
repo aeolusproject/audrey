@@ -4,3 +4,4 @@ audrey_start/pkg/*
 job*.cnd
 *-*-*-*-*
 *.pyc
+*.log

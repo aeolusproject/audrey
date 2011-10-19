@@ -69,7 +69,7 @@ module ConfigServer
       private
       def ensure_deployable_dir
         path = File.join(Deployable.storage_path, @uuid)
-        FileUtils.mkdir_p(path) if not File.directory?(path)
+        FileUtils.mkdir_p(path, :mode => 0700) if not File.directory?(path)
         Dir.new(path)
       end
     end

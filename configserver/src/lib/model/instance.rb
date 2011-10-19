@@ -300,7 +300,7 @@ module ConfigServer
       alias pp provided_parameters_raw
 
       def ensure_instance_dir
-        FileUtils.mkdir_p(@instance_dir) if not File.directory?(@instance_dir)
+        FileUtils.mkdir_p(@instance_dir, :mode => 0700) if not File.directory?(@instance_dir)
       end
 
       def load_configs

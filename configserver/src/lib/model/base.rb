@@ -30,7 +30,7 @@ module ConfigServer
       def self.ensure_storage_path
         path = storage_path
         if not (path.nil? or path.empty? or File.directory?(path))
-          FileUtils.mkdir_p(path)
+          FileUtils.mkdir_p(path, :mode => 0700)
         end
       end
 

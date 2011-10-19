@@ -17,6 +17,9 @@
 # thin log file for Aeolus Config Server
 #THIN_LOG="/var/log/aeolus-configserver/thin.log"
 
+# log file for application INFO and ERROR messages
+#APPLICATION_LOG="/var/log/aeolus-configserver/configserver.log"
+
 # thin pid file for Aeolus Config Server
 #THIN_PID="/var/run/aeolus-configserver/thin.pid"
 

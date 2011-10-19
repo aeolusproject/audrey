@@ -1,16 +1,14 @@
-use Rack::Logger
 
 module ApplicationHelper
   def logger
-    request.logger
+    LOGGER
   end
 
   def configs
-    ConfigServer::Model.storage_dir = settings.storage_dir
     ConfigServer::Model.instance_config_schema_location =
       settings.instance_config_rng
 
-    @configs ||= ConfigServer::InstanceConfigs.new(settings, request.logger)
+    @configs ||= ConfigServer::InstanceConfigs.new(settings, LOGGER)
   end
 
   def app_version
@@ -19,6 +17,10 @@ module ApplicationHelper
 
   def api_version
     "1"
+  end
+
+  def app_log_file
+    settings.app_log
   end
 
   def api_version_valid?(request, version)

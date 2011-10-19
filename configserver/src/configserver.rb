@@ -4,8 +4,14 @@ require 'rubygems'
 
 require 'lib/config_handler' # I don't like this name
 require 'lib/application_helper'
+require 'logger'
 
 helpers ApplicationHelper
+
+configure :development do
+  enable :logging, :dump_errors
+  set :raise_errors, true
+end
 
 error 400 do
   #FIXME: point the requestor to the relaxNG document used to parse the XML
@@ -17,13 +23,16 @@ end
 ## GET /version
 # Retrieve the Application and API version for this config server
 get '/version', :provides => ['text', 'xml'] do
+  logger.debug("Getting the version as text or XML")
   "<config-server>\n" +
   "  <application-version>#{app_version}</application-version>\n" +
   "  <api-version>#{api_version}</api-version>\n" +
   "</config-server>"
 end
 
-get '/version', :provides => 'html' do
+get '/version' do
+  logger.debug("Getting the version as HTML")
+  "<config-server>\n" +
   "<config-server>\n" +
   "Application Version: #{app_version}<br/>\n" +
   "API Version: #{api_version}<br/>\n"

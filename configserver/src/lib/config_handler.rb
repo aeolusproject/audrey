@@ -5,8 +5,6 @@ require 'open-uri'
 
 require 'lib/model'
 
-use Rack::Logger
-
 class String
   require 'base64'
   def to_b64
@@ -95,21 +93,21 @@ module ConfigServer
                 ""
               end
             end.join("|") +
-            "|" 
+            "|"
           when :textold
             #old format for now
             #|classes&service_name&service_name|parameters|param1&b64(va11)|param2&b64(val2)|
             #new format soon
             #|service&<s1>|parameters|<p1name>&b64(<v1>)|<p2name>&b64(<v2>)|service&<s2>|parameters|<p1name>&b64(<v1>)|<p2name>&b64(<v2>)|
             "|classes&" +
-	    instance.services.keys.join("&") + 
+	    instance.services.keys.join("&") +
             "|parameters|" +
             instance.services.values.map do |params|
               params.map do |pname, val|
                 "#{pname}&" + [val].pack("m0").delete("\n")
               end.join("|")
             end.join("|") +
-            "|" 
+            "|"
           else
             ""
         end
@@ -156,7 +154,7 @@ module ConfigServer
       log "provided_params: #{provided_params.inspect}"
 
       dep = instance.deployable
-      assembly_identifiers = [instance.uuid, instance.assembly_name] 
+      assembly_identifiers = [instance.uuid, instance.assembly_name]
       dep.instances_with_assembly_dependencies(assembly_identifiers).each do |uuid|
         log "found a dependency"
         other = Model::Instance.find(uuid)
@@ -191,7 +189,7 @@ module ConfigServer
         instance.file = file
       end
     end
-    
+
     private
     def logger
       @logger
