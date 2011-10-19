@@ -33,6 +33,11 @@ import tarfile
 import tarfile as tf # To simplify exception names.
 import tempfile
 import urllib
+import oauth2 as oauth
+
+
+EC2_USER_DATA_URL = 'http://169.254.169.254/latest/user-data'
+CLOUD_INFO_FILE = '/etc/sysconfig/cloud-info'
 
 # Location of the config tooling.
 TOOLING_DIR = '/var/audrey/tooling/'
@@ -236,10 +241,6 @@ class Service_Params(object):
             name = ''
         self.name = name # string
         self.params = [] # start with an empty list
-    def set_name(self, name):
-        if name == None:
-            name = ''
-        self.name = name
     def add_param(self, param):
         self.params.append(param)
     def __repr__(self):
@@ -513,57 +514,6 @@ def generate_provides(src):
 
     return urllib.urlencode({'audrey_data':'|'.join(provides_list)})
 
-#
-# Methods used to access any user provided configuration tooling.
-#
-
-#
-# Classes and methods to perform the get and put to and from
-# the Config Server (CS)
-#
-class HttpUnitTest(object):
-    '''
-    Description:
-        When testing the http object does not exists. This class provides
-        test methods that could be preformed when doing UNITTESTing.
-    '''
-    class HttpUnitTestResponse(object):
-        '''
-        Description:
-            When testing the http object does not exists. This class
-            provides the test method response that could be preformed
-            when doing UNITTESTing.
-        '''
-        def __init__(self, status):
-            self.status = status
-        def status(self):
-            '''
-            return status when not running live but in test environment.
-            '''
-            return self.status
-
-    # simple HTTP Response with 200 status code
-    ok_response = HttpUnitTestResponse(200)
-
-    def request(self, url, method='GET', body=None, headers=None):
-        '''
-        Handle request when not running live but in test environment.
-        '''
-        if method == 'GET' and url.find('/configs/') > -1:
-            body = '|service|s1|parameters|param1&%s|param2&%s' % \
-                    (base64.b64encode('value1'), base64.b64encode('value2'))
-        elif (method == 'GET') and (url.find('/params/') > -1):
-            body = '|param1&param2|'
-        elif method == 'PUT' and url.find('/params/') > -1:
-            body = ''
-        return HttpUnitTest.ok_response, body
-
-    def add_credentials(self, usernme, password):
-        '''
-        Handle add_credentials when not running live but in test environment.
-        '''
-        pass
-
 class Config_Tooling(object):
     '''
     TBD - Consider making this class derived from dictionary or a mutable
@@ -581,7 +531,7 @@ class Config_Tooling(object):
           Hat supplied.
     '''
 
-    def __init__(self, unittest=False, tool_dir=TOOLING_DIR):
+    def __init__(self, tool_dir=TOOLING_DIR):
         '''
         Description:
             Set initial state so it can be tracked. Valuable for
@@ -805,7 +755,7 @@ class CSClient(object):
         Client interface to Config Server (CS)
     '''
 
-    def __init__(self, unittest=False):
+    def __init__(self, endpoint, oauth_key, oauth_secret, **kwargs):
         '''
         Description:
             Set initial state so it can be tracked. Valuable for
@@ -813,50 +763,21 @@ class CSClient(object):
         '''
 
         self.version = CS_API_VER
-        self.cloud_type = 'UNKNOWN'
-        self.cs_addr = ''
-        self.cs_port = ''
-        self.cs_UUID = ''
-        self.cs_pw = ''
-        self.cs_proto = 'https'
+        self.cs_endpoint = endpoint
+        self.cs_oauth_key = oauth_key
+        self.cs_oauth_secret = oauth_secret
         self.ec2_user_data_url = 'http://169.254.169.254/latest/user-data'
-        self.config_serv = ''
         self.cs_params = ''
         self.cs_configs = ''
         self.tmpdir = ''
         self.tarball = ''
-        self.log_level = 'INFO'
 
-        # Construct the libhttp object
-        self.http = httplib2.Http()
-
-        # If not running unit testing (python -m unittest) then
-        # Discover the Config Server access info which could have
-        # been passed on command line. If not then discover it
-        # using the cloud provider specific method.
-        if unittest:
-            #
-            # For testing from UNITTEST
-            # Populate self.cloud_info_file with UNITTEST
-            #
-            self.cloud_type = 'UNITTEST'
-            self.config_serv = 'csAddr:csPort:csUUID:csPW'
-            self.cs_addr = self.config_serv.split(':')[0]
-            self.cs_port = self.config_serv.split(':')[1]
-            self.cs_UUID = self.config_serv.split(':')[2]
-            self.cs_pw   = self.config_serv.split(':')[3]
-            self.http = HttpUnitTest()
-
-        elif not self.parse_args():
-            self._discover_config_server()
-
-        # Add username and password credentials to the httplib2.Http
-        # object.
-        # Until this point the httplib2.Http object had been used to gather
-        # user data when running on EC2 with no username/passwod. From
-        # this point on the httplib2.Http object is only used to
-        # communicate with the config server which requires credentials.
-        self.http.add_credentials(self.cs_UUID, self.cs_pw)
+        # create an oauth client for communication with the cs
+        consumer = oauth.Consumer(self.cs_oauth_key, self.cs_oauth_secret)
+        # 2 legged auth, token unnessesary
+        token = None #oauth.Token('access-key-here','access-key-secret-here')
+        client = oauth.Client(consumer, token)
+        self.http = client
 
     def __del__(self):
         '''
@@ -876,302 +797,43 @@ class CSClient(object):
         '''
         return('\n<Instance of: %s\n' \
                '\tVersion: %s\n' \
-               '\tEC2 User Data URL: %s\n' \
-               '\tCloud Type: %s\n' \
-               '\tConfig Server: %s\n' \
-               '\tConfig Server Addr: %s\n' \
-               '\tConfig Server Port: %s\n' \
-               '\tConfig Server UUID: %s\n' \
-               '\tConfig Server Password: %s\n' \
-               '\tConfig Server Protocol: %s\n' \
+               '\tConfig Server Endpoint: %s\n' \
+               '\tConfig Server oAuth Key: %s\n' \
+               '\tConfig Server oAuth Secret: %s\n' \
                '\tConfig Server Params: %s\n' \
                '\tConfig Server Configs: %s\n' \
                '\tTemporary Directory: %s\n' \
                '\tTarball Name: %s\n' \
-               '\tLogging Level: %s\n' \
                'eot>' %
             (self.__class__.__name__,
             str(self.version),
-            str(self.ec2_user_data_url),
-            str(self.cloud_type),
-            str(self.config_serv),
-            str(self.cs_addr),
-            str(self.cs_port),
-            str(self.cs_UUID),
-            str(self.cs_pw),
-            str(self.cs_proto),
+            str(self.cs_endpoint),
+            str(self.cs_oauth_key),
+            str(self.cs_oauth_secret),
             str(self.cs_params),
             str(self.cs_configs),
             str(self.tmpdir),
             str(self.tarball),
-            str(self.log_level)
             ))
 
-    def parse_args(self):
-        '''
-        Description:
-            Gather any Config Server access info optionally passed
-            on the command line. If being provided on the command
-            line all of it must be provided.
-
-            password is prompted for and not allowed as an argument.
-            This is to avoid a ps on the system to display the password
-            argument.
- 
-            Config Server Access Info is:
-              cs_addr - IP Address or hostname
-              cs_port - Port where Config Server is listening
-              cs_UUID - Instance UUID
-              cs_pw   - Password
-
-            Additionally a logging level can be provided when
-            being run from the command line.
-
-        Return:
-            True - if all Config Server info was provided on command line
-            False - otherwise
-
-        '''
-
-        LOGGER.debug('Invoked CSClient.parse_args()')
-
-
-        text_desc = 'Audrey Start - must be run as root.'
-        parser = argparse.ArgumentParser(description=text_desc)
-        parser.add_argument('-a', '--addr', dest='addr', \
-            required=False, help='Config Server IP Addr')
-        parser.add_argument('-p', '--port', dest='port', \
-            required=False, help='Config Server IP Port')
-        parser.add_argument('-u', '--UUID', dest='UUID', \
-            required=False, help='Instance UUID')
-        parser.add_argument('-L', '--log-level', dest='log_level', \
-            required=False, help='Audrey Agent Logging Level',
-            choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
-
-        args = parser.parse_args()
-
-        # If not all of the required items were provided on the command
-        # line ignore them all by returning False.
-        if not (args.addr and args.port  and args.UUID):
-            return False
-
-        # If a logging level was provided reset from the default.
-        if args.log_level:
-            self.log_level = args.log_level
-            LOGGER.setLevel(self.log_level)
-
-        # Prompt for password.
-        pw_input = raw_input('Config Server password: ')
-
-        # If a password is not provided assume http.
-        if not pw_input:
-            self.cs_proto = 'http'
-        else:
-            self.cs_proto = 'https'
-
-        self.cs_addr = args.addr
-        self.cs_port = args.port
-        self.cs_UUID = args.UUID
-        self.cs_pw = pw_input
-
-        return True
-
-    def _discover_config_server(self):
-        '''
-        Description:
-            Discover the Config Server access info.
-            If not discover it using the cloud provider specific method.
-        '''
-        #
-        # What Cloud Backend?
-        #
-        # Read the file populated with Cloud back end type.
-        # e.g.: CLOUD_TYPE="EC2"
-        #
-        self.cloud_info_file = '/etc/sysconfig/cloud-info'
-        try:
-            with open(self.cloud_info_file, 'r') as fp:
-                read_data = fp.read()
-        except IOError:
-            _raise_ASError(('Failed accessing file %s') % \
-                (self.cloud_info_file))
-
-        #
-        # Discover the Config Server access info.
-        #
-        cloud_type = read_data.upper()
-        if 'EC2' in cloud_type:
-            #
-            # If on EC2 the user data will contain the Config Server
-            # access info.
-            #
-            self.cloud_type = 'EC2'
-
-            try:
-                max_attempts = 5
-                url = self.ec2_user_data_url
-                headers = {'Accept': 'text/plain'}
-                for attempt in range(1, max_attempts):
-                    response, body = self._get(url, headers=headers)
-                    if response.status == 200:
-                        break
-                if response.status != 200:
-                    _raise_ASError('Max attempts to get EC2 user data \
-                            exceeded.')
-
-                if ':' in body:
-                    self.cs_addr, self.cs_port, self.cs_UUID, \
-                        self.cs_pw = body.strip().split(':')
-                else:
-                    self.cs_addr, self.cs_port, \
-                        self.cs_UUID, self.cs_pw = \
-                        base64.b64decode(body).strip().split(':')
-
-            except:
-                _raise_ASError('Failed accessing EC2 user data.')
-
-        elif 'CONDORCLOUD' in cloud_type:
-            #
-            # If on Condor Cloud, the user data will be in smbios
-            # Uses the dmi files to access the stored smbios information.
-            #
-            self.cloud_type = 'CONDORCLOUD'
-            try:
-                # Sometimes the string http:// is appended to the
-                # Condfig Server (CS) address:port.
-                with open(CONDORCLOUD_CS_ADDR, 'r') as fp:
-                    self.cs_addr, self.cs_port, self.cs_pw = \
-                        fp.read().strip().lstrip('http://').split(':')
-
-                with open(CONDORCLOUD_CS_UUID, 'r') as fp:
-                    self.cs_UUID = fp.read().strip()
-
-            except:
-                _raise_ASError('Failed accessing Config Server data.')
-
-        elif 'RHEV' in cloud_type:
-            #
-            # If on RHEV-M the user data will be contained on the
-            # floppy device in file deltacloud-user-data.txt.
-            # To access it:
-            #    modprobe floppy
-            #    mount /dev/fd0 /media
-            #    read /media/deltacloud-user-data.txt
-            #
-            # Note:
-            # On RHEVm the deltacloud drive had been delivering the user
-            # data base64 decoded at one point that changed such that the
-            # deltacloud drive leaves the date base64 encoded. This
-            # Code segment will handle both base64 encoded and decoded
-            # user data.
-            #
-            # Since ':' is used as a field delimiter in the user data
-            # and is not a valid base64 char, if ':' is found assume
-            # the data is already base64 decoded.
-            #
-            self.cloud_type = 'RHEV'
-
-            #    modprobe floppy
-            cmd = ['/sbin/modprobe', 'floppy']
-            ret = _run_cmd(cmd)
-            if ret['subproc'].returncode != 0:
-                _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
-                    (' '.join(cmd), str(ret['err'])))
-
-            cmd = ['/bin/mkdir', '/media']
-            ret = _run_cmd(cmd)
-            # If /media is already there (1) or any other error (0)
-            if (ret['subproc'].returncode != 1) and  \
-               (ret['subproc'].returncode != 0):
-                _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
-                    (' '.join(cmd), str(ret['err'])))
-
-            cmd = ['/bin/mount', '/dev/fd0', '/media']
-            ret = _run_cmd(cmd)
-            # If /media is already mounted (32) or any other error (0)
-            if (ret['subproc'].returncode != 32) and  \
-               (ret['subproc'].returncode != 0):
-                _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
-                    (' '.join(cmd), str(ret['err'])))
-
-            try:
-                # Condfig Server (CS) address:port.
-                with open('/media/deltacloud-user-data.txt', 'r') as fp:
-                    line = fp.read()
-                    if ':' in line:
-                        self.cs_addr, self.cs_port, self.cs_UUID, \
-                            self.cs_pw = line.strip().split(':')
-                    else:
-                        self.cs_addr, self.cs_port, \
-                            self.cs_UUID, self.cs_pw = \
-                            base64.b64decode(line).strip().split(':')
-            except:
-                _raise_ASError('Failed accessing RHEVm user data.')
-
-        elif 'VSPHERE' in cloud_type:
-            #
-            # If on vSphere the user data will be contained on the
-            # floppy device in file deltacloud-user-data.txt.
-            # To access it:
-            #    mount /dev/fd0 /media
-            #    read /media/deltacloud-user-data.txt
-            #
-            # Note:
-            # On vSphere the deltacloud drive had been delivering the user
-            # data base64 decoded at one point that changed such that the
-            # deltacloud drive leaves the date base64 encoded. This
-            # Code segment will handle both base64 encoded and decoded
-            # user data.
-            #
-            # Since ':' is used as a field delimiter in the user data
-            # and is not a valid base64 char, if ':' is found assume
-            # the data is already base64 decoded.
-            #
-            self.cloud_type = 'VSPHERE'
-
-            cmd = ['/bin/mkdir', '/media']
-            ret = _run_cmd(cmd)
-            # If /media is already there (1) or any other error (0)
-            if (ret['subproc'].returncode != 1) and  \
-               (ret['subproc'].returncode != 0):
-                _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
-                    (' '.join(cmd), str(ret['err'])))
-
-            cmd = ['/bin/mount', '/dev/cdrom', '/media']
-            ret = _run_cmd(cmd)
-            # If /media is already mounted (32) or any other error (0)
-            if (ret['subproc'].returncode != 32) and  \
-               (ret['subproc'].returncode != 0):
-                _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
-                    (' '.join(cmd), str(ret['err'])))
-
-            try:
-                # Condfig Server (CS) address:port.
-                with open('/media/deltacloud-user-data.txt', 'r') as fp:
-                    line = fp.read()
-                    if ':' in line:
-                        self.cs_addr, self.cs_port, self.cs_UUID, \
-                            self.cs_pw = line.strip().split(':')
-                    else:
-                        self.cs_addr, self.cs_port, \
-                            self.cs_UUID, self.cs_pw = \
-                            base64.b64decode(line).strip().split(':')
-            except:
-                _raise_ASError('Failed accessing vSphere user data.')
+    def _cs_url(self, url_type):
+        return '%s/%s/%s/%s' % \
+            (self.cs_endpoint, url_type, self.version, self.cs_oauth_key)
 
     def _get(self, url, headers=None):
         '''
         Description:
             Issue the http get to the the Config Server.
         '''
-        return self.http.request(url, 'GET', headers=headers)
+        return self.http.request(url, method='GET', headers=headers)
 
     def _put(self, url, body=None, headers=None):
         '''
         Description:
             Issue the http put to the the Config Server.
         '''
-        return self.http.request(url, 'PUT', body=body, headers=headers)
+        return self.http.request(url, method='PUT',
+                            body=body, headers=headers)
 
     def _validate_http_status(self, status):
         '''
@@ -1192,8 +854,7 @@ class CSClient(object):
             get the required configuration from the Config Server.
         '''
         LOGGER.info('Invoked CSClient.get_cs_configs()')
-        url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
-            '/configs/' + str(self.version) + '/' + self.cs_UUID
+        url = self._cs_url('configs')
         headers = {'Accept': 'text/plain'}
 
         response, body = self._get(url, headers=headers)
@@ -1208,8 +869,7 @@ class CSClient(object):
             get the provides parameters from the Config Server.
         '''
         LOGGER.info('Invoked CSClient.get_cs_params()')
-        url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
-            '/params/' + str(self.version) + '/' + self.cs_UUID
+        url = self._cs_url('params')
         headers = {'Accept': 'text/plain'}
 
         response, body = self._get(url, headers=headers)
@@ -1224,8 +884,7 @@ class CSClient(object):
             put the provides parameters to the Config Server.
         '''
         LOGGER.info('Invoked CSClient.put_cs_params_values()')
-        url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
-            '/params/' + str(self.version) + '/' + self.cs_UUID
+        url = self._cs_url('params')
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
         response, body = self._put(url, body=params_values, headers=headers)
@@ -1238,8 +897,7 @@ class CSClient(object):
             provided as a tarball
         '''
         LOGGER.info('Invoked CSClient.get_cs_tooling()')
-        url = self.cs_proto + '://' + self.cs_addr + ':' + self.cs_port + \
-            '/files/' + str(self.version) + '/' + self.cs_UUID
+        url = self._cs_url('files')
         headers = {'Accept': 'content-disposition'}
 
         tarball = ''
@@ -1265,6 +923,197 @@ class CSClient(object):
                         'Error: %s') % (self.tarball, strerror))
 
         return response.status, self.tarball
+
+def discover_config_server(cloud_info_file=CLOUD_INFO_FILE,
+                           condor_addr_file=CONDORCLOUD_CS_ADDR,
+                           condor_uuid_file=CONDORCLOUD_CS_UUID,
+                           ec2_user_data=EC2_USER_DATA_URL,
+                           http=httplib2.Http()):
+    '''
+    Description:
+        Discover the Config Server access info.
+        If not discover it using the cloud provider specific method.
+    '''
+    #
+    # What Cloud Backend?
+    #
+    # Read the file populated with Cloud back end type.
+    # e.g.: CLOUD_TYPE="EC2"
+    #
+
+    def _parse_user_data(data, condor=None):
+        '''
+        Take a string in form version|cs_endpoint|oauth_key|oauth_secret
+        and populate the respective self vars.
+        Conductor puts the UUID into the oauth_key field.
+        At minimum this function expects to find a | in the string
+        this is in effort not to log oauth secrets.
+        '''
+        LOGGER.debug('Parsing User Data')
+        user_data = data.split('|')
+        if len(user_data) > 1:
+            if user_data[0] == '1':
+                if condor:
+                    ud_version, endpoint, \
+                        oauth_secret = user_data
+                    oauth_key = condor
+                else:
+                    ud_version, endpoint, \
+                        oauth_key, oauth_secret = user_data
+                return {'endpoint': endpoint,
+                        'oauth_key': oauth_key,
+                        'oauth_secret': oauth_secret,}
+            #elif ud[0] == nextversion
+            #    parse code for version
+            else:
+                _raise_ASError('Invalid User Data Version: %s' % user_data[0])
+        else:
+            _raise_ASError('Could not get user data version, parse failed')
+
+    try:
+        with open(cloud_info_file, 'r') as fp:
+            read_data = fp.read()
+    except IOError:
+        _raise_ASError(('Failed accessing file %s') % \
+            (cloud_info_file))
+
+    #
+    # Discover the Config Server access info.
+    #
+    cloud_type = read_data.upper()
+    if 'EC2' in cloud_type:
+        #
+        # If on EC2 the user data will contain the Config Server
+        # access info.
+        #
+
+        try:
+            max_attempts = 5
+            headers = {'Accept': 'text/plain'}
+            for attempt in range(1, max_attempts):
+                response, body = http.request(ec2_user_data,
+                                              headers=headers)
+                if response.status == 200:
+                    break
+            if response.status != 200:
+                _raise_ASError('Max attempts to get EC2 user data \
+                        exceeded.')
+
+            if '|' not in body:
+                body = base64.b64decode(body)
+            return _parse_user_data(body)
+
+        except Exception, e:
+            _raise_ASError('Failed accessing EC2 user data: %s' % e)
+
+    elif 'CONDORCLOUD' in cloud_type:
+        #
+        # If on Condor Cloud, the user data will be in smbios
+        # Uses the dmi files to access the stored smbios information.
+        #
+        try:
+            return _parse_user_data(open(condor_addr_file, 'r').read().strip(),
+                                    open(condor_uuid_file, 'r').read().strip())
+        except Exception, e:
+            _raise_ASError('Failed accessing Config Server data: %s' % e)
+
+    elif 'RHEV' in cloud_type:
+        #
+        # If on RHEV-M the user data will be contained on the
+        # floppy device in file deltacloud-user-data.txt.
+        # To access it:
+        #    modprobe floppy
+        #    mount /dev/fd0 /media
+        #    read /media/deltacloud-user-data.txt
+        #
+        # Note:
+        # On RHEVm the deltacloud drive had been delivering the user
+        # data base64 decoded at one point that changed such that the
+        # deltacloud drive leaves the date base64 encoded. This
+        # Code segment will handle both base64 encoded and decoded
+        # user data.
+        #
+        # Since ':' is used as a field delimiter in the user data
+        # and is not a valid base64 char, if ':' is found assume
+        # the data is already base64 decoded.
+        #
+        #    modprobe floppy
+        cmd = ['/sbin/modprobe', 'floppy']
+        ret = _run_cmd(cmd)
+        if ret['subproc'].returncode != 0:
+            _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+                (' '.join(cmd), str(ret['err'])))
+
+        cmd = ['/bin/mkdir', '/media']
+        ret = _run_cmd(cmd)
+        # If /media is already there (1) or any other error (0)
+        if (ret['subproc'].returncode != 1) and  \
+           (ret['subproc'].returncode != 0):
+            _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+                (' '.join(cmd), str(ret['err'])))
+
+        cmd = ['/bin/mount', '/dev/fd0', '/media']
+        ret = _run_cmd(cmd)
+        # If /media is already mounted (32) or any other error (0)
+        if (ret['subproc'].returncode != 32) and  \
+           (ret['subproc'].returncode != 0):
+            _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+                (' '.join(cmd), str(ret['err'])))
+
+        try:
+            # Condfig Server (CS) address:port.
+            with open('/media/deltacloud-user-data.txt', 'r') as fp:
+                line = fp.read()[:-1]
+                if '|' not in line:
+                    line = base64.b64decode(line)
+                return _parse_user_data(line)
+        except:
+            _raise_ASError('Failed accessing RHEVm user data.')
+
+    elif 'VSPHERE' in cloud_type:
+        #
+        # If on vSphere the user data will be contained on the
+        # floppy device in file deltacloud-user-data.txt.
+        # To access it:
+        #    mount /dev/fd0 /media
+        #    read /media/deltacloud-user-data.txt
+        #
+        # Note:
+        # On vSphere the deltacloud drive had been delivering the user
+        # data base64 decoded at one point that changed such that the
+        # deltacloud drive leaves the date base64 encoded. This
+        # Code segment will handle both base64 encoded and decoded
+        # user data.
+        #
+        # Since ':' is used as a field delimiter in the user data
+        # and is not a valid base64 char, if ':' is found assume
+        # the data is already base64 decoded.
+        #
+        cmd = ['/bin/mkdir', '/media']
+        ret = _run_cmd(cmd)
+        # If /media is already there (1) or any other error (0)
+        if (ret['subproc'].returncode != 1) and  \
+           (ret['subproc'].returncode != 0):
+            _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+                (' '.join(cmd), str(ret['err'])))
+
+        cmd = ['/bin/mount', '/dev/fd0', '/media']
+        ret = _run_cmd(cmd)
+        # If /media is already mounted (32) or any other error (0)
+        if (ret['subproc'].returncode != 32) and  \
+           (ret['subproc'].returncode != 0):
+            _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+                (' '.join(cmd), str(ret['err'])))
+
+        try:
+            # Condfig Server (CS) address:port.
+            with open('/media/deltacloud-user-data.txt', 'r') as fp:
+                line = fp.read()[:-1]
+                if '|' not in line:
+                    line = base64.b64decode(line)
+                return _parse_user_data(line)
+        except:
+            _raise_ASError('Failed accessing vSphere user data.')
 
 def setup_logging(level=logging.INFO, logfile_name=LOG):
     '''
@@ -1292,7 +1141,34 @@ def setup_logging(level=logging.INFO, logfile_name=LOG):
 
     LOGGER = logging.getLogger('Audrey')
 
-def audrey_script_main():
+def parse_args():
+    '''
+    Description:
+        Gather any Config Server access info optionally passed
+        on the command line. If being provided on the command
+        line all of it must be provided.
+
+    Return:
+        dict - of parser keys and values
+    '''
+    parser = argparse.ArgumentParser(description='Audrey Start')
+    parser.add_argument('-e', '--endpoint', dest='endpoint', \
+        required=False, help='Config Server endpoint url')
+    parser.add_argument('-k', '--key', dest='oauth_key', \
+        required=False, help='oAuth Key')
+    parser.add_argument('-s', '--secret', dest='oauth_secret', \
+        required=False, help='oAuth Secret')
+    parser.add_argument('-p', '--pwd', action="store_true", default=False, \
+        required=False, help='Log and look for configs in pwd',)
+    parser.add_argument('-L', '--log_level', dest='log_level', \
+        required=False, default='INFO', help='Audrey Agent Logging Level',
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
+
+    args = parser.parse_args()
+
+    return args
+
+def audrey_script_main(client_http=None):
     '''
     Description:
         This script will be used on EC2 for configuring the running
@@ -1304,7 +1180,31 @@ def audrey_script_main():
         202 HTTP Accepted - Success and more data of this type
         404 HTTP Not Found - This may be temporary so try again
     '''
-    setup_logging()
+    # parse the args and setup logging
+    conf = parse_args()
+    if 'pwd' in conf and conf.pwd:
+        log_file='audrey.log'
+        tool_dir='tooling'
+        cloud_info='cloud_info'
+    else:
+        log_file=LOG
+        tool_dir=TOOLING_DIR
+        cloud_info=CLOUD_INFO_FILE
+
+    setup_logging(level=conf.log_level,
+            logfile_name=log_file)
+
+    if not conf.endpoint:
+        if client_http:
+            conf = discover_config_server(cloud_info_file=cloud_info,
+                                          http=client_http)
+        else:
+            # discover the cloud I'm on
+            conf = discover_config_server(cloud_info_file=cloud_info)
+
+    # ensure the conf it a dictionary, not a namespace
+    if hasattr(conf, '__dict__'):
+       conf = vars(conf)
 
     LOGGER.info('Invoked audrey_script_main')
 
@@ -1315,12 +1215,14 @@ def audrey_script_main():
     services = []
 
     # Create the Client Object
-    cs_client = CSClient()
+    cs_client = CSClient(**conf)
+    if client_http:
+        cs_client.http = client_http
     LOGGER.info(str(cs_client))
 
     LOGGER.debug('Get optional tooling from the Config Server')
     # Get any optional tooling from the Config Server
-    tooling = Config_Tooling()
+    tooling = Config_Tooling(tool_dir=tool_dir)
     tooling_status, tarball = cs_client.get_cs_tooling()
     if (tooling_status == 200) or (tooling_status == 202):
         tooling.unpack_tooling(tarball)

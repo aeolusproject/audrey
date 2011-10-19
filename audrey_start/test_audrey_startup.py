@@ -12,12 +12,134 @@ import os
 import os.path
 import tempfile
 import unittest
+import sys
+import tarfile
 
-from audrey_startup import *
+from audrey_startup import CSClient
+from audrey_startup import Config_Tooling
+from audrey_startup import ASError
+from audrey_startup import parse_args
 from audrey_startup import parse_provides_params
 from audrey_startup import parse_require_config
-from audrey_startup import _run_cmd
+from audrey_startup import audrey_script_main
+from audrey_startup import gen_env
+from audrey_startup import _run_cmd, _run_pipe_cmd
+from audrey_startup import generate_provides
 from audrey_startup import setup_logging
+from audrey_startup import discover_config_server
+
+# Helpers and utils
+DUMMY_USER_DATA = '1|http://example.com/|oauthConsumer|oauthSecret'
+DUMMY_CS_CONFIG = {'endpoint': 'http://example.com/',
+                   'oauth_key': 'oauthConsumer',
+                   'oauth_secret': 'oauthSecret',}
+
+try:
+    from cStringIO import StringIO as BIO
+except ImportError: # python 3
+    from io import BytesIO as BIO
+
+class HttpUnitTest(object):
+    '''
+    Description:
+        When testing the http object does not exists. This class provides
+        test methods that could be preformed when doing UNITTESTing.
+    '''
+    class HttpUnitTestResponse(object):
+        '''
+        Description:
+            When testing the http object does not exists. This class
+            provides the test method response that could be preformed
+            when doing UNITTESTing.
+        '''
+        def __init__(self, status):
+            self.status = status
+
+        def add_content_disposition(self):
+            self.__dict__['content-disposition'] = \
+                                   'attachment; filename=test.tar.gz'
+
+        def __getitem__(self, key):
+            return self.__dict__[key]
+
+
+    # simple HTTP Response with 200 status code
+    ok_response = HttpUnitTestResponse(200)
+    not_found_response = HttpUnitTestResponse(404)
+
+    def request(self, url, method='GET', body=None, headers=None):
+        '''
+        Handle request when not running live but in test environment.
+        '''
+        body = ''
+        response = HttpUnitTest.ok_response
+        if method == 'GET':
+            if url.find('/configs/') > -1:
+                body = '|service|s1|parameters|param1&%s|param2&%s|' % \
+                    (base64.b64encode('value1'), base64.b64encode('value2'))
+            elif url.find('/params/') > -1:
+                body = '|param1&param2|'
+            elif url.find('/files/') > -1:
+                file_out = BIO()
+                tar = tarfile.open(mode = "w:gz", fileobj = file_out)
+                tar.add('/etc/passwd')
+                tar.close()
+                body = file_out.getvalue()
+                response.add_content_disposition()
+            elif url.endswith('/user-data'):
+                body = base64.b64encode(DUMMY_USER_DATA)
+            elif url.endswith('/no-version-user-data'):
+                body = base64.b64encode('0|endpoint')
+            elif url.endswith('/empty-user-data'):
+                body = base64.b64encode('')
+            elif url.endswith('/gimmie-404'):
+                body = base64.b64encode(DUMMY_USER_DATA)
+                response = HttpUnitTest.not_found_response
+            else:
+                print url
+                response = HttpUnitTest.not_found_response
+        #elif method == 'POST' and url.find('/params/') > -1:
+        #    body = ''
+        return response, body
+
+def _write_info_file(filepath, cloud):
+    f = open(filepath, 'w')
+    f.write(cloud)
+    f.close()
+
+# The actual tests
+
+class TestAudreyStarupRunCmds(unittest.TestCase):
+    '''
+    Test the _run*cmd functions
+    '''
+    def test_success_run_pipe_cmd(self):
+        self.assertEqual("'test'\n",
+            _run_pipe_cmd(["echo", "'test'"], ["grep", "test"])['out'])
+
+    def test_cmd2_fail_run_pipe_cmd(self):
+        self.assertEqual("[Errno 2] No such file or directory",
+            _run_pipe_cmd(["echo", "'test'"], ["notreal"])['err'])
+
+    def test_cmd1_fail_run_pipe_cmd(self):
+        self.assertEqual("[Errno 2] No such file or directory",
+            _run_pipe_cmd(["notreal"], ["echo", "'test'"])['err'])
+
+class TestAudreyStartupConfigTooling(unittest.TestCase):
+    '''
+    Make sure all the Config tooling is tested
+    '''
+    def test_is_user_supplied(self):
+        Config_Tooling('test_tooling').is_user_supplied('')
+
+    def test_is_rh_supplied(self):
+        Config_Tooling('test_tooling').is_rh_supplied('')
+
+    def test_empty_find_tooling(self):
+        self.assertRaises(ASError, Config_Tooling('test_tooling').find_tooling, '')
+
+    def test_fail_to_create_tooling_dir(self):
+        self.assertRaises(ASError, Config_Tooling, tool_dir='/not/real/dir')
 
 class TestAudreyStartupRequiredConfig(unittest.TestCase):
     '''
@@ -61,10 +183,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         for service in services:
             for param in service.params:
                 name_val = param.split('&')
-                if service.name == '':
-                    env_var  = 'AUDREY_VAR_' + name_val[0]
-                else:
-                    env_var  = 'AUDREY_VAR_' + service.name + '_' + name_val[0]
+                env_var  = 'AUDREY_VAR_' + service.name + '_' + name_val[0]
                 print 'name_val[0]:   ' + str(name_val[0])
                 print 'param:         ' + str(param)
                 print 'services.name: ' + str(service.name)
@@ -124,10 +243,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         for service in services:
             for param in service.params:
                 name_val = param.split('&')
-                if service.name == '':
-                    env_var  = 'AUDREY_VAR_' + name_val[0]
-                else:
-                    env_var  = 'AUDREY_VAR_' + service.name + '_' + name_val[0]
+                env_var  = 'AUDREY_VAR_' + name_val[0]
 
                 print 'name_val[0]:   ' + str(name_val[0])
                 print 'param:         ' + str(param)
@@ -188,6 +304,64 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         with self.assertRaises(ASError):
             print 'parse_require_config returned: ' + \
                 str(parse_require_config(src))
+
+class TestAudreyStartupDiscovery(unittest.TestCase):
+    def setUp(self):
+        '''
+        Perform required setup including setting up logging.
+        '''
+        setup_logging(logging.DEBUG, 'test_audrey_startup.log')
+        self.cloud_info_file = 'cloud_info'
+        self.condor_addr_file = 'condor_addr'
+        self.condor_uuid_file = 'condor_uuid'
+
+    def tearDown(self):
+        os.remove(self.cloud_info_file)
+        if os.path.exists(self.condor_addr_file):
+            os.remove(self.condor_addr_file)
+        if os.path.exists(self.condor_uuid_file):
+            os.remove(self.condor_uuid_file)
+
+    def test_ec2(self):
+        _write_info_file(self.cloud_info_file, 'EC2')
+        discover_config_server(self.cloud_info_file, http=HttpUnitTest())
+
+    def test_ec2_404(self):
+        _write_info_file(self.cloud_info_file, 'EC2')
+        self.assertRaises(ASError,
+            discover_config_server, self.cloud_info_file, http=HttpUnitTest(),
+            ec2_user_data='http://169.254.169.254/gimmie-404')
+
+    def test_condorcloud(self):
+        _write_info_file(self.condor_addr_file, '1|endpoint|secret')
+        _write_info_file(self.condor_uuid_file, 'key')
+        _write_info_file(self.cloud_info_file, 'CONDORCLOUD')
+        discover_config_server(self.cloud_info_file,
+                               condor_addr_file=self.condor_addr_file,
+                               condor_uuid_file=self.condor_uuid_file)
+
+    def test_rhev(self):
+        _write_info_file(self.cloud_info_file, 'RHEV')
+        self.assertRaises(ASError,
+            discover_config_server, self.cloud_info_file)
+
+    def test_vsphere(self):
+        _write_info_file(self.cloud_info_file, 'VSPHERE')
+        self.assertRaises(ASError,
+            discover_config_server, self.cloud_info_file)
+
+    def test_invalid_user_data_version(self):
+        _write_info_file(self.cloud_info_file, 'EC2')
+        self.assertRaises(ASError,
+            discover_config_server, self.cloud_info_file, http=HttpUnitTest(),
+            ec2_user_data='http://169.254.169.254/no-version-user-data')
+
+    def test_invalid_user_data_no_delim(self):
+        _write_info_file(self.cloud_info_file, 'EC2')
+        self.assertRaises(ASError,
+            discover_config_server, self.cloud_info_file, http=HttpUnitTest(),
+            ec2_user_data='http://169.254.169.254/empty-user-data')
+
 
 class TestAudreyStartupProvidesParameters(unittest.TestCase):
     '''
@@ -380,54 +554,12 @@ class TestConfigServerClient(unittest.TestCase):
 
         setup_logging(logging.DEBUG, './test_audrey_startup.log')
 
-        if os.path.exists('/etc/sysconfig/cloud-info'):
-            self.cs_client_unittest = False
-        else:
-            self.cs_client_unittest = True
-
         # Create the client Object
-        self.cs_client = CSClient(self.cs_client_unittest)
+        self.cs_client = CSClient(**DUMMY_CS_CONFIG)
+        self.cs_client.http = HttpUnitTest()
 
     def tearDown(self):
         pass
-
-    def test_success_csclient_init(self):
-        '''
-        Success case:
-        - Exercise cs_client __init__ method
-        '''
-        print '\n\n--- Test Name: test_success_csclient_init ---'
-
-        print 'self.cs_client : START \n' + str(self.cs_client) + \
-            '\nself.cs_client : END'
-
-        #print 'errstr: ' + str(self.cs_client.curlp.errstr())
-        #print 'HTTP_CODE: ' + \
-            #str(self.cs_client.curlp.getinfo(pycurl.HTTP_CODE))
-        #print 'EFFECTIVE_URL: ' + \
-            #str(self.cs_client.curlp.getinfo(pycurl.EFFECTIVE_URL))
-
-        if self.cs_client_unittest:
-            self.assertEqual(self.cs_client.ec2_user_data_url, \
-                'http://169.254.169.254/latest/user-data')
-            self.assertEqual(self.cs_client.cloud_type,  'UNITTEST')
-            self.assertEqual(self.cs_client.cs_addr, 'csAddr')
-            self.assertEqual(self.cs_client.cs_port, 'csPort')
-            self.assertEqual(self.cs_client.cs_UUID, 'csUUID')
-            self.assertEqual(self.cs_client.cs_pw, 'csPW')
-            self.assertEqual(self.cs_client.config_serv, \
-                'csAddr:csPort:csUUID:csPW')
-        else:
-            self.assertEqual(self.cs_client.ec2_user_data_url, \
-                'http://169.254.169.254/latest/user-data')
-            self.assertEqual(self.cs_client.cloud_type,  'EC2')
-
-            # For live nondeterministic data check for not blank.
-            self.assertNotEqual(self.cs_client.cs_addr, '')
-            self.assertNotEqual(self.cs_client.cs_port, '')
-            self.assertNotEqual(self.cs_client.cs_UUID, '')
-            self.assertNotEqual(self.cs_client.cs_pw, '')
-            self.assertNotEqual(self.cs_client.config_serv, '')
 
     def test_success_get_cs_configs(self):
         '''
@@ -442,6 +574,13 @@ class TestConfigServerClient(unittest.TestCase):
         print 'JJV -010- test_success_get_cs_configs() Add asserts'
         print 'self.cs_client : START \n' + str(self.cs_client) + \
             '\nself.cs_client : END'
+
+    def test_success_get_cs_tooling(self):
+        '''
+        Success case:
+        - Exercise get_cs_tooling()
+        '''
+        self.cs_client.get_cs_tooling()
 
     def test_success_get_cs_params(self):
         '''
@@ -473,6 +612,20 @@ class TestConfigServerClient(unittest.TestCase):
             '\nself.cs_client : END'
         print 'JJV -011- test_success_get_cs_confs_n_params() Add asserts'
 
+    def test_success_put_cs_params_values(self):
+        '''
+        Success case:
+        - Exercise put_cs_params_values()
+        '''
+        self.cs_client.put_cs_params_values('')
+
+    def test_error_http_status(self):
+        '''
+        Success case:
+        - Exercise put_cs_params_values()
+        '''
+        self.assertRaises(ASError, self.cs_client._validate_http_status, 401)
+
 class TestAudreyScript(unittest.TestCase):
     '''
     Class for exercising the full audrey script functionality
@@ -486,49 +639,45 @@ class TestAudreyScript(unittest.TestCase):
         with a live Config Server.
         '''
         setup_logging(logging.DEBUG, './test_audrey_startup.log')
-
+        # make a copy of argv
+        self.argv = list(sys.argv)
 
     def tearDown(self):
-        pass
+        # replace argv
+        sys.argv = list(self.argv)
 
     def test_audrey_script_main(self):
         '''
         Perform what the audrey script will do.
-        This test has been added as a diagnostic aid.
         '''
-        print '\n\n--- Test Name: test_audrey_script_main  ---'
+        cloud_info_file = 'cloud_info'
+        sys.argv.extend(['-p'])
+        _write_info_file(cloud_info_file, 'EC2')
+        audrey_script_main(HttpUnitTest())
+        os.remove(cloud_info_file)
 
-        # Only run this test on a cloud VM were the cloud-info file has
-        # been built into this image.
-        if not os.path.exists('/etc/sysconfig/cloud-info'):
-            return
+    def test_fail_audrey_script_main(self):
+        '''
+        Perform what the audrey script will do.
+        '''
+        self.assertRaises(ASError, audrey_script_main)
 
-        # Create the client Object
-        self.cs_client = CSClient()
+    def test_audrey_parseargs(self):
+        '''
+        mainly to provide test coverage.
+        '''
+        sys.argv.extend(['-e', 'endpoint', '-k', 'oauth_key', '-s', 'oauth_secret'])
+        parse_args()
+        # Don't need to actually assert, just want to make sure there's no errors
 
-        # Get the Required Configs from the Config Server
-        configs = self.cs_client.get_cs_configs()
+    def test_empty_gen_env(self):
+        self.assertRaises(ASError, gen_env, '', '')
 
-        # Get the requested provides from the Config Server
-        params = self.cs_client.get_cs_params()
-
-        # Generate the values for the requested provides parameters.
-        params_values = generate_provides(params)
-
-        # JJV Add asserts
-        print 'JJV -010- test_audrey_script_main() Add asserts'
-        print 'self.cs_client : START \n' + str(self.cs_client) + \
-            '\nself.cs_client : END'
-
-        print 'configs: \n' + str(configs)
-        print 'params: \n' + str(params)
-        print 'params_values: \n' + str(params_values)
-
-        # Put the requested provides with values to the Config Server
-        self.cs_client.put_cs_params_values(params_values)
+    # doesn't actually test what I wanted it to.
+    #def test_parse_require_config(self):
+    #    self.assertRaises(ASError, parse_require_config, '')
 
 if __name__ == '__main__':
 
-    setup_logging()
+    setup_logging(logging.DEBUG, logfile_name='./test_audrey_startup.log')
     unittest.main()
-
