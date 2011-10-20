@@ -17,20 +17,6 @@
     </element>
   </optional>
   <optional>
-    <element name="executable">
-      <attribute name="url"><text/></attribute>
-    </element>
-  </optional>
-  <optional>
-    <element name="files">
-      <oneOrMore>
-        <element name="file">
-          <attribute name="url"><text/></attribute>
-        </element>
-      </oneOrMore>
-    </element>
-  </optional>
-  <optional>
     <element name="provided-parameters">
       <zeroOrMore>
         <element name="provided-parameter">
@@ -44,11 +30,9 @@
       <zeroOrMore>
         <element name="service">
           <attribute name="name"><text/></attribute>
-          <optional>
-            <element name="executable">
-              <attribute name="url"><text/></attribute>
-            </element>
-          </optional>
+          <element name="executable">
+            <attribute name="url"><text/></attribute>
+          </element>
           <optional>
             <element name="files">
               <oneOrMore>
