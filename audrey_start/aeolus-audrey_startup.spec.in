@@ -13,6 +13,8 @@ URL:		http://aeolusproject.org
 Source0:	aeolus-audrey_startup-%{version}.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
+Requires:   facter python-httplib2 python-oauth2
+
 %description
 The Aeolus Audrey Startup script runs on a instances in a cloud at boot and
 contacts an Aeolus Config Server to retrieve post-boot configuration data.
