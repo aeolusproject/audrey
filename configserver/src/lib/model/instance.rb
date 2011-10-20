@@ -66,7 +66,7 @@ module ConfigServer
       # Nokogiri XML validator
       @@validator = nil
 
-      attr_reader :instance_config, :ip, :password, :uuid
+      attr_reader :instance_config, :ip, :secret, :uuid
 
       def self.exists?(uuid)
         File.exist?(File.join(storage_path, uuid))
@@ -117,7 +117,7 @@ module ConfigServer
       end
 
       @uuid = ""
-      @password = nil
+      @secret = nil
       @ip = ""
       @instance_dir = ""
 
@@ -338,7 +338,7 @@ module ConfigServer
 
         replace_tarball
 
-        @password = get_crypted_password
+        @secret = get_secret
 
         deployable
         @deployable.add_instance(@uuid)
@@ -353,8 +353,8 @@ module ConfigServer
         end if File.exists?(filename)
       end
 
-      def get_crypted_password
-        config.root['password']
+      def get_secret
+        config.root['secret']
       end
 
       def replace_ip(ip)

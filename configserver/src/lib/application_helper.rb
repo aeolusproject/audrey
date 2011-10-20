@@ -1,3 +1,6 @@
+require 'oauth'
+require 'oauth/request_proxy/rack_request'
+require 'lib/model/consumer'
 
 module ApplicationHelper
   def logger
@@ -29,5 +32,25 @@ module ApplicationHelper
       return api_version == version.to_s
     end
     return true
+  end
+
+  def authenticate!
+    if not authenticated?
+      logger.debug("  **AUTHENTICATING** NOT AUTHENTICATED! (returning 401)")
+      throw :halt, [401, "Not Authorized\n"]
+    end
+  end
+
+  def authenticated?
+    OAuth::Signature.verify(request, :unsigned_parameters => ["data", "audrey_data"]) do |request_proxy|
+      logger.debug("**AUTHENTICATING** key = #{request_proxy.consumer_key}")
+      consumer = ConfigServer::Model::Consumer.find(request_proxy.consumer_key)
+      if not consumer.nil?
+        [nil, consumer.secret]
+      else
+        logger.debug("  **AUTHENTICATING** No consumer secret found")
+        [nil, ""]
+      end
+    end
   end
 end

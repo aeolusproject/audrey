@@ -1,9 +1,7 @@
 <element name="instance-config" xmlns="http://relaxng.org/ns/structure/1.0">
   <attribute name="id"><text/></attribute>
   <attribute name="name"><text/></attribute>
-  <optional>
-    <attribute name="password"><text/></attribute>
-  </optional>
+  <attribute name="secret"><text/></attribute>
   <optional>
     <attribute name="type"><text/></attribute>
   </optional>

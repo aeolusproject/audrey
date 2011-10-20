@@ -18,12 +18,6 @@ if [ "x$PUPPET" == "x" ]; then
     exit 1
 fi
 
-HTPASSWD=$(which htpasswd)
-if [ "x$HTPASSWD" == "x" ]; then
-    echo "The httpd-tools package must be installed.  Install httpd-tools to continue."
-    exit 1
-fi
-
 USAGE="""
 """
 
@@ -63,38 +57,11 @@ In this case, "/" is the default used for the root context.
 
 """
 
-
-# Collect password
-PASSWORD_INFO="""
-
-Please provide the username and password information for the Config Server.
-These same credentials will have to be supplied to the Cloud Engine when
-entering data for this Config Server associated with a Provider Account.
-
-"""
-echo "$PASSWORD_INFO"
-try_again=true
-while [ $try_again == true ]; do
-    echo -n "Enter username: "
-    read user
-    echo -n "Enter password: "
-    read -s pass
-    echo ""
-    echo -n "Confirm password: "
-    read -s pass2
-    echo ""
-
-    if [ "$pass" != "$pass2" ]; then
-        echo "The password entries do not match.  Please try again."
-    else
-        try_again=false
-    fi
-done
-echo -n " ... creating htpasswd file for Apache Basic Auth "
-htpasswd_file="/var/lib/aeolus-configserver/htpasswd"
-sudo -u $AEOLUS_USER touch $htpasswd_file # create the file as the aeolus user
-$HTPASSWD -b $htpasswd_file $user $pass
-echo "... Done"
+# Generate OAuth key and secret for conductor
+# the argument to -dc is the characters to choose from
+# the argument to -c is the length of the generated string
+conductor_key=`</dev/urandom tr -dc 0-9 | head -c24`
+conductor_secret=`</dev/urandom tr -dc A-Za-z0-9 | head -c48`
 
 # Collect the Config Server application context
 CONTEXT_INFO="""
@@ -133,10 +100,12 @@ if [ "x$app_url" == "x" ]; then
     app_url="http://localhost:4567/"
 fi
 
-echo "Htpasswd File: $htpasswd_file"
 echo "Root context: $root_context"
 echo "App URL: $app_url"
-
+echo "Conductor Auth Key: $conductor_key"
+echo "Conductor Auth Secret: $conductor_secret"
+echo "\n\n*** You need to add this config server information to a ***"
+echo "*** provider account in conductor.                      ***"
 manifest_file=$(mktemp)
 
 manifest="""#!/bin/sh
@@ -149,7 +118,8 @@ classes:
     - apache::auth
     - configserver
 parameters:
-    htpasswd_file: ${htpasswd_file}
+    conductor_key: ${conductor_key}
+    conductor_secret: ${conductor_secret}
     proxy_type: \"apache\"
     config_server_context: ${root_context}
     config_server_url: ${app_url}

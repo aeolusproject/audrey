@@ -6,10 +6,6 @@ class apache {
       ''        => 'debug',
       default   => $httpd_log_level
     }
-    $htpasswd_file = $htpasswd_file ? {
-      ''        => "/etc/sysconfig/aeolus-configserver-passwd",
-      default   => $htpasswd_file
-    }
     $config_server_context = $config_server_context ? {
       ''        => '',
       default   => $config_server_context
@@ -109,28 +105,6 @@ class apache {
       ensure => directory,
       mode => 0644, owner => root, group => root,
       require => Package["apache"],
-    }
-  }
-
-  class auth {
-    include apache::variables
-
-    file { "http-auth":
-      name => "/etc/httpd/conf.d/cs443/auth.conf",
-      mode => 0644, owner => root, group => root,
-      ensure => present,
-      content => template("apache/auth_config.erb"),
-      require => Package["apache"],
-      notify => Exec["graceful-apache"],
-    }
-
-    file {"configserver-proxy-sysconfig":
-      name => "/etc/sysconfig/aeolus-configserver-proxy",
-      mode => 0644, owner => root, group => root,
-      ensure => present,
-      content => template("apache/aeolus-configserver-proxy.erb"),
-      require => Package["configserver"],
-      notify => Service["configserver"],
     }
   }
 }

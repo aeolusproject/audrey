@@ -13,11 +13,34 @@ configure :development do
   set :raise_errors, true
 end
 
+configure :production do
+  enable :logging
+end
+
 error 400 do
   #FIXME: point the requestor to the relaxNG document used to parse the XML
   # document.
   #FIXME: show the requestor the set of errors that occured
   "Could not parse the given XML document.\n"
+end
+
+
+before '/configs/*' do
+  authenticate!
+end
+before '/params/*' do
+  authenticate!
+end
+before '/files/*' do
+  authenticate!
+end
+before '/auth*' do
+  authenticate!
+end
+
+get '/auth' do
+  logger.debug("Client is testing auth credentials")
+  "Authentication test successful"
 end
 
 ## GET /version

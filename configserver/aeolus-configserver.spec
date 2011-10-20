@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	5%{?extra_release}%{?dist}
+Release:	3%{?extra_release}%{?dist}
 Summary:	The Aeolus Config Server
 BuildArch:  noarch
 
@@ -18,8 +18,9 @@ Requires:	    ruby >= 1.8.1
 Requires:       ruby-nokogiri
 Requires:       rubygem(sinatra)
 Requires:       rubygem(thin)
-requires:       rubygem(archive-tar-minitar)
-requires:       rubygem(activesupport)
+Requires:       rubygem(archive-tar-minitar)
+Requires:       rubygem(activesupport)
+Requires:       rubygem(oauth)
 Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
@@ -130,6 +131,16 @@ fi
 
 
 %changelog
+* Fri Nov 04 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-3
+- Adding new "auth" endpoint for testing oauth credentials
+- Fixing audrey_data unsigned parameter name for oauth
+* Thu Nov 03 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-1
+- Version bump to start being consistent with Audrey Client
+* Tue Nov 01 2011 Greg Blomquist <gblomqui@redhat.com> 0.3.0-3
+- Few small fixes for OAuth signature validation
+* Wed Oct 26 2011 Greg Blomquist <gblomqui@redhat.com> 0.3.0-2
+- Now using oauth for authentication
+- Fix logging for production deployment
 * Tue Oct 25 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-5
 - Explicitly require mod_ssl for proxy package
 * Wed Oct 05 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-4

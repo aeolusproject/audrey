@@ -135,7 +135,7 @@ module ConfigServer
     def create(uuid, data)
       xml = Model::Instance.validate(uuid, data)
       instance = Model::Instance.new(uuid, xml)
-      register_with_proxy(instance)
+      register_with_oauth(instance)
     end
 
     def update(uuid, data, ip, options={})
@@ -224,14 +224,10 @@ module ConfigServer
       end
     end
 
-    def register_with_proxy(instance)
-      if "apache" == @settings.proxy_type
-        username = instance.uuid
-        if password = instance.password
-          File.open(@settings.proxy_auth_file, File::WRONLY|File::APPEND) do |f|
-            f.puts "#{username}:#{password}"
-          end if File.exists?(@settings.proxy_auth_file)
-        end
+    def register_with_oauth(instance)
+      username = instance.uuid
+      if secret = instance.secret
+        Model::Consumer.create(username, secret)
       end
     end
   end
