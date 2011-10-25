@@ -1,0 +1,53 @@
+<!--
+This is an example Deployable for launching an instance to
+be managed by Katello.
+
+The tooling for service "katello" populates the facts file:
+/etc/rhsm/facts//aeolus.facts with the instance UUID from
+Conductor.
+-->
+<deployable name="dep6_katello">
+  <description>Deployable for testing the creation of the facts file for Katello</description>
+  <assemblies>
+    <assembly name="katello_facts" hwp="hwp1">
+      <!--
+      The image ID can be found using command: /usr/bin/aeolus-image
+      -->
+      <image id="Provide the image ID"/>
+
+        <services>
+
+          <!--
+          Configure two services, SimpleExample and katello.
+          -->
+          <service name="SimpleExample">
+            <!--
+            Configure a SimpleExample, service.
+            This entry is only used to exemplify multiple services. The
+            tooling used in this example doesn't do any configuration.
+            -->
+            <executable url="Provide the URL tooling path/simple_start.bash"/>
+            <parameters>
+              <parameter name="test_data_01" type="scalar"> <value>TestDataValue01</value> </parameter>
+            </parameters>
+          </service>
+
+          <service name="katello">
+            <!--
+            Use the katello_start.bash tooling to poplate the facts file with
+            the instnace UUID for Katello to consume.
+            -->
+            <executable url="Provide the URL tooling path/katello_start.bash"/>
+          </service>
+
+        </services>
+
+        <!--
+        -->
+        <returns>
+          <return name="ipaddress"/>
+        </returns>
+
+    </assembly>
+  </assemblies>
+</deployable>
