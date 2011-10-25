@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	4%{?extra_release}%{?dist}
+Release:	5%{?extra_release}%{?dist}
 Summary:	The Aeolus Config Server
 BuildArch:  noarch
 
@@ -37,6 +37,7 @@ Summary:    Proxy support for Aeolus Config Server
 Group:      Application/System
 Requires:   aeolus-configserver
 Requires:   httpd
+Requires:   mod_ssl
 Requires:   puppet
 License:    GPLv2+ and MIT and BSD
 URL:        http://aeolusproject.org
@@ -129,6 +130,8 @@ fi
 
 
 %changelog
+* Tue Oct 25 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-5
+- Explicitly require mod_ssl for proxy package
 * Wed Oct 05 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-4
 - Fix rakefile to build on f16, and fixup extrarelease and dist tags in the version
 * Wed Sep 07 2011 Greg Blomquist <gblomqui@redhat.com> 0.2.3-3
