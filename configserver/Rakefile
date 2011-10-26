@@ -14,7 +14,7 @@ require 'rake/testtask'
 require 'rake/clean'
 require 'rake/gempackagetask'
 
-version = '0.2.3'
+version = '0.4.0'
 pkg_name = 'aeolus-configserver'
 
 SPEC_FILE="aeolus-configserver.spec"

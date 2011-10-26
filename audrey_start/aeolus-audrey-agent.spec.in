@@ -1,6 +1,6 @@
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    7%{?dist}
+Release:    6%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
@@ -39,6 +39,15 @@ cp audrey_startup.py %{buildroot}%{_bindir}/audrey
 %doc COPYING
 
 %changelog
+* Wed Nov 02 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-6
+- Handles base64 encoded and decoded data in user data
+* Wed Nov 02 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-3
+- Fix for audrey.log location
+* Thu Oct 27 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-2
+- Radez doubled unit test coverage
+* Wed Oct 26 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-1
+- Now using oauth to authenticate with Config Server
+- Parsing a new user data format that is versioned
 * Mon Nov 07 2011 Joe VLcek <jvlcek@redhat.com> 0.3.1-7
 - Address Packaging for Fedora review feedback
 * Fri Nov 05 2011 Joe VLcek <jvlcek@redhat.com> 0.3.1-6
