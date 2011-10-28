@@ -1017,11 +1017,11 @@ class CSClient(object):
 
                 if ':' in body:
                     self.cs_addr, self.cs_port, self.cs_UUID, \
-                        self.cs_pw = body[:-1].split(':')
+                        self.cs_pw = body.strip().split(':')
                 else:
                     self.cs_addr, self.cs_port, \
                         self.cs_UUID, self.cs_pw = \
-                        base64.b64decode(body)[:-1].split(':')
+                        base64.b64decode(body).strip().split(':')
 
             except:
                 _raise_ASError('Failed accessing EC2 user data.')
@@ -1037,10 +1037,10 @@ class CSClient(object):
                 # Condfig Server (CS) address:port.
                 with open(CONDORCLOUD_CS_ADDR, 'r') as fp:
                     self.cs_addr, self.cs_port, self.cs_pw = \
-                        fp.read()[:-1].lstrip('http://').split(':')
+                        fp.read().strip().lstrip('http://').split(':')
 
                 with open(CONDORCLOUD_CS_UUID, 'r') as fp:
-                    self.cs_UUID = fp.read()[:-1]
+                    self.cs_UUID = fp.read().strip()
 
             except:
                 _raise_ASError('Failed accessing Config Server data.')
@@ -1096,11 +1096,11 @@ class CSClient(object):
                     line = fp.read()
                     if ':' in line:
                         self.cs_addr, self.cs_port, self.cs_UUID, \
-                            self.cs_pw = line[:-1].split(':')
+                            self.cs_pw = line.strip().split(':')
                     else:
                         self.cs_addr, self.cs_port, \
                             self.cs_UUID, self.cs_pw = \
-                            base64.b64decode(line)[:-1].split(':')
+                            base64.b64decode(line).strip().split(':')
             except:
                 _raise_ASError('Failed accessing RHEVm user data.')
 
@@ -1147,11 +1147,11 @@ class CSClient(object):
                     line = fp.read()
                     if ':' in line:
                         self.cs_addr, self.cs_port, self.cs_UUID, \
-                            self.cs_pw = line[:-1].split(':')
+                            self.cs_pw = line.strip().split(':')
                     else:
                         self.cs_addr, self.cs_port, \
                             self.cs_UUID, self.cs_pw = \
-                            base64.b64decode(line)[:-1].split(':')
+                            base64.b64decode(line).strip().split(':')
             except:
                 _raise_ASError('Failed accessing vSphere user data.')
 
