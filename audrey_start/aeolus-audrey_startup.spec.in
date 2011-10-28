@@ -2,7 +2,7 @@
 
 Name:		aeolus-audrey_startup
 Version:	@VERSION@
-Release:	3%{?dist}%{?extra_release}
+Release:	4%{?dist}%{?extra_release}
 
 Summary:	The Aeolus Audrey Startup Script
 BuildArch:	noarch

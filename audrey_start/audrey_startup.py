@@ -1015,9 +1015,14 @@ class CSClient(object):
                     _raise_ASError('Max attempts to get EC2 user data \
                             exceeded.')
 
-                self.config_serv = base64.b64decode(body)
-                self.cs_addr, self.cs_port, self.cs_UUID, self.cs_pw = \
-                        self.config_serv.split(':')
+                if ':' in body:
+                    self.cs_addr, self.cs_port, self.cs_UUID, \
+                        self.cs_pw = body[:-1].split(':')
+                else:
+                    self.cs_addr, self.cs_port, \
+                        self.cs_UUID, self.cs_pw = \
+                        base64.b64decode(body)[:-1].split(':')
+
             except:
                 _raise_ASError('Failed accessing EC2 user data.')
 
