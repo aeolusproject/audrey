@@ -14,11 +14,12 @@ require 'rake/testtask'
 require 'rake/clean'
 require 'rake/gempackagetask'
 
-version = '0.4.0'
+version = '0.4.1'
 pkg_name = 'aeolus-configserver'
 
 SPEC_FILE="aeolus-configserver.spec"
 CONFIG_RU="src/config.ru"
+LOGS="log"
 
 GENERATED_FILES=[
   [SPEC_FILE,false,nil],
@@ -40,7 +41,7 @@ configserver_files = FileList[
   "conf/*",
   "client/*",
   "configure/**/*",
-].exclude(CONFIG_RU).exclude(SPEC_FILE)
+].exclude(CONFIG_RU).exclude(SPEC_FILE).exclude(LOGS)
 
 spec = Gem::Specification.new do |s|
   s.name = pkg_name

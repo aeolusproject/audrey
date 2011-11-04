@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	4%{?extra_release}%{?dist}
+Release:	1%{?extra_release}%{?dist}
 Summary:	The Aeolus Config Server
 BuildArch:  noarch
 
@@ -131,6 +131,8 @@ fi
 
 
 %changelog
+* Mon Nov 14 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.1-1
+- Enabling Config Server to process inline configuration files
 * Mon Nov 14 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-4
 - Allow httpd and config server to run with selinux enabled
 - Configure ip tables to open port 443

@@ -29,13 +29,22 @@
         <element name="service">
           <attribute name="name"><text/></attribute>
           <element name="executable">
-            <attribute name="url"><text/></attribute>
+            <choice>
+              <attribute name="url"><text/></attribute>
+              <element name="contents"><text/></element>
+            </choice>
           </element>
           <optional>
             <element name="files">
               <oneOrMore>
                 <element name="file">
-                  <attribute name="url"><text/></attribute>
+                  <choice>
+                    <attribute name="url"><text/></attribute>
+                    <element name="contents">
+                      <attribute name="filename"><text/></attribute>
+                      <text/>
+                    </element>
+                  </choice>
                 </element>
               </oneOrMore>
             </element>

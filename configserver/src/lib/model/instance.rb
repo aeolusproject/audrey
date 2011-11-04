@@ -424,10 +424,9 @@ module ConfigServer
       def replace_tarball
         # mk a tmpdir
         Dir.mktmpdir do |dir|
-          # download all the executable files
-          download_files(dir, :type => :executable)
-          # download all the general files
-          download_files(dir, :type => :file)
+          # grab all the executable files and conf files
+          get_configuration_scripts(dir, :type => :executable)
+          get_configuration_scripts(dir, :type => :file)
 
           # tar the contents of the tmpdir
           Dir.pushd(dir) do
@@ -436,40 +435,64 @@ module ConfigServer
               Minitar.pack('.', tgz)
             end
           end
-        # unlink the tmpdir
+        # auto-unlinks the tmpdir
         end
       end
 
-      def download_files(dir, opts={})
-        type = opts[:type] || :executable
-        if not [:executable, :file].include? type
-          raise RuntimeError, "unknown download file type #{type.to_s}"
+      def get_configuration_scripts(dir, opts={})
+        opts[:type] ||= :executable
+        config_type = opts[:type]
+        if not [:executable, :file].include? config_type
+          raise RuntimeError, "unknown configuration file type #{config_type}"
         end
-        (config / type.to_s).each do |node|
-          download_dir = dir
-          parent = (:file == type) ? node.parent.parent : node.parent
+        (config / config_type.to_s).each do |node|
+          config_dir = dir
+          parent = (:file == config_type) ? node.parent.parent : node.parent
           if "service" == parent.name
             svc_name = parent['name']
-            download_dir = "#{dir}/#{svc_name}"
-            Dir.mkdir download_dir if not File.exists? download_dir
+            config_dir = "#{dir}/#{svc_name}"
+            Dir.mkdir config_dir if not File.exists? config_dir
           end
-          download = download_file(node['url'])
-          if "200" == download[:code]
-            logger.debug("Downloaded file #{node['url']}: #{download[:body].size}b")
-            filename = (:file == type) ? download[:name] : "start"
-            if type == :executable
-              open("#{download_dir}/#{filename}", 'wb', 0777) do |file|
-                file << download[:body]
-              end
-            else
-              open("#{download_dir}/#{filename}", 'wb') do |file|
-                file << download[:body]
-              end
-            end
-          else
-            logger.debug("ERROR(#{download[:code]}): could not download file #{node['url']}")
-            # TODO: log that the config server could not download the file...
-            # bundle up errors to return...
+          # if file is URL, download file
+          # else read file from cdata contents
+          begin
+            file_data = get_configuration_file(node)
+            write_configuration_file(file_data, config_dir, opts[:type])
+          rescue => e
+            puts "ERROR: could not get configuration file contents"
+            puts e
+          end
+
+        end
+      end
+
+      def get_configuration_file(node)
+        file_data = {}
+        if not node['url']
+          file_content_node = node.first_element_child
+          if file_content_node.nil?
+            raise "No 'contents' element found for configuration file without url: #{node.name}"
+          end
+          file_data[:name] = file_content_node[:filename]
+          file_data[:body] = file_content_node.content
+        else
+          file_data = download_file(node['url'])
+          if file_data[:code] != "200"
+            raise "Could not download file #{node['url']}.  Http Response code: #{file_data[:code]}"
+          end
+        end
+        file_data
+      end
+
+      def write_configuration_file(file_data, config_dir, file_type=:executable)
+        filename = (:file == file_type) ? file_data[:name] : "start"
+        if file_type == :executable
+          open("#{config_dir}/#{filename}", "wb", 0777) do |file|
+            file << file_data[:body]
+          end
+        else
+          open("#{config_dir}/#{filename}", "wb") do |file|
+            file << file_data[:body]
           end
         end
       end
