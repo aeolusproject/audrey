@@ -848,8 +848,6 @@ class CSClient(object):
             self.http = HttpUnitTest()
 
         elif not self.parse_args():
-            if not os.geteuid() == 0:
-                _raise_ASError('Must be run as root.')
             self._discover_config_server()
 
         # Add username and password credentials to the httplib2.Http
@@ -858,8 +856,6 @@ class CSClient(object):
         # user data when running on EC2 with no username/passwod. From
         # this point on the httplib2.Http object is only used to
         # communicate with the config server which requires credentials.
-        if not os.geteuid() == 0:
-            _raise_ASError('Must be run as root.')
         self.http.add_credentials(self.cs_UUID, self.cs_pw)
 
     def __del__(self):
@@ -939,7 +935,9 @@ class CSClient(object):
 
         LOGGER.debug('Invoked CSClient.parse_args()')
 
-        parser = argparse.ArgumentParser(description='Audrey Start')
+
+        text_desc = 'Audrey Start - must be run as root.'
+        parser = argparse.ArgumentParser(description=text_desc)
         parser.add_argument('-a', '--addr', dest='addr', \
             required=False, help='Config Server IP Addr')
         parser.add_argument('-p', '--port', dest='port', \
