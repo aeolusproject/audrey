@@ -1,0 +1,53 @@
+Name:       aeolus-audrey-agent
+Version:    @VERSION@
+Release:    7%{?dist}
+Summary:    The Aeolus Audrey Startup Agent
+
+Group:      Applications/System
+License:    GPLv2+ and MIT and BSD
+URL:        http://aeolusproject.org
+
+# to build source tarball
+# git clone git@github.com:aeolusproject/audrey.git
+# make dist     
+# cp aeolus-conductor-0.3.0.tar.gz ~/rpmbuild/SOURCES
+Source0:    aeolus-audrey-agent-%{version}.tar.gz
+
+Requires:   python-argparse facter python-httplib2 python-oauth2
+
+BuildArch:  noarch
+
+%description
+The Aeolus Audrey Startup Agent, a script which runs on a booting
+cloud instance to retrieve configuration data from the Aeolus
+Config Server.
+
+%prep
+%setup -q
+
+%build
+
+%install
+rm -rf %{buildroot}
+mkdir -p %{buildroot}%{_bindir}
+
+# copy over the audrey startup agent bits
+cp audrey_startup.py %{buildroot}%{_bindir}/audrey
+
+%files
+%{_bindir}/audrey
+%doc COPYING
+
+%changelog
+* Mon Nov 07 2011 Joe VLcek <jvlcek@redhat.com> 0.3.1-7
+- Address Packaging for Fedora review feedback
+* Fri Nov 05 2011 Joe VLcek <jvlcek@redhat.com> 0.3.1-6
+- Packaging for Fedora
+* Thu Oct 20 2011 Dan Radez <dradez@redhat.com> 0.3.1-3
+- adding requires for rpm installations
+* Tue Oct 11 2011 Joe VLcek <joev@redhat.com> 0.3.1-2
+- RHEVm user data injection base64 encoded.
+* Fri Sep 30 2011 Joe VLcek <joev@redhat.com> 0.3.1-1
+- RHEVm user data injection.
+* Wed May 18 2011 Joe VLcek <joev@redhat.com> 0.0.1-1
+- Initial build.

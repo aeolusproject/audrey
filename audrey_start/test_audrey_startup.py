@@ -15,7 +15,7 @@ import unittest
 
 from audrey_startup import *
 from audrey_startup import parse_provides_params
-from audrey_startup import parse_require_config 
+from audrey_startup import parse_require_config
 from audrey_startup import _run_cmd
 from audrey_startup import setup_logging
 
@@ -50,7 +50,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         print '\nTest Name: test_success_service_n_params()'
         print 'Test input:\n' + src
         print 'Expect: parse_require_config() success'
-        
+
         # Exersise code segment
         services = parse_require_config(src)
 
@@ -61,14 +61,14 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         for service in services:
             for param in service.params:
                 name_val = param.split('&')
-                if service.name == '': 
+                if service.name == '':
                     env_var  = 'AUDREY_VAR_' + name_val[0]
                 else:
                     env_var  = 'AUDREY_VAR_' + service.name + '_' + name_val[0]
                 print 'name_val[0]:   ' + str(name_val[0])
                 print 'param:         ' + str(param)
                 print 'services.name: ' + str(service.name)
-            
+
                 cmd = ['/usr/bin/printenv', env_var]
                 ret = _run_cmd(cmd)
                 self.assertEqual(ret['out'][:-1], \
@@ -79,13 +79,13 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         Success case:
         - Exercise parse_require_config() with valid empty input
         '''
- 
+
         # Establish valid test data:
         src = '||'
         print '\nTest Name: test_success_empty_source()'
         print 'Test input:\n' + src
         print 'Expect: parse_require_config() success'
-        
+
         # Exersise code segment
         services = parse_require_config(src)
         print 'services: ' + str(services)
@@ -98,7 +98,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         Failure case:
         - Exercise parse_require_config() with valid input
         '''
- 
+
         # Establish valid test data:
         src = '|service|' + \
             '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
@@ -113,7 +113,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         print '\nTest Name: test_success_empty_service()'
         print 'Test input:\n' + src
         print 'Expect: parse_require_config() success'
-        
+
         # Exersise code segment
         services = parse_require_config(src)
 
@@ -124,7 +124,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         for service in services:
             for param in service.params:
                 name_val = param.split('&')
-                if service.name == '': 
+                if service.name == '':
                     env_var  = 'AUDREY_VAR_' + name_val[0]
                 else:
                     env_var  = 'AUDREY_VAR_' + service.name + '_' + name_val[0]
@@ -132,7 +132,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
                 print 'name_val[0]:   ' + str(name_val[0])
                 print 'param:         ' + str(param)
                 print 'services.name: ' + str(service.name)
-            
+
                 cmd = ['/usr/bin/printenv', env_var]
                 ret = _run_cmd(cmd)
                 self.assertEqual(ret['out'][:-1], \
@@ -151,7 +151,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         |service|paramseters
 
         '''
- 
+
         # Establish valid test data:
         src = '|service' \
             '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
@@ -166,7 +166,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         print '\nTest Name: test_failure_no_service_names()'
         print 'Test input:\n' + src
         print 'Expect: parse_require_config() success'
-        
+
         # Exersise code segment
         with self.assertRaises(ASError):
             print 'parse_require_config returned: ' + \
@@ -177,7 +177,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         Failure case:
         - Exercise parse_require_config() with valid input
         '''
- 
+
         # Establish valid test data:
         src = '|service|parameters|'
         print '\nTest Name: test_failure_bad_service_name()'
@@ -207,14 +207,14 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         - Exercise parse_provides_params() and generate_provides()
           with valid input
         '''
- 
+
         # Establish valid test data:
         src = '|operatingsystem&is_virtual|'
 
         print '\nTest Name: test_success_parameters()'
         print 'Test input:\n' + src
         print 'Expect: parse_provides_params() success'
-        
+
         expected_params_list = ['operatingsystem', 'is_virtual']
 
         # Exersise code segment
@@ -242,14 +242,14 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
           with valid input
         - Containging an unavailable parameter
         '''
- 
+
         # Establish valid test data:
         src = '|uptime_days&unavailable_dogs&ipaddress|'
 
         print '\nTest Name: test_success_no_params()'
         print 'Test input:\n' + src
         print 'Expect: parse_provides_params() success'
-        
+
         expected_params_list = ['uptime_days', 'unavailable_dogs', 'ipaddress']
 
         # Exersise code segment
@@ -278,14 +278,14 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
           with valid input
         - with only one parameter
         '''
- 
+
         # Establish valid test data:
         src = '|uptime_days|'
 
         print '\nTest Name: test_success_parameters()'
         print 'Test input:\n' + src
         print 'Expect: parse_provides_params() success'
-        
+
         expected_params_list = ['uptime_days']
 
         # Exersise code segment
@@ -311,14 +311,14 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
           with valid input
         - With only one parameter which is unavailable
         '''
- 
+
         # Establish valid test data:
         src = '|unavailable_dogs|'
 
         print '\nTest Name: test_success_one_parameter()'
         print 'Test input:\n' + src
         print 'Expect: parse_provides_params() success'
-        
+
         expected_params_list = ['unavailable_dogs']
 
         # Exersise code segment
@@ -347,14 +347,14 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
           with invalid input
         - missing leading delimiter
         '''
- 
+
         # Establish valid test data:
         src = 'unavailable_dogs|'
 
         print '\nTest Name: test_failure_missing_delimiter()'
         print 'Test input:\n' + src
         print 'Expect: parse_require_config() ASError'
-        
+
         expected_params_list = ['unavailable_dogs']
 
         # Exersise code segment and validate results
@@ -409,7 +409,7 @@ class TestConfigServerClient(unittest.TestCase):
 
         if self.cs_client_unittest:
             self.assertEqual(self.cs_client.ec2_user_data_url, \
-                'http://169.254.169.254/2009-04-04/user-data')
+                'http://169.254.169.254/latest/user-data')
             self.assertEqual(self.cs_client.cloud_type,  'UNITTEST')
             self.assertEqual(self.cs_client.cs_addr, 'csAddr')
             self.assertEqual(self.cs_client.cs_port, 'csPort')
@@ -419,7 +419,7 @@ class TestConfigServerClient(unittest.TestCase):
                 'csAddr:csPort:csUUID:csPW')
         else:
             self.assertEqual(self.cs_client.ec2_user_data_url, \
-                'http://169.254.169.254/2009-04-04/user-data')
+                'http://169.254.169.254/latest/user-data')
             self.assertEqual(self.cs_client.cloud_type,  'EC2')
 
             # For live nondeterministic data check for not blank.
