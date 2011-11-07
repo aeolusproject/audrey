@@ -848,6 +848,8 @@ class CSClient(object):
             self.http = HttpUnitTest()
 
         elif not self.parse_args():
+            if not os.geteuid() == 0:
+                _raise_ASError('Must be run as root.')
             self._discover_config_server()
 
         # Add username and password credentials to the httplib2.Http
@@ -856,6 +858,8 @@ class CSClient(object):
         # user data when running on EC2 with no username/passwod. From
         # this point on the httplib2.Http object is only used to
         # communicate with the config server which requires credentials.
+        if not os.geteuid() == 0:
+            _raise_ASError('Must be run as root.')
         self.http.add_credentials(self.cs_UUID, self.cs_pw)
 
     def __del__(self):
@@ -914,6 +918,10 @@ class CSClient(object):
             on the command line. If being provided on the command
             line all of it must be provided.
 
+            password is prompted for and not allowed as an argument.
+            This is to avoid a ps on the system to display the password
+            argument.
+ 
             Config Server Access Info is:
               cs_addr - IP Address or hostname
               cs_port - Port where Config Server is listening
@@ -927,8 +935,6 @@ class CSClient(object):
             True - if all Config Server info was provided on command line
             False - otherwise
 
-
-
         '''
 
         LOGGER.debug('Invoked CSClient.parse_args()')
@@ -940,16 +946,14 @@ class CSClient(object):
             required=False, help='Config Server IP Port')
         parser.add_argument('-u', '--UUID', dest='UUID', \
             required=False, help='Instance UUID')
-        parser.add_argument('-P', '--pw', dest='pw', \
-            required=False, help='Config Server IP password')
         parser.add_argument('-L', '--log-level', dest='log_level', \
             required=False, help='Audrey Agent Logging Level',
             choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
 
         args = parser.parse_args()
 
-        # If not all of the items were provided on the command line
-        # ignore them all by returning False.
+        # If not all of the required items were provided on the command
+        # line ignore them all by returning False.
         if not (args.addr and args.port  and args.UUID):
             return False
 
@@ -958,8 +962,11 @@ class CSClient(object):
             self.log_level = args.log_level
             LOGGER.setLevel(self.log_level)
 
+        # Prompt for password.
+        pw_input = raw_input('Config Server password: ')
+
         # If a password is not provided assume http.
-        if not args.pw:
+        if not pw_input:
             self.cs_proto = 'http'
         else:
             self.cs_proto = 'https'
@@ -967,7 +974,7 @@ class CSClient(object):
         self.cs_addr = args.addr
         self.cs_port = args.port
         self.cs_UUID = args.UUID
-        self.cs_pw = args.pw
+        self.cs_pw = pw_input
 
         return True
 
