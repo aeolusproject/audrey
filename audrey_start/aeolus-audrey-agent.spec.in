@@ -9,7 +9,7 @@ URL:        http://aeolusproject.org
 
 # to build source tarball
 # git clone git@github.com:aeolusproject/audrey.git
-# make dist     
+# make dist
 # cp aeolus-conductor-0.3.0.tar.gz ~/rpmbuild/SOURCES
 Source0:    aeolus-audrey-agent-%{version}.tar.gz
 
