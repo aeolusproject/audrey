@@ -1097,7 +1097,7 @@ def discover_config_server(cloud_info_file=CLOUD_INFO_FILE,
             _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
                 (' '.join(cmd), str(ret['err'])))
 
-        cmd = ['/bin/mount', '/dev/fd0', '/media']
+        cmd = ['/bin/mount', '/dev/cdrom', '/media']
         ret = _run_cmd(cmd)
         # If /media is already mounted (32) or any other error (0)
         if (ret['subproc'].returncode != 32) and  \
