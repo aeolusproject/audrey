@@ -20,6 +20,9 @@
 '''
 Audrey Startup (AS)
 
+Note: The source file is named audrey_start.in.py The make process generates
+      audrey_start.py. audrey_start.py should not be manually modified.
+
 Invoked at instance launch to interface with the Config Server (CS)
 
 For prototype end to end testing this file needs to be installed
@@ -63,7 +66,8 @@ TOOLING_DIR = '/var/audrey/tooling/'
 LOG = '/var/log/audrey.log'
 LOGGER = None
 CS_API_VER = 1
-AUDREY_VER = '0.5.1'
+# The VERSION string is filled in during the make process.
+AUDREY_VER = '@VERSION@'
 
 # When running on condor-cloud, the Config Server (CS) contact
 # information will be stored in the smbios.
@@ -1194,16 +1198,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description=desc_txt)
     parser.add_argument('-e', '--endpoint', dest='endpoint',
         required=False, help='Config Server endpoint url')
-    parser.add_argument('-k', '--key', dest='oauth_key',
-        required=False, help='oAuth Key')
+    parser.add_argument('-k', '--key', dest='oauth_key', required=False,
+        help='oAuth Key. If specified the user will be prompted for the oAuth Secret.')
     parser.add_argument('-p', '--pwd', action='store_true', default=False,
         required=False, help='Log and look for configs in pwd',)
     parser.add_argument('-L', '--log-level', dest='log_level',
         required=False, default='INFO', help='Audrey Agent Logging Level',
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']),
-    parser.add_argument('-s', '--secret', dest='prompt_for_oauth_secret',
-        action='store_true', default=False, required=False,
-        help='If specified the user will be prompted for the oAuth Secret')
     parser.add_argument('-V', '-v', '--version', dest='version',
         action='store_true', default=False, required=False,
         help='Displays the program\'s version number and exit.')
@@ -1214,7 +1215,7 @@ def parse_args():
         print AUDREY_VER
         sys.exit()
 
-    if args.prompt_for_oauth_secret:
+    if args.oauth_key:
         # Prompt for oAuth secret so ps won't display it.
         args.oauth_secret = raw_input('oAuth Secret: ')
 

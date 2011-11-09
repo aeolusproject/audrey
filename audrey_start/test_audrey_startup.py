@@ -679,15 +679,6 @@ class TestAudreyScript(unittest.TestCase):
         '''
         self.assertRaises(ASError, audrey_script_main)
 
-    def test_audrey_parseargs(self):
-        '''
-        mainly to provide test coverage.
-        '''
-        sys.argv.extend(['-e', 'endpoint', '-k', 'oauth_key'])
-        parse_args()
-        # Don't need to actually assert, just want to make sure
-        # there's no errors
-
     def test_empty_gen_env(self):
         self.assertRaises(ASError, gen_env, '', '')
 
