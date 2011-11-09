@@ -24,7 +24,6 @@ import base64
 from collections import deque
 import httplib2
 import logging
-from optparse import OptionParser
 import os
 import shutil
 import sys
@@ -46,6 +45,7 @@ TOOLING_DIR = '/var/audrey/tooling/'
 LOG = '/var/log/audrey.log'
 LOGGER = None
 CS_API_VER = 1
+AUDREY_VER = '0.5.1'
 
 # When running on condor-cloud, the Config Server (CS) contact
 # information will be stored in the smbios.
@@ -766,7 +766,7 @@ class CSClient(object):
         self.cs_endpoint = endpoint
         self.cs_oauth_key = oauth_key
         self.cs_oauth_secret = oauth_secret
-        self.ec2_user_data_url = 'http://169.254.169.254/latest/user-data'
+        self.ec2_user_data_url = EC2_USER_DATA_URL
         self.cs_params = ''
         self.cs_configs = ''
         self.tmpdir = ''
@@ -1148,23 +1148,43 @@ def parse_args():
         on the command line. If being provided on the command
         line all of it must be provided.
 
+        oAuth Secret is prompted for and not allowed as an argument.
+        This is to avoid a ps on the system from displaying the
+        oAuth Secret argument.
+
     Return:
         dict - of parser keys and values
     '''
-    parser = argparse.ArgumentParser(description='Audrey Start')
-    parser.add_argument('-e', '--endpoint', dest='endpoint', \
+    desc_txt = 'The Aeolus Audrey Startup Agent, a script which ' + \
+               'runs on a booting cloud instance to retrieve ' + \
+               'configuration data from the Aeolus Config Server.'
+
+    parser = argparse.ArgumentParser(description=desc_txt)
+    parser.add_argument('-e', '--endpoint', dest='endpoint',
         required=False, help='Config Server endpoint url')
-    parser.add_argument('-k', '--key', dest='oauth_key', \
+    parser.add_argument('-k', '--key', dest='oauth_key',
         required=False, help='oAuth Key')
-    parser.add_argument('-s', '--secret', dest='oauth_secret', \
-        required=False, help='oAuth Secret')
-    parser.add_argument('-p', '--pwd', action="store_true", default=False, \
+    parser.add_argument('-p', '--pwd', action='store_true', default=False,
         required=False, help='Log and look for configs in pwd',)
-    parser.add_argument('-L', '--log_level', dest='log_level', \
+    parser.add_argument('-L', '--log-level', dest='log_level',
         required=False, default='INFO', help='Audrey Agent Logging Level',
-        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'])
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']),
+    parser.add_argument('-s', '--secret', dest='prompt_for_oauth_secret',
+        action='store_true', default=False, required=False,
+        help='If specified the user will be prompted for the oAuth Secret')
+    parser.add_argument('-V', '-v', '--version', dest='version',
+        action='store_true', default=False, required=False,
+        help='Displays the program\'s version number and exit.')
 
     args = parser.parse_args()
+
+    if args.version:
+        print AUDREY_VER
+        sys.exit()
+
+    if args.prompt_for_oauth_secret:
+        # Prompt for oAuth secret so ps won't display it.
+        args.oauth_secret = raw_input('oAuth Secret: ')
 
     return args
 

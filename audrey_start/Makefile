@@ -33,13 +33,24 @@ GIT_RELEASE	= $(date)git$(git_head)
 RPMDIR		= $$(rpm --eval '%{_rpmdir}')
 # RPM_FLAGS	= --define "audrey-agent_cache_dir $(AUDREY_STARTUP_CACHE_DIR)"
 # RPM_FLAGS	+= $(if $(_audrey-agent_dev),--define "extra_release .$(GIT_RELEASE)")
+man_section = 8
 
-dist:
+dist: audrey.$(man_section)
 	sed -e 's/@VERSION@/$(VERSION)/' aeolus-audrey-agent.spec.in > aeolus-audrey-agent.spec
 	mkdir -p dist/aeolus-audrey-agent-$(VERSION)
 	cp -a aeolus-audrey-agent.spec COPYING Makefile audrey_startup.py \
+                audrey.$(man_section) \
 		test_audrey_startup.py dist/aeolus-audrey-agent-$(VERSION)
 	tar -C dist -zcvf aeolus-audrey-agent-$(VERSION).tar.gz aeolus-audrey-agent-$(VERSION)
+	
+audrey: audrey_startup.py
+	cp $< $@
+
+audrey.$(man_section): audrey
+	help2man --name='Aeolus startup agent' --section $(man_section) \
+	    --no-discard-stderr --no-info \
+	  ./$< > $@-t
+	mv $@-t $@
 
 check:
 	python test_audrey_startup.py
@@ -51,6 +62,10 @@ srpms: check dist
 	rpmbuild -ts aeolus-audrey-agent-$(VERSION).tar.gz
 
 clean:
-	rm -rf dist aeolus-audrey-agent-$(VERSION).tar.gz aeolus-audrey-agent.spec dist
+	rm -rf dist aeolus-audrey-agent-$(VERSION).tar.gz \
+	aeolus-audrey-agent.spec audrey.$(man_section) audrey \
+	audrey.log audrey_startup.pyc test_toolinglog test_toolinguser \
+	toolinglog toolinguser
+
 
 .PHONY: dist check rpms srpms

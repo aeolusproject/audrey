@@ -570,8 +570,8 @@ class TestConfigServerClient(unittest.TestCase):
 
         self.cs_client.get_cs_configs()
 
-        # JJV Add asserts
-        print 'JJV -010- test_success_get_cs_configs() Add asserts'
+        # Add asserts
+        print 'test_success_get_cs_configs() Add asserts'
         print 'self.cs_client : START \n' + str(self.cs_client) + \
             '\nself.cs_client : END'
 
@@ -591,8 +591,8 @@ class TestConfigServerClient(unittest.TestCase):
 
         self.cs_client.get_cs_params()
 
-        # JJV Add asserts
-        print 'JJV -010- test_success_get_cs_params() Add asserts'
+        # Add asserts
+        print 'test_success_get_cs_params() Add asserts'
         print 'self.cs_client : START \n' + str(self.cs_client) + \
             '\nself.cs_client : END'
 
@@ -606,11 +606,11 @@ class TestConfigServerClient(unittest.TestCase):
         self.cs_client.get_cs_configs()
         self.cs_client.get_cs_params()
 
-        # JJV Add asserts
-        print 'JJV -010- test_success_get_cs_confs_n_params() Add asserts'
+        # Add asserts
+        print 'test_success_get_cs_confs_n_params() Add asserts'
         print 'self.cs_client : START \n' + str(self.cs_client) + \
             '\nself.cs_client : END'
-        print 'JJV -011- test_success_get_cs_confs_n_params() Add asserts'
+        print 'test_success_get_cs_confs_n_params() Add asserts'
 
     def test_success_put_cs_params_values(self):
         '''
@@ -666,9 +666,10 @@ class TestAudreyScript(unittest.TestCase):
         '''
         mainly to provide test coverage.
         '''
-        sys.argv.extend(['-e', 'endpoint', '-k', 'oauth_key', '-s', 'oauth_secret'])
+        sys.argv.extend(['-e', 'endpoint', '-k', 'oauth_key'])
         parse_args()
-        # Don't need to actually assert, just want to make sure there's no errors
+        # Don't need to actually assert, just want to make sure
+        # there's no errors
 
     def test_empty_gen_env(self):
         self.assertRaises(ASError, gen_env, '', '')

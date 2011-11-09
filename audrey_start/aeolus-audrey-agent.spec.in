@@ -4,13 +4,13 @@ Release:    7%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
-License:    GPLv2+ and MIT and BSD
+License:    GPLv2+
 URL:        http://aeolusproject.org
 
 # to build source tarball
 # git clone git@github.com:aeolusproject/audrey.git
 # make dist
-# cp aeolus-conductor-0.3.0.tar.gz ~/rpmbuild/SOURCES
+# cp aeolus-conductor-<version>.tar.gz ~/rpmbuild/SOURCES
 Source0:    aeolus-audrey-agent-%{version}.tar.gz
 
 Requires:   python-argparse facter python-httplib2 python-oauth2
@@ -30,15 +30,21 @@ Config Server.
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{_bindir}
+mkdir -p %{buildroot}%{_mandir}/man8
 
 # copy over the audrey startup agent bits
 cp audrey_startup.py %{buildroot}%{_bindir}/audrey
+cp audrey.8 %{buildroot}%{_mandir}/man8
+ls -aFlR %{buildroot}%{_mandir}/man8
 
 %files
 %{_bindir}/audrey
+%{_mandir}/man8/audrey.8
 %doc COPYING
 
 %changelog
+* Tue Nov 08 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-8
+- Add man page generation and address packaging review feedback
 * Tue Nov 08 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-7
 - Fixing changelog history
 * Mon Nov 07 2011 Joe VLcek <jvlcek@redhat.com> 0.3.1-7
