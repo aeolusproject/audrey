@@ -74,8 +74,6 @@ def main():
     xml_body = f.read()
     f.close()
 
-    import pdb
-    pdb.set_trace()
     xml_root = ET.XML(xml_body)
     uuid = xml_root.attrib['id']
     cs_client.post('/configs/%s/%s' % (CS_API_VER, uuid),
