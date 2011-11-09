@@ -1,6 +1,6 @@
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    7%{?dist}
+Release:    8%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
@@ -43,7 +43,7 @@ cp audrey.8 %{buildroot}%{_mandir}/man8
 
 %changelog
 * Tue Nov 08 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-8
-- Add man page generation and address packaging review feedback
+- Add man page generation and address some packaging review feedback
 * Tue Nov 08 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-7
 - Fixing changelog history
 * Mon Nov 07 2011 Joe VLcek <jvlcek@redhat.com> 0.3.1-7
