@@ -1,199 +1,85 @@
-#!/bin/bash
+#! /usr/bin/env python
+import argparse
+import os
+import oauth2 as oauth
 
-PROGNAME=`basename $0`
-USAGE=$(cat <<END_OF_USAGE
-  Usage: $0 {-e server_endpoint} {-u user} [-vVd] [post|put|get] {arguments}
+from xml.etree import ElementTree as ET
+from optparse import OptionParser
 
-    -e    server_endpoint is the fully qualified URL for the config server;
-          this includes the scheme, host, and port,
-          ex: https://configserver.org:443/
-    -u    user is the username for authenticated config servers; curl will
-          request the password from the user
-    -v    verbose (output the curl command that will be called)
-    -V    very verbose (include verbose output from curl); implies -v
-    -d    dry run
+CS_API_VER = 1
 
-    post: $PROGNAME {options} post \$uuid [\$filename]
-          \$uuid: the instance indentifier for this data
-          \$filename: (optional) the file where the data can be found
-                      if empty, then the file called ./\$uuid is used
-     get: $PROGNAME {options} get \$what \$uuid
-          \$what: either "configs", "params", "ip", or "files";
-                  * when "configs", retrieves the configs for the \$uuid
-                  * when "params", retrieves the "provides" parameters for the \$uuid
-                  * when "ip", retrieves the ip reported by the instance
-                  * when "files", retrieves the tarball associated with the
-                    instance, if any
-          \$uuid: the instance identifier
-     put: $PROGNAME {options} put \$what \$uuid \$data
-          \$what: either "params" or "files";
-          \$uuid: the instance identifier
-          \$data: when \$what is "params": key/value pairs of data in query
-                  string format (i.e., key1=value1&key2=value2)
-                  when \$what is "files": a filename
- version: $PROGNAME {options} version
-          retrieves the version reported by the config server
+def add_endpoint(fn):
+    def wrapper(self, url, **kwargs):
+        url = self.cs_endpoint + url
+        fn(self, url, **kwargs)
+    return wrapper
 
-    Advanced:  Use cs-input to generate a bare-bones instance-config document.
-    Example:
-    $> ./cs-input \$UUID | $0 post \$UUID -
+class CSClient(object):
+    '''
+    Description:
+        Client interface to Config Server (CS)
+    '''
 
-     * cs-input will generate an XML document to stdout
-     * cs-client will read the XML document on POST from stdin when the last arg
-       is "-"
-END_OF_USAGE
-)
+    def __init__(self, endpoint, oauth_key, oauth_secret, **kwargs):
+        self.version = CS_API_VER
+        self.cs_endpoint = endpoint
+        self.cs_oauth_key = oauth_key
+        self.cs_oauth_secret = oauth_secret
 
-API_VERSION="1"
+        # create an oauth client for communication with the cs
+        consumer = oauth.Consumer(self.cs_oauth_key, self.cs_oauth_secret)
+        # 2 legged auth, token unnessesary
+        token = None #oauth.Token('access-key-here','access-key-secret-here')
+        client = oauth.Client(consumer, token)
+        self.http = client
 
-VALID_VERBS=(POST PUT GET DELETE VERSION)
+    def get(self, url, headers=None):
+        '''
+        Issue the http get to the the Config Server.
+        '''
+        return self.http.request(url, method='GET', headers=headers)
 
-ENDPOINT="http://localhost:4567"
-VERBOSE=false
-VERY_VERBOSE=false
-DRY_RUN=false
-while getopts "vVdhe:u:" opt; do
-  case $opt in
-    v) VERBOSE=true;;
-    d) DRY_RUN=true;;
-    V) VERY_VERBOSE=true; VERBOSE=true;;
-    e) ENDPOINT=$OPTARG;;
-    u) HTTP_USER=$OPTARG;;
-    h) echo "$USAGE"
-       exit 0;;
-    *) echo "$USAGE"
-       exit 1;;
-  esac
-done
-shift $((OPTIND-1))
+    def put(self, url, body=None, headers=None):
+        '''
+        Issue the http put to the the Config Server.
+        '''
+        return self.http.request(url, method='PUT',
+                            body=body, headers=headers)
+    @add_endpoint
+    def post(self, url, body=None, headers=None):
+        '''
+        Issue the http put to the the Config Server.
+        '''
+        return self.http.request(url, method='POST',
+                            body=body, headers=headers)
 
-CURL=`which curl`
-function call_curl {
-  args=( "$@" )
-  args=( "-w" "\n\nHTTP_CODE: %{http_code}\n" "${args[@]}" )
-  if [ "x$HTTP_USER" != "x" ]; then
-    # include user argument, and curl with prompt for password
-    args=( "-u" "$HTTP_USER" "${args[@]}" )
-  fi
-  if [[ $ENDPOINT == https* ]]; then
-    # ignore cert verification on https requests
-    args=( "-k" "${args[@]}" )
-  fi
+def main():
+    parser = argparse.ArgumentParser(description='Audrey Start')
+    parser.add_argument('-e', '--endpoint', dest='endpoint', \
+        required=True, help='Config Server endpoint url')
+    parser.add_argument('-k', '--key', dest='oauth_key', \
+        required=True, help='oAuth Key')
+    parser.add_argument('-s', '--secret', dest='oauth_secret', \
+        required=True, help='oAuth Secret')
+    parser.add_argument('xml_file', help='XML file to post')
 
-  # make sure this check stays last...
-  # since it not only adds the verbose flag to curl,
-  # but also prints out the curl command
-  if [ $VERY_VERBOSE == true ]; then
-    args=( "-v" "${args[@]}" )
-  fi
-  if [ $VERBOSE == true ]; then
-    echo "$CURL ${args[*]}"
-  fi
+    args = parser.parse_args()
 
-  if [ $DRY_RUN == false ]; then
-    $CURL "${args[@]}"
-  fi
-}
+    # ensure the conf it a dictionary, not a namespace
+    if hasattr(args, '__dict__'):
+       args = vars(args)
 
-## Validate the argument against the list of VALID_VERBS
-function validate_verb {
-  for verb in "${VALID_VERBS[@]}"; do
-    if [ "$1" == "$verb" ]; then return 0; fi
-  done
-  return 1
-}
+    cs_client = CSClient(**args)
+    f = open(args['xml_file'], 'r')
+    xml_body = f.read()
+    f.close()
 
-function post {
-  uuid="$1"
-  if [ "x$2" == "x" ]; then
-    fname="./$1"
-  elif [ "$2" == "-" ]; then
-    xml=`cat /dev/stdin`
-    fname=`mktemp`
-    echo "$xml" > $fname
-  else
-    fname="$2"
-  fi
-  if [ ! -f $fname ]; then
-    echo "Could not find file $fname to submit instance config to config server"
-    return 1
-  fi
-  echo "Using $fname for the data"
-  args=("-X" "POST" "--data-urlencode" "data@$fname"
-  "$ENDPOINT/configs/$API_VERSION/$uuid")
-  call_curl "${args[@]}"
-}
+    import pdb
+    pdb.set_trace()
+    xml_root = ET.XML(xml_body)
+    uuid = xml_root.attrib['id']
+    cs_client.post('/configs/%s/%s' % (CS_API_VER, uuid),
+                   body=xml_body)
 
-function format_put_params {
-  data="|"
-  while IFS='&' read -ra PARAMS; do
-    for param in "${PARAMS[@]}"; do
-      k=${param%=*}
-      v=${param#*=}
-      b64=`echo -n $v | base64 -w 0 -`
-      data="${data}${k}&${b64}|"
-    done
-  done <<< "$1"
-  if [ "$data" == "|" ]; then
-    data="||"
-  fi
-  echo -n "$data"
-}
-
-function put {
-  what="$1"
-  uuid="$2"
-  if [ "$what" == "params" ]; then
-    data=$(format_put_params "$3")
-    args=("-X" "PUT" "--data-urlencode" "audrey_data=$data" "$ENDPOINT/params/$API_VERSION/$uuid")
-  elif [ "$what" == "files" ]; then
-    if [ ! -f "$3" ]; then
-      err1="Valid filename required:  $0 put $what $uuid"
-      err_length=${#err}
-      err2=""
-      echo "Valid filename required:  $0 put $what $uuid $3"
-      echo "                                             ^ invalid filename"
-      exit 1
-    fi
-    args=("-X" "PUT" "-F" "file=@$3" "$ENDPOINT/files/$API_VERSION/$uuid")
-  fi
-  call_curl "${args[@]}"
-}
-
-function format_get_output {
-  exit 1
-}
-
-function get {
-  what="$1"
-  uuid="$2"
-  case $what in
-    files) args=("-O" "-J" "$ENDPOINT/files/$API_VERSION/$uuid");;
-        *) args=("-H" "Accept: text/plain" "$ENDPOINT/$what/$API_VERSION/$uuid");;
-  esac
-  call_curl "${args[@]}"
-}
-
-function version {
-  args=("-H" "Accept: text/plain" "$ENDPOINT/version")
-  call_curl "${args[@]}"
-}
-
-VERB=`echo $1 | tr '[:lower:]' '[:upper:]'`
-validate_verb $VERB
-if [ $? -ne 0 ]; then
-  echo -n "$1 is not a valid verb: "
-  echo "${VALID_VERBS[@]}"
-  exit 1
-fi
-
-shift
-case $VERB in
-  "POST"    ) post "$@";;
-  "PUT"     ) put "$@";;
-  "GET"     ) get "$@";;
-  "VERSION" ) version "$@";;
-  *         ) echo "Unsupported for now.";;
-esac
-
-exit $?
+if __name__ == '__main__':
+    main()
