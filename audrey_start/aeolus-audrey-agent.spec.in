@@ -1,10 +1,10 @@
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    8%{?dist}
+Release:    9%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
-License:    GPLv2+
+License:    ASL2.0
 URL:        http://aeolusproject.org
 
 # to build source tarball
@@ -42,6 +42,8 @@ cp audrey.8 %{buildroot}%{_mandir}/man8
 %doc COPYING
 
 %changelog
+* Tue Nov 09 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-9
+- Update the licensing information
 * Tue Nov 08 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-8
 - Add man page generation and address some packaging review feedback
 * Tue Nov 08 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-7
