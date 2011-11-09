@@ -67,5 +67,4 @@ clean:
 	audrey.log audrey_startup.pyc test_toolinglog test_toolinguser \
 	toolinglog toolinguser
 
-
 .PHONY: dist check rpms srpms

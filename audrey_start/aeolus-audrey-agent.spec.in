@@ -35,11 +35,10 @@ mkdir -p %{buildroot}%{_mandir}/man8
 # copy over the audrey startup agent bits
 cp audrey_startup.py %{buildroot}%{_bindir}/audrey
 cp audrey.8 %{buildroot}%{_mandir}/man8
-ls -aFlR %{buildroot}%{_mandir}/man8
 
 %files
 %{_bindir}/audrey
-%{_mandir}/man8/audrey.8
+%{_mandir}/man8/audrey.8*
 %doc COPYING
 
 %changelog
