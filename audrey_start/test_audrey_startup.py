@@ -16,7 +16,7 @@ import sys
 import tarfile
 
 from audrey_startup import CSClient
-from audrey_startup import Config_Tooling
+from audrey_startup import ConfigTooling
 from audrey_startup import ASError
 from audrey_startup import parse_args
 from audrey_startup import parse_provides_params
@@ -130,16 +130,16 @@ class TestAudreyStartupConfigTooling(unittest.TestCase):
     Make sure all the Config tooling is tested
     '''
     def test_is_user_supplied(self):
-        Config_Tooling('test_tooling').is_user_supplied('')
+        ConfigTooling('test_tooling').is_user_supplied()
 
     def test_is_rh_supplied(self):
-        Config_Tooling('test_tooling').is_rh_supplied('')
+        ConfigTooling('test_tooling').is_rh_supplied()
 
     def test_empty_find_tooling(self):
-        self.assertRaises(ASError, Config_Tooling('test_tooling').find_tooling, '')
+        self.assertRaises(ASError, ConfigTooling('test_tooling').find_tooling, '')
 
     def test_fail_to_create_tooling_dir(self):
-        self.assertRaises(ASError, Config_Tooling, tool_dir='/not/real/dir')
+        self.assertRaises(ASError, ConfigTooling, tool_dir='/not/real/dir')
 
 class TestAudreyStartupRequiredConfig(unittest.TestCase):
     '''

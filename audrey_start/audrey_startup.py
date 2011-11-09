@@ -219,7 +219,7 @@ def _run_pipe_cmd(cmd1, cmd2):
 
     return ret
 
-class Service_Params(object):
+class ServiceParams(object):
     '''
     Description:
         Used for storing a service and all of it's associated parameters
@@ -227,9 +227,9 @@ class Service_Params(object):
         API message.
 
         services = [
-                Service_Params('serviceA', ['n&v', 'n&v', 'n&v',...]),
-                Service_Params('serviceB', ['n&v', 'n&v', 'n&v',...]),
-                Service_Params('serviceB', ['n&v', 'n&v', 'n&v',...]),
+                ServiceParams('serviceA', ['n&v', 'n&v', 'n&v',...]),
+                ServiceParams('serviceB', ['n&v', 'n&v', 'n&v',...]),
+                ServiceParams('serviceB', ['n&v', 'n&v', 'n&v',...]),
         ]
 
         This structure aids in tracking the parsed required config
@@ -242,6 +242,10 @@ class Service_Params(object):
         self.name = name # string
         self.params = [] # start with an empty list
     def add_param(self, param):
+        '''
+        Description:
+            Add a parameter provided by   the Config Server to the list.
+        '''
         self.params.append(param)
     def __repr__(self):
         return repr((self.name, self.params))
@@ -335,7 +339,7 @@ def parse_require_config(src):
         |service|apache2::common|apache_port&<b64('8081')>|
 
     Returns:
-        - A list of Service_Params objects.
+        - A list of ServiceParams objects.
     '''
 
     services = []
@@ -373,7 +377,7 @@ def parse_require_config(src):
                     _raise_ASError(('ERROR invalid service name: %s') % \
                        (str(token)))
 
-                new = Service_Params(token)
+                new = ServiceParams(token)
                 services.append(new)
             elif token == 'parameters' or token == '':
                 pass
@@ -514,7 +518,7 @@ def generate_provides(src):
 
     return urllib.urlencode({'audrey_data':'|'.join(provides_list)})
 
-class Config_Tooling(object):
+class ConfigTooling(object):
     '''
     TBD - Consider making this class derived from dictionary or a mutable
     mapping.
@@ -552,7 +556,7 @@ class Config_Tooling(object):
                 _raise_ASError(('Failed to create directory %s. ' + \
                     'Error: %s') % (self.user_dir, strerror))
 
-        self.ct_logger = logging.getLogger('Config_Tooling')
+        self.ct_logger = logging.getLogger('ConfigTooling')
         self.ct_logger.addHandler(logging.FileHandler(self.log))
 
     def __str__(self):
@@ -600,13 +604,13 @@ class Config_Tooling(object):
             Invoke the configuration tooling for the specified services.
 
         Input:
-            services - A list of Service_Params objects.
+            services - A list of ServiceParams objects.
 
         '''
 
         # For now invoke them all. Later versions will invoke the service
         # based on the required params from the Config Server.
-        LOGGER.debug('Invoked Config_Tooling.invoke_tooling()')
+        LOGGER.debug('Invoked ConfigTooling.invoke_tooling()')
         LOGGER.debug(str(services))
         for service in services:
 
@@ -665,7 +669,7 @@ class Config_Tooling(object):
                 raise IOError
         except IOError, (errno, strerror):
             _raise_ASError(('File was not found or is not a tar file: %s ' + \
-                    'Error: %s') % (self.tarball, strerror))
+                    'Error: %s %s') % (self.tarball, errno, strerror))
 
         # Attempt to extract the contents from the specified tarfile.
         #
@@ -685,19 +689,25 @@ class Config_Tooling(object):
             _raise_ASError(('Failed to access tar file %s. Error: %s') %  \
                 (self.tarball, strerror))
 
-    def is_user_supplied(self, service_name):
+    def is_user_supplied(self):
         '''
         Description:
             Is the the configuration tooling for the specified service
             supplied by the user?
+
+            TBD: Take in a service_name and evaluate.
+            def is_user_supplied(self, service_name):
         '''
         return True
 
-    def is_rh_supplied(self, service_name):
+    def is_rh_supplied(self):
         '''
         Description:
             Is the the configuration tooling for the specified service
             supplied by Red Hat?
+
+            TBD: Take in a service_name and evaluate.
+            def is_rh_supplied(self, service_name):
         '''
         return False
 
@@ -817,6 +827,10 @@ class CSClient(object):
             ))
 
     def _cs_url(self, url_type):
+        '''
+        Description:
+            Generate the Config Server (CS) URL.
+        '''
         return '%s/%s/%s/%s' % \
             (self.cs_endpoint, url_type, self.version, self.cs_oauth_key)
 
@@ -920,7 +934,7 @@ class CSClient(object):
                 f.close()
             except IOError, (errno, strerror):
                 _raise_ASError(('File not found or not a tar file: %s ' + \
-                        'Error: %s') % (self.tarball, strerror))
+                        'Error: %s %s') % (self.tarball, errno, strerror))
 
         return response.status, self.tarball
 
@@ -1126,7 +1140,7 @@ def setup_logging(level=logging.INFO, logfile_name=LOG):
     # If not run as root create the log file in the current directory.
     # This allows minimal functionality, e.g.: --help
     if not os.geteuid() == 0:
-        logfile_name='./audrey.log'
+        logfile_name = './audrey.log'
 
     # set up logging
     LOG_FORMAT = ('%(asctime)s - %(levelname)-8s: '
@@ -1203,13 +1217,13 @@ def audrey_script_main(client_http=None):
     # parse the args and setup logging
     conf = parse_args()
     if 'pwd' in conf and conf.pwd:
-        log_file='audrey.log'
-        tool_dir='tooling'
-        cloud_info='cloud_info'
+        log_file = 'audrey.log'
+        tool_dir = 'tooling'
+        cloud_info = 'cloud_info'
     else:
-        log_file=LOG
-        tool_dir=TOOLING_DIR
-        cloud_info=CLOUD_INFO_FILE
+        log_file = LOG
+        tool_dir = TOOLING_DIR
+        cloud_info = CLOUD_INFO_FILE
 
     setup_logging(level=conf.log_level,
             logfile_name=log_file)
@@ -1224,7 +1238,7 @@ def audrey_script_main(client_http=None):
 
     # ensure the conf it a dictionary, not a namespace
     if hasattr(conf, '__dict__'):
-       conf = vars(conf)
+        conf = vars(conf)
 
     LOGGER.info('Invoked audrey_script_main')
 
@@ -1242,7 +1256,7 @@ def audrey_script_main(client_http=None):
 
     LOGGER.debug('Get optional tooling from the Config Server')
     # Get any optional tooling from the Config Server
-    tooling = Config_Tooling(tool_dir=tool_dir)
+    tooling = ConfigTooling(tool_dir=tool_dir)
     tooling_status, tarball = cs_client.get_cs_tooling()
     if (tooling_status == 200) or (tooling_status == 202):
         tooling.unpack_tooling(tarball)
