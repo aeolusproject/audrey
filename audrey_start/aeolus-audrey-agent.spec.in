@@ -28,6 +28,8 @@ URL:        http://aeolusproject.org
 # cp aeolus-conductor-<version>.tar.gz ~/rpmbuild/SOURCES
 Source0:    aeolus-audrey-agent-%{version}.tar.gz
 
+BuildRequires: help2man
+
 Requires:   facter python-httplib2 python-oauth2
 %if (0%{?fedora} <= 14 || 0%{?rhel} <= 6)
 Requires: python-argparse
