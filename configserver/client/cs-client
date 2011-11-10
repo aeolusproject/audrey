@@ -11,7 +11,7 @@ CS_API_VER = 1
 def add_endpoint(fn):
     def wrapper(self, url, **kwargs):
         url = self.cs_endpoint + url
-        fn(self, url, **kwargs)
+        return fn(self, url, **kwargs)
     return wrapper
 
 class CSClient(object):
@@ -76,8 +76,9 @@ def main():
 
     xml_root = ET.XML(xml_body)
     uuid = xml_root.attrib['id']
-    cs_client.post('/configs/%s/%s' % (CS_API_VER, uuid),
-                   body=xml_body)
+    response, body = cs_client.post('/configs/%s/%s' % (CS_API_VER, uuid),
+                   body=("data=%s" % xml_body))
+    print "HTTP Status: %s" % response['status']
 
 if __name__ == '__main__':
     main()
