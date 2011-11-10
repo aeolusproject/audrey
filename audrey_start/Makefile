@@ -1,19 +1,18 @@
-# Copyright (C) 2011 Red Hat, Inc.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; version 2 of the License.
+#   Copyright [2011] [Red Hat, Inc.]
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-# MA  02110-1301, USA.  A copy of the GNU General Public License is
-# also available at http://www.gnu.org/copyleft/gpl.html.
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#  limitations under the License.
+#
 
 AUDREY_STARTUP_CACHE_DIR	?= $(HOME)/audrey-agent-cache
 
@@ -43,20 +42,24 @@ man_section = 8
 #        Copy the desired bits to the dist directory.
 #        tar up the contents of the dist directory.
 dist: audrey_startup.py audrey.$(man_section)
-	sed -e 's/@VERSION@/$(VERSION)/' aeolus-audrey-agent.spec.in > aeolus-audrey-agent.spec
-	sed -e 's/@VERSION@/$(VERSION).$(RELEASE)/' audrey_startup.in.py > audrey_startup.py
+	rm -rf dist
+	sed -e 's/@VERSION@/$(VERSION)/' aeolus-audrey-agent.spec.in \
+	  > aeolus-audrey-agent.spec
 	mkdir -p dist/aeolus-audrey-agent-$(VERSION)
-	cp -a aeolus-audrey-agent.spec.in COPYING Makefile audrey_startup.in.py \
-                audrey.$(man_section) \
+	cp -a aeolus-audrey-agent.spec aeolus-audrey-agent.spec.in \
+		COPYING Makefile audrey_startup.in.py \
+		audrey.$(man_section) \
 		test_audrey_startup.py dist/aeolus-audrey-agent-$(VERSION)
 	tar -C dist -zcvf aeolus-audrey-agent-$(VERSION).tar.gz aeolus-audrey-agent-$(VERSION)
 
 # cp audrey_starup.in.py to audrey_startup.py
 audrey_startup.py: audrey_startup.in.py
-	cp $< $@
-	
-# cp audrey_starup.in.py to audrey.
-audrey: audrey_startup.in.py
+	sed -e 's/@VERSION@/$(VERSION)/' $< > $@-t
+	chmod a+x,a-w $@-t
+	mv $@-t $@
+
+# cp audrey_starup.py to audrey.
+audrey: audrey_startup.py
 	cp $< $@
 
 # Generate the man page using help2man from the --help text output from the Audrey agent.
