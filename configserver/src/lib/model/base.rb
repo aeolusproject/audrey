@@ -27,6 +27,10 @@ module ConfigServer
         Base.ensure_storage_path
       end
 
+      def logger
+        $LOGGER
+      end
+
       def self.ensure_storage_path
         path = storage_path
         if not (path.nil? or path.empty? or File.directory?(path))

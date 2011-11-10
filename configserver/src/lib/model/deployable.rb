@@ -57,7 +57,7 @@ module ConfigServer
           assembly_names = [assembly_names]
         end
         match_string = "['\"](#{assembly_names.join("|")})['\"]"
-        puts "match_string: #{match_string}"
+        logger.debug("match_string: #{match_string}")
         instance_uuids.select do |uuid|
           p = File.join(@deployable_dir.path, uuid, 'required-parameters.xml')
           File.open(p) do |f|

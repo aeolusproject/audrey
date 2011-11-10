@@ -4,14 +4,14 @@ require 'lib/model/consumer'
 
 module ApplicationHelper
   def logger
-    LOGGER
+    $LOGGER
   end
 
   def configs
     ConfigServer::Model.instance_config_schema_location =
       settings.instance_config_rng
 
-    @configs ||= ConfigServer::InstanceConfigs.new(settings, LOGGER)
+    @configs ||= ConfigServer::InstanceConfigs.new(settings)
   end
 
   def app_version
@@ -42,7 +42,8 @@ module ApplicationHelper
   end
 
   def authenticated?
-    OAuth::Signature.verify(request, :unsigned_parameters => ["data", "audrey_data"]) do |request_proxy|
+    unsigned_parameters = settings.oauth_ignore_post_body ? ["data", "audrey_data"] : []
+    OAuth::Signature.verify(request, :unsigned_parameters => unsigned_parameters) do |request_proxy|
       logger.debug("**AUTHENTICATING** key = #{request_proxy.consumer_key}")
       consumer = ConfigServer::Model::Consumer.find(request_proxy.consumer_key)
       if not consumer.nil?

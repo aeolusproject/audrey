@@ -40,8 +40,19 @@ module ConfigServer
       attr_reader :cause
 
       def initialize(errors=nil, cause=nil)
-        @errors = errors if not errors.nil?
+        @errors = (errors.nil?) ? [] : errors
+        if not @errors.is_a? Array
+          @errors = [@errors]
+        end
         @cause = cause if not cause.nil?
+      end
+
+      def to_s
+        s = super()
+        @errors.each do |error|
+          s = "#{s}\n  Error: #{error}"
+        end
+        s
       end
     end
 
@@ -167,7 +178,7 @@ module ConfigServer
       end
 
       def provided_parameters_values=(params={})
-        puts "provided params: #{params.inspect}"
+        logger.debug("provided params: #{params.inspect}")
         if not (params.nil? or params.empty?)
           params.each do |k,v|
             param = pp % "//provided-parameter[@name='#{k}']"
@@ -207,11 +218,11 @@ module ConfigServer
       end
 
       def required_parameters_values=(params={})
-        puts "required params: #{params.inspect}"
+        logger.debug("required params: #{params.inspect}")
         params.each do |k,v|
           param = rp % "//required-parameter[@name='#{k}']"
-          puts "param: #{param.to_xml}"
-          puts "value: #{v}"
+          logger.debug("param: #{param.to_xml}")
+          logger.debug("value: #{v}")
           param.inner_html = "<value><![CDATA[#{v}]]></value>" if not param.nil?
         end if not (params.nil? or params.empty?)
         File.open(get_path(@@REQUIRED_PARAMS_FILE), 'w') do |f|
@@ -398,7 +409,7 @@ module ConfigServer
             end
           end
           xml += "</required-parameters>\n"
-          puts "reqparams xml: #{xml}"
+          logger.debug("reqparams xml: #{xml}")
 
           File.open(file, 'w') do |f|
             f.write(xml)
@@ -444,7 +455,7 @@ module ConfigServer
           end
           download = download_file(node['url'])
           if "200" == download[:code]
-            puts "Downloaded file #{node['url']}: #{download[:body].size}b"
+            logger.debug("Downloaded file #{node['url']}: #{download[:body].size}b")
             filename = (:file == type) ? download[:name] : "start"
             if type == :executable
               open("#{download_dir}/#{filename}", 'wb', 0777) do |file|
@@ -456,7 +467,7 @@ module ConfigServer
               end
             end
           else
-            puts "ERROR(#{download[:code]}): could not download file #{node['url']}"
+            logger.debug("ERROR(#{download[:code]}): could not download file #{node['url']}")
             # TODO: log that the config server could not download the file...
             # bundle up errors to return...
           end

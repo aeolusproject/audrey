@@ -4,7 +4,6 @@ require 'rubygems'
 
 require 'lib/config_handler' # I don't like this name
 require 'lib/application_helper'
-require 'logger'
 
 helpers ApplicationHelper
 
@@ -55,10 +54,10 @@ end
 
 get '/version' do
   logger.debug("Getting the version as HTML")
-  "<config-server>\n" +
-  "<config-server>\n" +
-  "Application Version: #{app_version}<br/>\n" +
-  "API Version: #{api_version}<br/>\n"
+  "<html><body>\n" +
+  "<li>Application Version: #{app_version}</li>\n" +
+  "<li>API Version: #{api_version}<li/>\n" +
+  "</body></html>"
 end
 
 
@@ -167,7 +166,6 @@ get '/params/:version/:uuid', :provides => 'text' do
     not_found
   else
     provides = configs.get_provides(params[:uuid], :as => :text)
-    logger.debug("GET params: #{provides}")
     provides
   end
 end
@@ -178,7 +176,6 @@ get '/params/:version/:uuid', :provides => 'xml' do
     not_found
   else
     provides = configs.get_provides(params[:uuid], :as => :xml)
-    logger.debug("GET params: #{provides}")
     provides
   end
 end

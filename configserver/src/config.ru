@@ -18,13 +18,28 @@ set :root,                root_dir
 set :version,             version
 set :proxy_type,          proxy_type
 set :proxy_auth_file,     proxy_auth_file
-set :app_file,            File.join(root_dir, 'hello.rb')
 ConfigServer::Model.storage_dir = settings.storage_dir
 disable :run
 
-if env == :development
+require 'logger'
+$LOGGER = Logger.new(ENV['APPLICATION_LOG'])
+if env == :production
+  $LOGGER.level = Logger::INFO
+  set :oauth_ignore_post_body, true
+else
+  $LOGGER.level = Logger::DEBUG
   require 'ruby-debug'
+  set :oauth_ignore_post_body, false
 end
 
-LOGGER = Logger.new(ENV['APPLICATION_LOG'])
+# This is an awful hack that needs to go away very soon!
+# In order to make this go away, Conductor needs to use
+# the oauth client to post instance config XML instead of
+# using RestClient
+if env == :production
+  set :oauth_ignore_post_body, true
+else
+  set :oauth_ignore_post_body, false
+end
+
 run Sinatra::Application

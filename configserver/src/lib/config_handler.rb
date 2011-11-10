@@ -19,12 +19,6 @@ end
 
 module ConfigServer
 
-  class MyStupidLogger
-    def info(msg); puts msg; end
-    def debug(msg); info msg; end
-    def error(msg); info msg; end
-  end
-
   class InvalidInstanceConfigError < StandardError
     attr_reader :errors
 
@@ -40,13 +34,9 @@ module ConfigServer
 
   class InstanceConfigs
     attr_reader :version
-    def initialize(settings, logger=nil)
+    def initialize(settings)
       @settings = settings
-      if not logger.nil?
-        @logger = logger
-      else
-        @logger = MyStupidLogger.new
-      end
+      @logger = $LOGGER
       @version = @settings.version || "0.2.0"
     end
 
