@@ -46,7 +46,7 @@ dist: audrey_startup.py audrey.$(man_section)
 	sed -e 's/@VERSION@/$(VERSION)/' aeolus-audrey-agent.spec.in > aeolus-audrey-agent.spec
 	sed -e 's/@VERSION@/$(VERSION).$(RELEASE)/' audrey_startup.in.py > audrey_startup.py
 	mkdir -p dist/aeolus-audrey-agent-$(VERSION)
-	cp -a aeolus-audrey-agent.spec COPYING Makefile audrey_startup.py \
+	cp -a aeolus-audrey-agent.spec.in COPYING Makefile audrey_startup.in.py \
                 audrey.$(man_section) \
 		test_audrey_startup.py dist/aeolus-audrey-agent-$(VERSION)
 	tar -C dist -zcvf aeolus-audrey-agent-$(VERSION).tar.gz aeolus-audrey-agent-$(VERSION)
