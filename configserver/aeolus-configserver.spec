@@ -2,7 +2,7 @@
 
 Name:		aeolus-configserver
 Version:	@VERSION@
-Release:	3%{?extra_release}%{?dist}
+Release:	4%{?extra_release}%{?dist}
 Summary:	The Aeolus Config Server
 BuildArch:  noarch
 
@@ -131,6 +131,9 @@ fi
 
 
 %changelog
+* Mon Nov 14 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-4
+- Allow httpd and config server to run with selinux enabled
+- Configure ip tables to open port 443
 * Fri Nov 04 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-3
 - Adding new "auth" endpoint for testing oauth credentials
 - Fixing audrey_data unsigned parameter name for oauth

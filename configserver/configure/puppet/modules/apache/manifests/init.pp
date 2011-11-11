@@ -27,6 +27,13 @@ class apache {
       ensure => installed,
     }
 
+    exec { "permit-http-networking":
+      command   => "/usr/sbin/setsebool -P httpd_can_network_connect 1",
+      logoutput => true,
+      unless    => "/usr/bin/test 'Disabled' = `/usr/sbin/getenforce`",
+      require   => Package["apache"]
+    }
+
     exec { "graceful-apache":
       command => "/sbin/service httpd graceful",
       refreshonly => true,
@@ -85,6 +92,12 @@ class apache {
       ensure => directory,
       mode => 0644, owner => root, group => root,
       require => Package["apache"],
+    }
+
+    exec { "config-iptables-for-443":
+      command   => "/sbin/iptables -I INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT",
+      logoutput => true,
+      require => Package["apache"]
     }
   }
 
