@@ -1,6 +1,6 @@
 require 'cgi'
-require 'sinatra'
 require 'rubygems'
+require 'sinatra'
 
 require 'lib/config_handler' # I don't like this name
 require 'lib/application_helper'
