@@ -22,10 +22,6 @@ module ApplicationHelper
     "1"
   end
 
-  def app_log_file
-    settings.app_log
-  end
-
   def api_version_valid?(request, version)
     root_path = request.path[0, (request.path.index('/', 1) + 1)]
     if ["/params/", "/configs/"].include? root_path
