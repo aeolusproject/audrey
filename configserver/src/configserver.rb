@@ -188,6 +188,8 @@ put '/params/:version/:uuid' do
     not_found
   else
     logger.debug("PUT params: #{params[:audrey_data]}")
-    configs.update(params[:uuid], params[:audrey_data], request.ip)
+    provides = configs.update(params[:uuid], params[:audrey_data], request.ip)
+    status = ("||" == provides) ? 200 : 202
+    [status, provides]
   end
 end
