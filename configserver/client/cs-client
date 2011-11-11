@@ -2,6 +2,9 @@
 import argparse
 import os
 import oauth2 as oauth
+import httplib2
+import base64
+import urllib
 
 from xml.etree import ElementTree as ET
 from optparse import OptionParser
@@ -31,54 +34,114 @@ class CSClient(object):
         # 2 legged auth, token unnessesary
         token = None #oauth.Token('access-key-here','access-key-secret-here')
         client = oauth.Client(consumer, token)
-        self.http = client
+        self.oauth = client
+        self.http = httplib2.Http()
 
+    @add_endpoint
     def get(self, url, headers=None):
         '''
         Issue the http get to the the Config Server.
         '''
-        return self.http.request(url, method='GET', headers=headers)
+        return self.oauth.request(url, method='GET', headers=headers)
 
+    @add_endpoint
     def put(self, url, body=None, headers=None):
         '''
         Issue the http put to the the Config Server.
         '''
-        return self.http.request(url, method='PUT',
+        return self.oauth.request(url, method='PUT',
                             body=body, headers=headers)
     @add_endpoint
     def post(self, url, body=None, headers=None):
         '''
         Issue the http put to the the Config Server.
         '''
-        return self.http.request(url, method='POST',
+        return self.oauth.request(url, method='POST',
                             body=body, headers=headers)
 
+def parse_put_data(**kwargs):
+    data = "|"
+    for key in kwargs.keys():
+        value = kwargs[key]
+        b64 = base64.b64encode(value)
+        data = "%s%s&%s|" % (data, key, b64)
+    if "|" == data:
+        data = "||"
+    return data
+
 def main():
-    parser = argparse.ArgumentParser(description='Audrey Start')
+    parser = argparse.ArgumentParser(description='Audrey Start', \
+        formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-e', '--endpoint', dest='endpoint', \
         required=True, help='Config Server endpoint url')
     parser.add_argument('-k', '--key', dest='oauth_key', \
         required=True, help='oAuth Key')
     parser.add_argument('-s', '--secret', dest='oauth_secret', \
         required=True, help='oAuth Secret')
-    parser.add_argument('xml_file', help='XML file to post')
+
+    parser.add_argument('verb', help="The ACTION you want to perform", \
+        choices=["get", "post", "put"])
+    parser.add_argument('vars', help='''When ACTION is
+    get: [version | {configs, params} uuid]
+      ex: get version
+      ex: get configs 123-456-789
+      ex: get params 123-456-789
+    put: uuid 'param=value' ['param=value' ...]
+      ex: put 123-456-789 param1=value1 param2=value2
+    post: xml_filename
+      ex: post instance_config.xml''', \
+        nargs="+")
 
     args = parser.parse_args()
 
-    # ensure the conf it a dictionary, not a namespace
+    # ensure the conf is a dictionary, not a namespace
     if hasattr(args, '__dict__'):
        args = vars(args)
 
+    verb = args['verb']
+    kwargs = args['vars']
     cs_client = CSClient(**args)
-    f = open(args['xml_file'], 'r')
-    xml_body = f.read()
-    f.close()
 
-    xml_root = ET.XML(xml_body)
-    uuid = xml_root.attrib['id']
-    response, body = cs_client.post('/configs/%s/%s' % (CS_API_VER, uuid),
-                   body=("data=%s" % xml_body))
+    if "get" == verb:
+        what = kwargs[0]
+        headers = None
+        if "configs" == what or "params" == what:
+            if len(kwargs) < 2:
+                print "Provide a uuid when getting %s:\n\t" \
+                    "cs-client -e endpoint -k key -s secret " \
+                    "get %s uuid" % (what, what)
+                return
+            uuid = kwargs[1]
+            what = "%s/%s/%s" %(what, CS_API_VER, uuid)
+            headers = {"Accept":"text/plain"}
+        elif "version" == what:
+            headers = {"Accept":"application/xml"}
+        else:
+            print "Invalid request to GET: %s\n\t" \
+                "Valid options are 'configs', " \
+                "'params', 'version'" % what
+            return
+
+        response, body = cs_client.get("/%s" % what, headers=headers)
+    elif "put" == verb:
+        uuid = kwargs.pop(0)
+        put_args = dict(map(lambda item: item.split("="), kwargs))
+        put_data = parse_put_data(**put_args)
+        put_data = urllib.urlencode({"audrey_data":put_data})
+        headers = {"Accept":"text/plain", "Content-Type":"application/x-www-form-urlencoded"}
+        response, body = cs_client.put("/params/%s/%s" % (CS_API_VER, uuid),
+                body=("%s" % put_data), headers=headers)
+    elif "post" == verb:
+        xml_file = kwargs[0]
+        f = open(xml_file, 'r')
+        xml_body = f.read()
+        f.close()
+        xml_root = ET.XML(xml_body)
+        uuid = xml_root.attrib['id']
+        response, body = cs_client.post('/configs/%s/%s' % (CS_API_VER, uuid),
+                body=("data=%s" % xml_body))
     print "HTTP Status: %s" % response['status']
+    print "Body:\n%s" % body
 
 if __name__ == '__main__':
     main()
