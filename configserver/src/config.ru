@@ -10,14 +10,12 @@ proxy_type=ENV['PROXY_TYPE']
 proxy_auth_file = ENV['PROXY_AUTH_FILE']
 
 require 'configserver'
-set :app_log,             ENV['APPLICATION_LOG']
 set :environment,         env
 set :storage_dir,         storage_dir
 set :instance_config_rng, instance_config_rng
 set :root,                root_dir
 set :version,             version
 set :proxy_type,          proxy_type
-set :proxy_auth_file,     proxy_auth_file
 ConfigServer::Model.storage_dir = settings.storage_dir
 disable :run
 
