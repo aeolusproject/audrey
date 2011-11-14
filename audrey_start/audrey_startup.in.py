@@ -54,6 +54,7 @@ import phacter
 import oauth2 as oauth
 import tarfile as tf # To simplify exception names.
 
+from time import sleep
 from collections import deque
 from subprocess import Popen, PIPE
 
@@ -1237,9 +1238,12 @@ def audrey_script_main(client_http=None):
 
     LOGGER.info('Invoked audrey_script_main')
 
-    config_status = 0
-    param_status = 0
-    tooling_status = 0
+    # 0 means don't run again
+    # -1 is non zero so initial runs will happen
+    config_status = -1
+    param_status = -1
+    tooling_status = -1
+
     max_retry = 5
     services = []
 
@@ -1264,46 +1268,44 @@ def audrey_script_main(client_http=None):
 
     # Process the Requires and Provides parameters until the HTTP status
     # from the get_cs_configs and the get_cs_params both return 200
-    while (config_status != 200) or (param_status != 200):
+    while config_status or param_status:
 
         LOGGER.debug('Config Parameter status: ' + str(config_status))
         LOGGER.debug('Return Parameter status: ' + str(param_status))
 
         # Get the Required Configs from the Config Server
-        if (config_status != 200):
+        if config_status:
             config_status, configs = cs_client.get_cs_configs()
 
-        # Configure the system with the provided Required Configs
-        if (config_status == 200) or (config_status == 202):
-            services = parse_require_config(configs)
-            tooling.invoke_tooling(services)
-
-        else:
-            LOGGER.info('No configuration parameters provided. status: ' + \
-                str(config_status))
+            # Configure the system with the provided Required Configs
+            if config_status == 200:
+                services = parse_require_config(configs)
+                tooling.invoke_tooling(services)
+                # don't do any more config status work
+                # now that the tooling has run
+                config_status = 0
+            else:
+                LOGGER.info('No configuration parameters provided. status: ' + \
+                    str(config_status))
 
         # Get the requested provides from the Config Server
-        if (param_status != 200):
-            param_status, params = cs_client.get_cs_params()
+        if param_status:
+            get_status, params = cs_client.get_cs_params()
 
-        # Gather the values from the system for the requested provides
-        if (param_status == 200) or (param_status == 202):
+            # Gather the values from the system for the requested provides
+            if get_status == 200:
+                params_values = generate_provides(params)
+            else:
+                params_values = '||'
 
-            # Generate the values for the requested provides parameters.
-            params_values = generate_provides(params)
-
-        else:
-            # Return empty params values string even if the status code
-            # is not success.
-            # This will provide the Config Server with the IP Address
-            # and UUID for this instance.
-            params_values = '||'
-
-        # Put the requested provides with values to the Config Server
-        cs_client.put_cs_params_values(params_values)
+            # Put the requested provides with values to the Config Server
+            param_status, body = cs_client.put_cs_params_values(params_values)
+            if param_status == 200:
+                # don't operate on params anymore, all have been provided.
+                param_status = 0
 
         # Retry a number of times if 404 HTTP Not Found is returned.
-        if (config_status == 404) or (param_status == 404):
+        if config_status == 404 or param_status == 404:
             LOGGER.error('Requiest to Config Server failed or more to come.')
             LOGGER.error('Required Config Parameter status: ' + \
                 str(config_status))
@@ -1312,6 +1314,8 @@ def audrey_script_main(client_http=None):
             max_retry -= 1
             if max_retry < 0:
                 _raise_ASError('Too many erroneous Config Server responses.')
+
+        sleep(10)
 
 if __name__ == '__main__':
 
