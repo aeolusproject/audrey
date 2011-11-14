@@ -13,6 +13,8 @@ require 'rake'
 require 'rake/testtask'
 require 'rake/clean'
 require 'rake/gempackagetask'
+# JJV rake/gempackagetask is deprecated.
+# JJV require 'rubygems/package_task'
 
 version = '0.4.1'
 pkg_name = 'aeolus-configserver'
@@ -95,17 +97,27 @@ GENERATED_FILES.each do |(source_file,is_packaged,block)|
   end
 end
 
+# Clean up the build destination
+CLEAN.include('pkg')
+
+
+# Build the (S)RPMs
 desc "Build (S)RPMs for #{pkg_name}"
 task :rpm => [ :package ] do |t|
   Dir::chdir("pkg") do |dir|
     dir = File::expand_path(".")
     system("which rpmbuild &> /dev/null")
     if $? != 0
-      raise "Oops, no rpmbuild command found.  Please install the rpm-build package to run the rpm rake task."
+      raise "No rpmbuild command found. Please install the " \
+          "rpm-build package to run the rpm rake task."
     end
-    # set pipefail so that is rpmbuild fails, its status is reported back to the rake task
-    puts "Running: set -o pipefail && rpmbuild --define '_sourcedir #{dir}' -ba #{SPEC_FILE} | tee rpmbuild.log 2>&1"
-    system("set -o pipefail && rpmbuild --define '_sourcedir #{dir}' -ba #{SPEC_FILE} | tee rpmbuild.log 2>&1")
+    # set pipefail so if rpmbuild fails, it's status is reported back
+    # to the rake task
+    cmd = "set -o pipefail && rpmbuild " \
+          "--define '_sourcedir #{dir}' " \
+          "-ba #{SPEC_FILE} | tee rpmbuild.log 2>&1"
+    puts "Running: #{cmd}"
+    system(cmd)
     rpmbuild_status = $?
     if rpmbuild_status != 0
       raise "rpmbuild failed (exit code: #{rpmbuild_status})"

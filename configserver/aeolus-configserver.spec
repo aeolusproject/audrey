@@ -1,51 +1,38 @@
 %define app_root %{_datadir}/%{name}
 
-Name:		aeolus-configserver
-Version:	@VERSION@
-Release:	1%{?extra_release}%{?dist}
-Summary:	The Aeolus Config Server
-BuildArch:  noarch
+Name:       aeolus-configserver
+Version:    @VERSION@
+Release:    4%{?extra_release}%{?dist}
+Summary:    The Aeolus Config Server
 
-Group:		Applications/System
-License:	GPLv2+ and MIT and BSD
-URL:		http://aeolusproject.org
-Source0:	aeolus-configserver-%{version}.tgz
-BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+Group:      Applications/System
+License:    ASL 2.0
+URL:        http://aeolusproject.org
+Source0:    http://joev.fedorapeople.org/audrey-agent/aeolus-configserver-%{version}.tgz
 
-BuildRequires:	ruby
-BuildRequires:	ruby-devel
-Requires:	    ruby >= 1.8.1
-Requires:       ruby-nokogiri
-Requires:       rubygem(sinatra)
-Requires:       rubygem(thin)
-Requires:       rubygem(archive-tar-minitar)
-Requires:       rubygem(activesupport)
-Requires:       rubygem(oauth)
-Requires(post): chkconfig
+BuildRequires:   ruby
+BuildRequires:   ruby-devel
+BuildRequires:   help2man
+
+Requires:        httpd
+Requires:        mod_ssl
+Requires:        puppet
+Requires:        ruby >= 1.8.1
+Requires:        ruby-nokogiri
+Requires:        rubygem(sinatra)
+Requires:        rubygem(thin)
+Requires:        rubygem(archive-tar-minitar)
+Requires:        rubygem(activesupport)
+Requires:        rubygem(oauth)
+Requires(post):  chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
 
+BuildArch:      noarch
 
 %description
 The Aeolus Config Server, a service for storing and retrieving VM
 configurations.
-
-##
-## aeolus-configserver-proxy package
-##
-%package proxy
-Summary:    Proxy support for Aeolus Config Server
-Group:      Application/System
-Requires:   aeolus-configserver
-Requires:   httpd
-Requires:   mod_ssl
-Requires:   puppet
-License:    GPLv2+ and MIT and BSD
-URL:        http://aeolusproject.org
-
-%description proxy
-The Aeolus Config Server proxy provides a script to configure ProxyPass, SSL
-Termination, and Basic Authentication.
 
 %prep
 %setup -q
@@ -60,6 +47,8 @@ rm -rf $RPM_BUILD_ROOT
 ##
 %{__mkdir} -p %{buildroot}
 %{__mkdir} -p %{buildroot}%{app_root}
+%{__mkdir} -p %{buildroot}%{app_root}/configure
+%{__mkdir} -p %{buildroot}%{_bindir}
 %{__mkdir} -p %{buildroot}%{_initrddir}
 %{__mkdir} -p %{buildroot}%{_sysconfdir}/sysconfig
 %{__mkdir} -p %{buildroot}%{_sysconfdir}/%{name}
@@ -76,12 +65,6 @@ rm -rf $RPM_BUILD_ROOT
 
 # copy relaxNG schema files
 %{__cp} schema/*.rng %{buildroot}%{_localstatedir}/lib/%{name}/schema/
-
-##
-# proxy
-##
-%{__mkdir} -p %{buildroot}%{app_root}/configure
-%{__mkdir} -p %{buildroot}%{_bindir}
 
 # copy over all puppet scripts and bin files
 %{__cp} -R configure/puppet %{buildroot}%{app_root}/configure/
@@ -114,6 +97,9 @@ fi
 
 %files
 %defattr(-,root,root,-)
+%{_bindir}/aeolus-configserver-setup-httpd
+%{_sysconfdir}/sysconfig/%{name}-proxy
+%{app_root}/configure
 %{app_root}
 %dir %{_sysconfdir}/%{name}
 %{_initrddir}/%{name}
@@ -122,13 +108,6 @@ fi
 %attr(-, aeolus, aeolus) %{_localstatedir}/run/%{name}
 %attr(-, aeolus, aeolus) %{_localstatedir}/log/%{name}
 %doc COPYING
-
-%files proxy
-%defattr(-, root, root, -)
-%{_bindir}/aeolus-configserver-setup-httpd
-%{_sysconfdir}/sysconfig/%{name}-proxy
-%{app_root}/configure
-
 
 %changelog
 * Mon Nov 14 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.1-1
