@@ -2,7 +2,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    4%{?extra_release}%{?dist}
+Release:    1%{?extra_release}%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System

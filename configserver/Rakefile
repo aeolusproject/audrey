@@ -19,13 +19,14 @@ require 'rake/gempackagetask'
 version = '0.4.1'
 pkg_name = 'aeolus-configserver'
 
+SPEC_FILE_IN="aeolus-configserver.spec.in"
 SPEC_FILE="aeolus-configserver.spec"
 CONFIG_RU="src/config.ru"
 LOGS="log"
 
 GENERATED_FILES=[
-  [SPEC_FILE,false,nil],
-  [CONFIG_RU,true,nil]
+  [SPEC_FILE_IN,SPEC_FILE,false,nil],
+  [CONFIG_RU,CONFIG_RU,true,nil]
 ]
 
 #
@@ -37,6 +38,7 @@ GENERATED_FILES=[
 # below.  And, rake uses hard links to copy files into the package location,
 # which would change both the packaged file and the file in the source tree.
 configserver_files = FileList[
+  "aeolus-configserver.spec.in",
   "Rakefile", "COPYING",
   "schema/*.rng",
   "src/**/*.*",
@@ -67,20 +69,42 @@ end
 # In this case, we allow for files that replace the "@VERSION@" text with the
 # actual package version.  Some generated files are packaged, while others are
 # simply used during packaging.
-GENERATED_FILES.each do |(source_file,is_packaged,block)|
+GENERATED_FILES.each do |(source_file,dest_file,is_packaged,block)|
   # create the file task to generate the file
   if is_packaged
     packaged_name = "#{p.package_name}/#{source_file}"
     dependencies = [p.package_dir_path] + p.package_files
   else
-    packaged_name = source_file
+    packaged_name = dest_file
     dependencies = [p.package_dir] + p.package_files
   end
   if block != nil
     block.call(source_file, packaged_name, dependencies, p)
   else
+    puts "JJV packaged_name: #{packaged_name}"
+    puts "JJV packaged_name: #{packaged_name}"
+    puts "JJV packaged_name: #{packaged_name}"
+    puts "JJV packaged_name: #{packaged_name}"
+    puts "JJV packaged_name: #{packaged_name}"
+    puts "JJV packaged_name: #{packaged_name}"
+    puts "JJV source_file: #{source_file}"
+    cmd = "sed -e 's/@VERSION@/#{version}/' #{source_file} " \
+        "> #{p.package_dir}/#{packaged_name}"
+    puts "JJV -010- cmd: #{cmd}"
+    puts "JJV -010- cmd: #{cmd}"
+    puts "JJV -010- cmd: #{cmd}"
+    puts "JJV -010- cmd: #{cmd}"
+    puts "JJV -010- cmd: #{cmd}"
+    puts "JJV -010- cmd: #{cmd}"
     file "#{p.package_dir}/#{packaged_name}" => dependencies do
-      system("sed -e 's/@VERSION@/#{version}/' #{source_file} > #{p.package_dir}/#{packaged_name}")
+      puts "JJV -020- cmd: #{cmd}"
+      puts "JJV -020- cmd: #{cmd}"
+      puts "JJV -020- cmd: #{cmd}"
+      puts "JJV -020- cmd: #{cmd}"
+      puts "JJV -020- cmd: #{cmd}"
+      puts "JJV -020- cmd: #{cmd}"
+      puts "JJV -020- cmd: #{cmd}"
+      system("#{cmd}")
     end
   end
 
