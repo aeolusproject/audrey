@@ -15,7 +15,7 @@
 #
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    9%{?dist}
+Release:    10%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
@@ -58,6 +58,8 @@ cp audrey.8 %{buildroot}%{_mandir}/man8
 %doc COPYING
 
 %changelog
+* Thu Nov 17 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-10
+- Fix bz754769 fix user data parsing and log level
 * Tue Nov 09 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-9
 - Update the licensing information
 * Tue Nov 08 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-8
