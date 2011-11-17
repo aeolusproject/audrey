@@ -50,13 +50,11 @@ mkdir -p %{buildroot}%{_mandir}/man8
 
 # copy over the audrey startup agent bits
 install audrey_startup.py %{buildroot}%{_bindir}/audrey
-
-# Disable man page for now, to fix build.
-# JJV cp audrey.8 %{buildroot}%{_mandir}/man8
+cp audrey.8 %{buildroot}%{_mandir}/man8
 
 %files
 %{_bindir}/audrey
-# JJV %{_mandir}/man8/audrey.8*
+%{_mandir}/man8/audrey.8*
 %doc COPYING
 
 %changelog
