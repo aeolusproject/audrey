@@ -17,9 +17,9 @@ if [ "x$UUID" == "x" ]; then
 fi
 
 XML=$(cat <<END_OF_XML
-<instance-config id='$UUID' name='$UUID' type='$UUID'> 
-    <deployable name='$UUID' id='$UUID'/> 
-    <template name='$UUID'/> 
+<instance-config id='$UUID' name='$UUID' type='$UUID'>
+    <deployable name='$UUID' id='$UUID'/>
+    <template name='$UUID'/>
 </instance-config>
 END_OF_XML
 )

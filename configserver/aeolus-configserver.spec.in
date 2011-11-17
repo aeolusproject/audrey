@@ -8,7 +8,7 @@ Summary:    The Aeolus Config Server
 Group:      Applications/System
 License:    ASL 2.0
 URL:        http://aeolusproject.org
-Source0:    http://joev.fedorapeople.org/audrey-agent/aeolus-configserver-%{version}.tgz
+Source0:    http://joev.fedorapeople.org/configserver/aeolus-configserver-%{version}.tgz
 
 BuildRequires:   ruby
 BuildRequires:   ruby-devel
@@ -37,40 +37,43 @@ configurations.
 %prep
 %setup -q
 
-#%build
+%build
 
 %install
-rm -rf $RPM_BUILD_ROOT
+rm -rf %{buildroot}
 
 ##
 # aeolus-configserver
 ##
-%{__mkdir} -p %{buildroot}
-%{__mkdir} -p %{buildroot}%{app_root}
-%{__mkdir} -p %{buildroot}%{app_root}/configure
-%{__mkdir} -p %{buildroot}%{_bindir}
-%{__mkdir} -p %{buildroot}%{_initrddir}
-%{__mkdir} -p %{buildroot}%{_sysconfdir}/sysconfig
-%{__mkdir} -p %{buildroot}%{_sysconfdir}/%{name}
-%{__mkdir} -p %{buildroot}%{_localstatedir}/lib/%{name}/schema
-%{__mkdir} -p %{buildroot}%{_localstatedir}/log/%{name}
-%{__mkdir} -p %{buildroot}%{_localstatedir}/run/%{name}
+mkdir -p %{buildroot}%{app_root}/configure
+mkdir -p %{buildroot}%{_bindir}
+mkdir -p %{buildroot}%{_initrddir}
+mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
+mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d
+mkdir -p %{buildroot}%{_sysconfdir}/%{name}
+mkdir -p %{buildroot}%{_localstatedir}/lib/%{name}/schema
+mkdir -p %{buildroot}%{_localstatedir}/log/%{name}
+mkdir -p %{buildroot}%{_localstatedir}/run/%{name}
+mkdir -p %{buildroot}%{_mandir}/man8
 
 # copy over all of the src directory...
-%{__cp} -R src/* %{buildroot}/%{app_root}
+cp -R src/* %{buildroot}/%{app_root}
 
-# copy init script and configs
-%{__cp} conf/%{name} %{buildroot}/%{_initrddir}
-%{__cp} conf/%{name}.sysconf %{buildroot}%{_sysconfdir}/sysconfig/%{name}
+# copy over init scripts and configs
+cp conf/%{name} %{buildroot}/%{_initrddir}
+cp conf/%{name}.sysconf %{buildroot}%{_sysconfdir}/sysconfig/%{name}
+cp conf/%{name}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 
 # copy relaxNG schema files
-%{__cp} schema/*.rng %{buildroot}%{_localstatedir}/lib/%{name}/schema/
+cp schema/*.rng %{buildroot}%{_localstatedir}/lib/%{name}/schema/
 
 # copy over all puppet scripts and bin files
-%{__cp} -R configure/puppet %{buildroot}%{app_root}/configure/
-%{__cp} configure/bin/config_httpd.sh %{buildroot}%{_bindir}/aeolus-configserver-setup-httpd
-%{__cp} conf/%{name}-proxy.sysconf %{buildroot}%{_sysconfdir}/sysconfig/%{name}-proxy
+cp -R configure/puppet %{buildroot}%{app_root}/configure/
+cp configure/bin/config_httpd.sh %{buildroot}%{_bindir}/aeolus-configserver-setup
+cp conf/%{name}-proxy.sysconf %{buildroot}%{_sysconfdir}/sysconfig/%{name}-proxy
 
+# copy the man page
+cp aeolus-configserver-setup.8 %{buildroot}%{_mandir}/man8
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -94,19 +97,19 @@ if [ $1 = 0 ]; then
 /sbin/chkconfig --del %{name}
 fi
 
-
 %files
 %defattr(-,root,root,-)
-%{_bindir}/aeolus-configserver-setup-httpd
-%{_sysconfdir}/sysconfig/%{name}-proxy
-%{app_root}/configure
+%{_bindir}/aeolus-configserver-setup
+%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-proxy
 %{app_root}
 %dir %{_sysconfdir}/%{name}
 %{_initrddir}/%{name}
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
+%config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
 %attr(-, aeolus, aeolus) %{_localstatedir}/lib/%{name}
-%attr(-, aeolus, aeolus) %{_localstatedir}/run/%{name}
+%ghost %attr(-, aeolus, aeolus) %{_localstatedir}/run/%{name}
 %attr(-, aeolus, aeolus) %{_localstatedir}/log/%{name}
+%{_mandir}/man8/aeolus-configserver-setup.8*
 %doc COPYING
 
 %changelog

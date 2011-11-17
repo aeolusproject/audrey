@@ -1,0 +1,12 @@
+weekly
+rotate 52
+compress
+missingok
+notifempty
+
+/var/log/aeolus-configserver/configserver.log /var/log/aeolus-configserver/thin.log {
+  sharedscripts
+  postrotate
+      /etc/init.d/aeolus-configserver restart
+  endscript
+}

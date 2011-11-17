@@ -1,26 +1,5 @@
 #!/bin/bash
 
-MODULE_PATH="/usr/share/aeolus-configserver/configure/puppet/modules"
-
-[ -r "/etc/sysconfig/aeolus-configserver" ] && . /etc/sysconfig/aeolus-configserver
-AEOLUS_USER="${AEOLUS_USER:-aeolus}"
-AEOLUS_GROUP="${AEOLUS_GROUP:-aeolus}"
-
-# should be run as root
-if [ "root" != "$USER" ]; then
-    echo "Please run this configuration tool as root"
-    exit 1
-fi
-
-PUPPET=$(which puppet)
-if [ "x$PUPPET" == "x" ]; then
-    echo "Puppet must be installed.  Please install puppet to continue."
-    exit 1
-fi
-
-USAGE="""
-"""
-
 PREAMBLE="""
 This script will help you configure Apache as a proxy for a Config Server.
 Typically this is only useful if you are not familiar with Apache
@@ -32,8 +11,45 @@ for any purposes on this server.  This configuration tool will create a Named
 Virtual Host for *:443.  If this server is currently using Apache to serve
 secure pages on port 443, then this tool should not be used.
 
-
 """
+
+
+usage()
+{
+cat << EOF
+
+usage: aeolus-configserver-setup [-h|--help]
+
+${PREAMBLE}
+
+optional arguments:
+  -h, --help            show this help message and exit
+
+EOF
+}
+
+# use case to simplify supporting -h and --help
+case "$1"  in
+    -h|--help) usage ; exit 1 ;;
+esac
+
+MODULE_PATH="/usr/share/aeolus-configserver/configure/puppet/modules"
+
+[ -r "/etc/sysconfig/aeolus-configserver" ] && . /etc/sysconfig/aeolus-configserver
+AEOLUS_USER="${AEOLUS_USER:-aeolus}"
+AEOLUS_GROUP="${AEOLUS_GROUP:-aeolus}"
+
+# should be run as root
+if [ "root" != "$USER" ]; then
+    echo "aeolus-configuration-setup must be run as root"
+    exit 1
+fi
+
+PUPPET=$(which puppet)
+if [ "x$PUPPET" == "x" ]; then
+    echo "Puppet must be installed.  Please install puppet to continue."
+    exit 1
+fi
 
 echo "$PREAMBLE"
 echo -n "Do you wish to continue [y/N]: "

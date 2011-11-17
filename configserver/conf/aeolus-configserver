@@ -31,6 +31,9 @@ RETVAL=0
 start() {
     echo -n "Starting aeolus-configserver: "
 
+    # Create the thin pid directory since installing the package should not.
+    mkdir -p $(dirname ${THIN_PID})
+
     export STORAGE_DIR="${STORAGE_DIR:-/var/lib/aeolus-configserver/configs}"
     export INSTANCE_CONFIG_RNG="${INSTANCE_CONFIG_RNG:-/var/lib/aeolus-configserver/schema/instance-config.rng}"
     export PROXY_TYPE="${PROXY_TYPE:-}"
