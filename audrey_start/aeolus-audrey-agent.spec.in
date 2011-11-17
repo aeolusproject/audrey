@@ -15,7 +15,7 @@
 #
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    10%{?dist}
+Release:    11%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
@@ -50,14 +50,18 @@ mkdir -p %{buildroot}%{_mandir}/man8
 
 # copy over the audrey startup agent bits
 install audrey_startup.py %{buildroot}%{_bindir}/audrey
-cp audrey.8 %{buildroot}%{_mandir}/man8
+
+# Disable man page for now, to fix build.
+# JJV cp audrey.8 %{buildroot}%{_mandir}/man8
 
 %files
 %{_bindir}/audrey
-%{_mandir}/man8/audrey.8*
+# JJV %{_mandir}/man8/audrey.8*
 %doc COPYING
 
 %changelog
+* Thu Nov 17 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-11
+- Remove Auto help file generation as it is currently breakin the build
 * Thu Nov 17 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-10
 - Fix bz754769 fix user data parsing and log level
 * Tue Nov 09 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-9

@@ -41,14 +41,17 @@ man_section = 8
 #        Set the version numbers in aeolus-audrey-agent.spec and audrey_startup.py
 #        Copy the desired bits to the dist directory.
 #        tar up the contents of the dist directory.
-dist: audrey_startup.py audrey.$(man_section)
+
+# Disable man page generation to fix build. JJV 
+# dist: audrey_startup.py audrey.$(man_section)
+# JJV and remove this from cp below: audrey.$(man_section)
+dist: audrey_startup.py
 	rm -rf dist
 	sed -e 's/@VERSION@/$(VERSION)/' aeolus-audrey-agent.spec.in \
 	  > aeolus-audrey-agent.spec
 	mkdir -p dist/aeolus-audrey-agent-$(VERSION)
 	cp -a aeolus-audrey-agent.spec aeolus-audrey-agent.spec.in \
 		COPYING Makefile audrey_startup.in.py \
-		audrey.$(man_section) \
 		test_audrey_startup.py dist/aeolus-audrey-agent-$(VERSION)
 	tar -C dist -zcvf aeolus-audrey-agent-$(VERSION).tar.gz aeolus-audrey-agent-$(VERSION)
 
