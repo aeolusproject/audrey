@@ -327,7 +327,7 @@ def gen_env(serv_name, param_val):
     # Get what was set and log it.
     cmd = ['/usr/bin/printenv', var_name]
     ret = _run_cmd(cmd)
-    LOGGER.debug(var_name + '=' + str(ret['out'][:-1]))
+    LOGGER.debug(var_name + '=' + str(ret['out'].strip()))
 
 def parse_require_config(src):
     '''
@@ -1099,7 +1099,7 @@ def discover_config_server(cloud_info_file=CLOUD_INFO_FILE,
         try:
             # Condfig Server (CS) address:port.
             with open('/media/deltacloud-user-data.txt', 'r') as fp:
-                line = fp.read()[:-1]
+                line = fp.read().strip()
                 if '|' not in line:
                     line = base64.b64decode(line)
                 return _parse_user_data(line)
@@ -1144,7 +1144,7 @@ def discover_config_server(cloud_info_file=CLOUD_INFO_FILE,
         try:
             # Condfig Server (CS) address:port.
             with open('/media/deltacloud-user-data.txt', 'r') as fp:
-                line = fp.read()[:-1]
+                line = fp.read().strip()
                 if '|' not in line:
                     line = base64.b64decode(line)
                 return _parse_user_data(line)
@@ -1195,11 +1195,17 @@ def parse_args():
                'runs on a booting cloud instance to retrieve ' + \
                'configuration data from the Aeolus Config Server.'
 
+    log_level_dict={'DEBUG' : logging.DEBUG,
+        'INFO' : logging.INFO,
+        'WARNING' : logging.WARNING,
+        'ERROR' : logging.ERROR,
+        'CRITICAL' : logging.CRITICAL}
+
     parser = argparse.ArgumentParser(description=desc_txt)
     parser.add_argument('-e', '--endpoint', dest='endpoint',
         required=False, help='Config Server endpoint url')
     parser.add_argument('-k', '--key', dest='oauth_key', required=False,
-        help='oAuth Key. If specified the user will be prompted for the oAuth Secret.')
+        help='oAuth Key. If specified prompt for the oAuth Secret.')
     parser.add_argument('-p', '--pwd', action='store_true', default=False,
         required=False, help='Log and look for configs in pwd',)
     parser.add_argument('-L', '--log-level', dest='log_level',
@@ -1210,6 +1216,7 @@ def parse_args():
         help='Displays the program\'s version number and exit.')
 
     args = parser.parse_args()
+    args.log_level = log_level_dict[args.log_level]
 
     if args.version:
         print AUDREY_VER
