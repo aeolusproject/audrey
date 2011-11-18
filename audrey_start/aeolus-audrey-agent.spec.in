@@ -15,7 +15,7 @@
 #
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    11%{?dist}
+Release:    12%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
@@ -65,6 +65,8 @@ cp audrey.8 %{buildroot}%{_mandir}/man8
 %doc COPYING
 
 %changelog
+* Thu Nov 18 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-12
+- Fixed Auto help file generation induced build failure
 * Thu Nov 17 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-11
 - Remove Auto help file generation as it is currently breakin the build
 * Thu Nov 17 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-10
