@@ -23,11 +23,18 @@ License:    ASL 2.0
 URL:        http://aeolusproject.org
 Source0:    http://joev.fedorapeople.org/audrey-agent/aeolus-audrey-agent-%{version}.tar.gz
 
+# All of these are required for building since during the build
+# process "audrey --help" is executed to generate the man page.
 BuildRequires: help2man
+BuildRequires: facter python-httplib2 python-oauth2
+%if (0%{?fedora} <= 14 || 0%{?rhel} <= 6)
+BuildRequires: python-argparse
+%endif
 
 Requires:   facter python-httplib2 python-oauth2
+Requires:   python-argparse
 %if (0%{?fedora} <= 14 || 0%{?rhel} <= 6)
-Requires: python-argparse
+Requires:   python-argparse
 %endif
 
 BuildArch:  noarch

@@ -66,8 +66,7 @@ audrey: audrey_startup.py
 #    Run the audrey target before geneeerating the man page.
 audrey.$(man_section): audrey
 	help2man --name='Aeolus startup agent' --section $(man_section) \
-	    --no-discard-stderr --no-info \
-	  ./$< > $@-t
+	    --no-info ./$< > $@-t
 	mv $@-t $@
 
 # Run the automated tests
