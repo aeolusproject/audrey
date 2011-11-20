@@ -1,10 +1,19 @@
 # -*- ruby -*-
 # Rakefile: build aeolus config server
 #
-# Copyright (C) 2011 Red Hat, Inc.
+#   Copyright [2011] [Red Hat, Inc.]
 #
-# Distributed under the GNU Lesser General Public License v2.1 or later.
-# See COPYING for details
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#  limitations under the License.
 #
 # Greg Blomquist <gblomqui@redhat.com>
 
@@ -85,21 +94,19 @@ GENERATED_FILES.each do |(source_file,dest_file,action,is_packaged,block)|
   if block != nil
     block.call(source_file, packaged_name, dependencies, p)
   elsif action == "version"
-    puts "action is #{action}"
     cmd = "sed -e 's/@VERSION@/#{version}/' #{source_file} " \
         "> #{p.package_dir}/#{packaged_name}"
     file "#{p.package_dir}/#{packaged_name}" => dependencies do
       system("#{cmd}")
     end
   elsif action == "man"
-    puts "action is #{action}"
     cmd = "help2man --name='Aeolus Config Server Setup' --section #{man_section} " \
       "--no-discard-stderr --no-info #{source_file} > #{p.package_dir}/#{packaged_name}"
     file "#{p.package_dir}/#{packaged_name}" => dependencies do
       system("#{cmd}")
     end
   else
-    puts "Unrecognized action: #{action}"
+    puts "Unrecognized action: #{action}, continuing."
   end
 
   # make the zip/tar/etc. task depend on the created file task
@@ -117,8 +124,11 @@ end
 
 # Clean up the build destination
 CLEAN.include('pkg')
+CLEAN.include('aeolus-configserver-setup.8')
 
-spec_path = "#{p.package_name}/#{SPEC_FILE}"
+spec_path  = "#{p.package_name}/#{SPEC_FILE}"
+setup_path = "#{p.package_name}/#{SETUP}"
+
 
 # Build the (S)RPMs
 desc "Build (S)RPMs for #{pkg_name}"
@@ -130,15 +140,25 @@ task :rpm => [ :package ] do |t|
       raise "No rpmbuild command found. Please install the " \
           "rpm-build package to run the rpm rake task."
     end
-    # set pipefail so if rpmbuild fails, it's status is reported back
+    # set pipefail so if the command fails, it's status is reported back
     # to the rake task
     cmd = "set -o pipefail && rpmbuild " \
           "--define '_sourcedir #{dir}' " \
           "-ba #{spec_path} | tee rpmbuild.log 2>&1"
+    puts "JJV -030- cmd: #{cmd}"
+    puts "JJV -030- setup_path: #{setup_path}"
+    puts "JJV -030- MAN: #{MAN}"
+    puts "JJV -030- p.package_dir: #{p.package_dir}"
+    puts "JJV -030- p.package_name: #{p.package_name}"
     system(cmd)
-    rpmbuild_status = $?
-    if rpmbuild_status != 0
-      raise "rpmbuild failed (exit code: #{rpmbuild_status})"
+    cmd_status = $?
+    if cmd_status != 0
+      raise "#{cmd} failed (exit code: #{cmd_status})"
     end
   end
 end
+
+# Default Build all
+desc "Build (S)RPMs for #{pkg_name}"
+task :default => [ :rpm ]
+

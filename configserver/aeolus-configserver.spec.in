@@ -1,8 +1,23 @@
+#
+#   Copyright [2011] [Red Hat, Inc.]
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#  limitations under the License.
+#
 %define app_root %{_datadir}/%{name}
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    1%{?extra_release}%{?dist}
+Release:    2%{?extra_release}%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -38,6 +53,7 @@ configurations.
 %setup -q
 
 %build
+# rake
 
 %install
 rm -rf %{buildroot}
@@ -72,11 +88,11 @@ cp -R configure/puppet %{buildroot}%{app_root}/configure/
 cp configure/bin/config_httpd.sh %{buildroot}%{_bindir}/aeolus-configserver-setup
 cp conf/%{name}-proxy.sysconf %{buildroot}%{_sysconfdir}/sysconfig/%{name}-proxy
 
-# copy the man page
+# copy the generated man page from the buildroot
 cp aeolus-configserver-setup.8 %{buildroot}%{_mandir}/man8
 
 %clean
-rm -rf $RPM_BUILD_ROOT
+rm -rf %{buildroot}
 
 %pre
 # Ensure the aeolus user/group is created (same IDs as in aeolus-conductor)
@@ -113,6 +129,8 @@ fi
 %doc COPYING
 
 %changelog
+* Mon Nov 20 2011 Joe VLcek <jvlcek@redhat.com> 0.4.1-2
+- Packaging for Fedora
 * Mon Nov 14 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.1-1
 - Enabling Config Server to process inline configuration files
 * Mon Nov 14 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-4
