@@ -100,8 +100,9 @@ GENERATED_FILES.each do |(source_file,dest_file,action,is_packaged,block)|
       system("#{cmd}")
     end
   elsif action == "man"
-    cmd = "help2man --name='Aeolus Config Server Setup' --section #{man_section} " \
-      "--no-discard-stderr --no-info #{source_file} > #{p.package_dir}/#{packaged_name}"
+    cmd = "help2man --name='Aeolus Config Server Setup' " \
+      "--section #{man_section} " \
+      "--no-info #{source_file} > #{p.package_dir}/#{packaged_name}"
     file "#{p.package_dir}/#{packaged_name}" => dependencies do
       system("#{cmd}")
     end
