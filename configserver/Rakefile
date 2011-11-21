@@ -146,11 +146,6 @@ task :rpm => [ :package ] do |t|
     cmd = "set -o pipefail && rpmbuild " \
           "--define '_sourcedir #{dir}' " \
           "-ba #{spec_path} | tee rpmbuild.log 2>&1"
-    puts "JJV -030- cmd: #{cmd}"
-    puts "JJV -030- setup_path: #{setup_path}"
-    puts "JJV -030- MAN: #{MAN}"
-    puts "JJV -030- p.package_dir: #{p.package_dir}"
-    puts "JJV -030- p.package_name: #{p.package_name}"
     system(cmd)
     cmd_status = $?
     if cmd_status != 0
