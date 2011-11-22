@@ -30,6 +30,7 @@ pkg_name = 'aeolus-configserver'
 
 SPEC_FILE_IN="aeolus-configserver.spec.in"
 SPEC_FILE="aeolus-configserver.spec"
+CONFIG_RU_IN="src/config.in.ru"
 CONFIG_RU="src/config.ru"
 SETUP="configure/bin/config_httpd.sh"
 MAN="aeolus-configserver-setup.8"
@@ -37,7 +38,7 @@ LOGS="log"
 
 GENERATED_FILES=[
   [SPEC_FILE_IN,SPEC_FILE,"version",true,nil],
-  [CONFIG_RU,CONFIG_RU,"version",true,nil],
+  [CONFIG_RU_IN,CONFIG_RU,"version",true,nil],
   [SETUP,MAN,"man",true,nil]
 ]
 
@@ -51,13 +52,14 @@ GENERATED_FILES=[
 # which would change both the packaged file and the file in the source tree.
 configserver_files = FileList[
   SPEC_FILE_IN,
+  CONFIG_RU_IN,
   "Rakefile", "COPYING",
   "schema/*.rng",
   "src/**/*.*",
   "conf/*",
   "client/*",
   "configure/**/*",
-].exclude(CONFIG_RU).exclude(LOGS)
+].exclude(LOGS)
 
 spec = Gem::Specification.new do |s|
   s.name = pkg_name
