@@ -48,11 +48,10 @@ import os
 import shutil
 import sys
 import tarfile
+import tarfile as tf # To simplify exception names.
 import tempfile
 import urllib
-import phacter
 import oauth2 as oauth
-import tarfile as tf # To simplify exception names.
 
 from time import sleep
 from collections import deque
@@ -420,6 +419,36 @@ def parse_require_config(src):
 
     return services
 
+def _get_system_info():
+    '''
+    Description:
+        Get the system info to be used for generating this instances
+        provides back to the Config Server.
+
+        Currently utilizes Puppet's facter via a Python subprocess call.
+
+    Input:
+        None
+
+    Returns:
+        A dictionary of system info name/value pairs.
+
+    '''
+
+    cmd = ['/usr/bin/facter']
+    ret = _run_cmd(cmd)
+    if ret['subproc'].returncode != 0:
+        _raise_ASError(('Failed command: \n%s \nError: \n%s') % \
+            (' '.join(cmd), str(ret['err'])))
+
+    facts = {}
+    for fact in ret['out'].split('\n'):
+        if fact: # Handle the new line at the end of the facter output
+            name, val = fact.split(' => ')
+            facts[ name ] = val.rstrip()
+
+    return facts
+
 def parse_provides_params(src):
     '''
     Description:
@@ -493,10 +522,12 @@ def generate_provides(src):
     provides_dict = {}
     params_list = parse_provides_params(src)
 
+    system_info_dict = _get_system_info()
+
     for param in params_list:
         try:
             provides_dict.update( \
-                {param:base64.b64encode(phacter[param])})
+                {param:base64.b64encode(system_info_dict[param])})
         except KeyError:
             # A specified parameter is not found. Provide value ''
             provides_dict.update({param:''})

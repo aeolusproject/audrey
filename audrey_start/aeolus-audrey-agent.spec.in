@@ -15,7 +15,7 @@
 #
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    1%{?dist}
+Release:    12%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
@@ -26,12 +26,12 @@ Source0:    http://joev.fedorapeople.org/audrey-agent/aeolus-audrey-agent-%{vers
 # All of these are required for building since during the build
 # process "audrey --help" is executed to generate the man page.
 BuildRequires: help2man
-BuildRequires: python-phacter python-httplib2 python-oauth2
+BuildRequires: facter python-httplib2 python-oauth2
 %if (0%{?fedora} <= 14 || 0%{?rhel} <= 6)
 BuildRequires: python-argparse
 %endif
 
-Requires:   python-phacter python-httplib2 python-oauth2
+Requires:   facter python-httplib2 python-oauth2
 Requires:   python-argparse
 %if (0%{?fedora} <= 14 || 0%{?rhel} <= 6)
 Requires:   python-argparse
