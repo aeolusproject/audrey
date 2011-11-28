@@ -116,7 +116,7 @@ module ConfigServer
           else
             ""
         end
-	return configs, instance.required_parameters_remaining?
+        return configs, instance.required_parameters_remaining?
       end
     end
 
@@ -135,6 +135,10 @@ module ConfigServer
 
     def delete(uuid)
       Model::Instance.find(uuid).delete! if exists?(uuid)
+    end
+
+    def delete_deployment(uuid)
+      Model::Deployable.find(uuid).delete!
     end
 
     def create(uuid, data)

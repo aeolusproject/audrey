@@ -24,7 +24,7 @@ require 'rake/clean'
 require 'rubygems'
 require 'rubygems/package_task'
 
-version = '0.4.1'
+version = '0.4.2'
 man_section = '8'
 pkg_name = 'aeolus-configserver'
 
@@ -159,4 +159,3 @@ end
 # Default Build all
 desc "Build (S)RPMs for #{pkg_name}"
 task :default => [ :rpm ]
-

@@ -17,7 +17,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    4%{?dist}
+Release:    2%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -169,6 +169,8 @@ fi
 %doc COPYING
 
 %changelog
+* Tue Nov 29 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.2-2
+- Allow deletion of deployment configs
 * Tue Nov 29 2011 Joe VLcek <jvlcek@redhat.com> 0.4.1-4
 - Use install -m in place of cp in spec file
 * Mon Nov 28 2011 Joe VLcek <jvlcek@redhat.com> 0.4.1-3

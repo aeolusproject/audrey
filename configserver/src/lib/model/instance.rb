@@ -95,15 +95,20 @@ module ConfigServer
       attr_reader :instance_config, :ip, :secret, :uuid
 
       def self.exists?(uuid)
-        File.exist?(File.join(storage_path, uuid))
+        File.exist?(storage_path uuid)
       end
 
-      def self.storage_path
-        super "instances"
+      def self.storage_path(uuid=nil)
+        path = uuid ? File.join("instances", uuid) : "instances"
+        super path
       end
 
       def self.find(uuid)
         Instance.new(uuid) if exists?(uuid)
+      end
+
+      def self.delete!(uuid)
+        FileUtils.rm_rf(storage_path uuid)
       end
 
       def self.get_validator
@@ -152,7 +157,7 @@ module ConfigServer
         Instance.ensure_storage_path
 
         @uuid = uuid
-        @instance_dir = File.join(Instance.storage_path, uuid)
+        @instance_dir = Instance.storage_path uuid
         ensure_instance_dir
 
         if configs.nil?
@@ -161,18 +166,6 @@ module ConfigServer
           replace_instance_config(configs)
         end
         self
-      end
-
-      def delete!
-        FileUtils.rm_rf(@instance_dir)
-        @uuid = nil
-        @ip = nil
-        @instance_dir = nil
-        @instance_config = nil
-        @provided_parameters = nil
-        @required_parameters = nil
-        @deployable = nil
-        @assembly_name = nil
       end
 
       def deployable

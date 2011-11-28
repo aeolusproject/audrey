@@ -38,25 +38,6 @@ error 400 do
   "Could not parse the given XML document.\n"
 end
 
-
-before '/configs/*' do
-  authenticate!
-end
-before '/params/*' do
-  authenticate!
-end
-before '/files/*' do
-  authenticate!
-end
-before '/auth*' do
-  authenticate!
-end
-
-get '/auth' do
-  logger.debug("Client is testing auth credentials")
-  "Authentication test successful"
-end
-
 ## GET /version
 # Retrieve the Application and API version for this config server
 get '/version', :provides => ['text', 'xml'] do
@@ -75,6 +56,29 @@ get '/version' do
   "</body></html>"
 end
 
+# OAuth protected URLs
+before '/configs/*' do
+  authenticate!
+end
+before '/params/*' do
+  authenticate!
+end
+before '/files/*' do
+  authenticate!
+end
+before '/auth*' do
+  authenticate!
+end
+
+# Test OAuth
+get '/auth' do
+  logger.debug("Client is testing auth credentials")
+  "Authentication test successful"
+end
+
+#
+# API Methods
+#
 
 ## GET /ip/
 # Retrieve the IP address for an instance that has reported its IP
@@ -141,6 +145,13 @@ end
 # Permanently delete the configuration data for an instance
 delete '/configs/:version/:uuid' do
   configs.delete(params[:uuid])
+end
+
+## DELETE /deployment/
+# Permanently delete the configuration data for an entire deployment
+#  - delete all instance configurations under that deployment
+delete '/deployment/:version/:uuid' do
+  configs.delete_deployment(params[:uuid])
 end
 
 ## GET /files/

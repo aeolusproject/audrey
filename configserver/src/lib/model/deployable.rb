@@ -27,12 +27,13 @@ module ConfigServer
         Deployable.new(uuid) if exists?(uuid)
       end
 
-      def self.storage_path
-        super "deployables"
+      def self.storage_path(uuid=nil)
+        path = uuid ? File.join("deployables", uuid) : "deployables"
+        super path
       end
 
       def self.exists?(uuid)
-        File.exists?(File.join(storage_path, uuid))
+        File.exists?(storage_path uuid)
       end
 
       @uuid = nil
@@ -50,7 +51,7 @@ module ConfigServer
       def add_instance(uuid)
         # never actually hold the state of the list of instances
         # always pick up the list from the filesystem
-        instance_dir = File.join(Instance.storage_path, uuid)
+        instance_dir = Instance.storage_path uuid
         if File.directory?(instance_dir)
           FileUtils.ln_s(instance_dir, File.join(@deployable_dir.path, uuid))
         end
@@ -61,6 +62,14 @@ module ConfigServer
         delete_path = File.join(@deployable_dir.path, uuid)
         File.delete(delete_path) if File.exists?(delete_path)
         instance_uuids
+      end
+
+      def delete!
+        instance_uuids.each do |instance_uuid|
+          Instance.delete! instance_uuid
+          remove_instance instance_uuid
+        end
+        FileUtils.rm_rf(@deployable_dir.path)
       end
 
       def instance_uuids
@@ -83,7 +92,7 @@ module ConfigServer
 
       private
       def ensure_deployable_dir
-        path = File.join(Deployable.storage_path, @uuid)
+        path = Deployable.storage_path @uuid
         FileUtils.mkdir_p(path, :mode => 0700) if not File.directory?(path)
         Dir.new(path)
       end
