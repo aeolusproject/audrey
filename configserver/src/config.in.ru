@@ -1,6 +1,7 @@
 root_dir = File.dirname(__FILE__)
 version = ENV['AEOLUS_CONFSERVER_VERSION'] || '@VERSION@'
-storage_dir = ENV['STORAGE_DIR'] || '/tmp/audrey'
+storage_dir = ENV['STORAGE_DIR'] ||
+    '/var/lib/aeolus-configserver'
 instance_config_rng = ENV['INSTANCE_CONFIG_RNG'] ||
     '/var/lib/aeolus-configserver/schema/instance-config.rng'
 

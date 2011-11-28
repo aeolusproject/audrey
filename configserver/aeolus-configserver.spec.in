@@ -53,7 +53,6 @@ configurations.
 %setup -q
 
 %build
-# rake
 
 %install
 rm -rf %{buildroot}
@@ -129,8 +128,9 @@ fi
 %doc COPYING
 
 %changelog
-* Mon Nov 20 2011 Joe VLcek <jvlcek@redhat.com> 0.4.1-2
+* Mon Nov 28 2011 Joe VLcek <jvlcek@redhat.com> 0.4.1-2
 - Packaging for Fedora
+- Removed rake build comment from spec
 * Mon Nov 14 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.1-1
 - Enabling Config Server to process inline configuration files
 * Mon Nov 14 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.0-4

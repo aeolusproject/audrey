@@ -52,7 +52,7 @@
 # sinatra application
 #PREFIX="/"
 
-# Directory where aeolus-configserver stores the instance configrations
+# Directory where aeolus-configserver stores the instance configurations
 #STORAGE_DIR="/var/lib/aeolus-configserver/configs"
 
 # Location of Relax NG schema file for instance-config
