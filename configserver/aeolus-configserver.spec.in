@@ -17,7 +17,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    3%{?dist}
+Release:    4%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -74,47 +74,62 @@ mkdir -p %{buildroot}%{_mandir}/man8
 # copy over all of the src directory...
 install -d %{buildroot}/%{app_root}/lib/model
 
-install src/config.ru                 \
-        src/config.in.ru              \
-        src/configserver.rb           %{buildroot}/%{app_root}
+install -m 0644 \
+    src/config.ru \
+    src/config.in.ru \
+    src/configserver.rb %{buildroot}/%{app_root}
 
-install src/lib/application_helper.rb \
-        src/lib/config_handler.rb     \
-        src/lib/model.rb              %{buildroot}/%{app_root}/lib
+install -m 0644 \
+    src/lib/application_helper.rb \
+    src/lib/config_handler.rb \
+    src/lib/model.rb %{buildroot}/%{app_root}/lib
 
-install src/lib/model/base.rb         \
-        src/lib/model/consumer.rb     \
-        src/lib/model/deployable.rb   \
-        src/lib/model/instance.rb     %{buildroot}/%{app_root}/lib/model
+install -m 0644 \
+    src/lib/model/base.rb \
+    src/lib/model/consumer.rb \
+    src/lib/model/deployable.rb \
+    src/lib/model/instance.rb %{buildroot}/%{app_root}/lib/model
 
 # copy over init scripts and configs
 install conf/%{name} %{buildroot}/%{_initrddir}
-install conf/%{name}.sysconf %{buildroot}%{_sysconfdir}/sysconfig/%{name}
-install conf/%{name}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
+install -m 0644 conf/%{name}.sysconf \
+    %{buildroot}%{_sysconfdir}/sysconfig/%{name}
+install -m 0644 conf/%{name}-proxy.sysconf \
+    %{buildroot}%{_sysconfdir}/sysconfig/%{name}-proxy
+install -m 0644 conf/%{name}.logrotate \
+    %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 
 # copy relaxNG schema files
-install schema/*.rng %{buildroot}%{_localstatedir}/lib/%{name}/schema/
+install -m 0644 \
+    schema/assembly.rng \
+    schema/deployable.rng \
+    schema/instance-config.rng \
+    schema/template.rng %{buildroot}%{_localstatedir}/lib/%{name}/schema/
 
 # copy over all puppet scripts and bin files
-install -d %{buildroot}%{app_root}/configure/puppet//modules/apache/manifests
-install configure/puppet/modules/apache/manifests/init.pp \
-    %{buildroot}%{app_root}/configure/puppet//modules/apache/manifests
+install -d %{buildroot}%{app_root}/configure/puppet/modules/apache/manifests
+install -m 0644 \
+    configure/puppet/modules/apache/manifests/init.pp \
+    %{buildroot}%{app_root}/configure/puppet/modules/apache/manifests
 
-install -d %{buildroot}%{app_root}/configure/puppet//modules/apache/templates
-install configure/puppet/modules/apache/templates/vhost443.erb \
-        configure/puppet/modules/apache/templates/vhost80.erb \
-        configure/puppet/modules/apache/templates/vhost.erb \
-    %{buildroot}%{app_root}/configure/puppet//modules/apache/templates
+install -d %{buildroot}%{app_root}/configure/puppet/modules/apache/templates
+install -m 0644 \
+    configure/puppet/modules/apache/templates/vhost443.erb \
+    configure/puppet/modules/apache/templates/vhost80.erb \
+    configure/puppet/modules/apache/templates/vhost.erb \
+    %{buildroot}%{app_root}/configure/puppet/modules/apache/templates
 
-install -d %{buildroot}%{app_root}/configure/puppet//modules/configserver/manifests
-install configure/puppet/modules/configserver/manifests/init.pp \
-    %{buildroot}%{app_root}/configure/puppet//modules/configserver/manifests
+install -d \
+    %{buildroot}%{app_root}/configure/puppet/modules/configserver/manifests
+install -m 0644 \
+    configure/puppet/modules/configserver/manifests/init.pp \
+    %{buildroot}%{app_root}/configure/puppet/modules/configserver/manifests
 
-install configure/bin/config_httpd.sh %{buildroot}%{_bindir}/aeolus-configserver-setup
-install conf/%{name}-proxy.sysconf %{buildroot}%{_sysconfdir}/sysconfig/%{name}-proxy
+install configure/bin/config_httpd.sh \
+    %{buildroot}%{_bindir}/aeolus-configserver-setup
 
 # copy the generated man page from the buildroot
-install aeolus-configserver-setup.8 %{buildroot}%{_mandir}/man8
+install -m 0644 aeolus-configserver-setup.8 %{buildroot}%{_mandir}/man8
 
 %clean
 rm -rf %{buildroot}
@@ -154,6 +169,8 @@ fi
 %doc COPYING
 
 %changelog
+* Tue Nov 29 2011 Joe VLcek <jvlcek@redhat.com> 0.4.1-4
+- Use install -m in place of cp in spec file
 * Mon Nov 28 2011 Joe VLcek <jvlcek@redhat.com> 0.4.1-3
 - Removed rake build comment from spec
 * Mon Nov 20 2011 Joe VLcek <jvlcek@redhat.com> 0.4.1-2
