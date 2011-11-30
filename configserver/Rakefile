@@ -34,7 +34,7 @@ CONFIG_RU_IN="src/config.in.ru"
 CONFIG_RU="src/config.ru"
 SETUP="configure/bin/config_httpd.sh"
 MAN="aeolus-configserver-setup.8"
-LOGS="log"
+LOGS="*/log/*"
 
 GENERATED_FILES=[
   [SPEC_FILE_IN,SPEC_FILE,"version",true,nil],
