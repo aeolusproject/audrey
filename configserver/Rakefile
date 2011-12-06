@@ -156,6 +156,29 @@ task :rpm => [ :package ] do |t|
   end
 end
 
+# Build the SRPM
+desc "Build SRPM for #{pkg_name}"
+task :srpm => [ :package ] do |t|
+  Dir::chdir("pkg") do |dir|
+    dir = File::expand_path(".")
+    system("which rpmbuild &> /dev/null")
+    if $? != 0
+      raise "No rpmbuild command found. Please install the " \
+          "rpm-build package to run the rpm rake task."
+    end
+    # set pipefail so if the command fails, it's status is reported back
+    # to the rake task
+    cmd = "set -o pipefail && rpmbuild " \
+          "--define '_sourcedir #{dir}' " \
+          "-bs #{spec_path} | tee rpmbuild.log 2>&1"
+    system(cmd)
+    cmd_status = $?
+    if cmd_status != 0
+      raise "#{cmd} failed (exit code: #{cmd_status})"
+    end
+  end
+end
+
 # Default Build all
 desc "Build (S)RPMs for #{pkg_name}"
 task :default => [ :rpm ]
