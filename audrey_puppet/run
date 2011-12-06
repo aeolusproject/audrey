@@ -1,4 +1,0 @@
-#! /bin/sh
-
-echo | puppet --verbose --manifest manifests/defaults.pp --modulepath modules \
-              --external_nodes `pwd`/node --node_terminus exec --no-report
