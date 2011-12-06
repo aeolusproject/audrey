@@ -37,42 +37,42 @@ RELEASE		= $(shell grep ^Release: aeolus-audrey-agent.spec.in | \
 man_section = 8
 
 # Create the dist.
-#    Run the audrey_startup.py audrey.$(man_section) then:
-#        Set the version numbers in aeolus-audrey-agent.spec and audrey_startup.py
+#    Run the audrey_agent.py audrey.$(man_section) then:
+#        Set the version numbers in aeolus-audrey-agent.spec and audrey_agent.py
 #        Copy the desired bits to the dist directory.
 #        tar up the contents of the dist directory.
-dist: audrey_startup.py audrey.$(man_section)
+dist: audrey_agent.py audrey.$(man_section)
 	rm -rf dist
 	sed -e 's/@VERSION@/$(VERSION)/' aeolus-audrey-agent.spec.in \
 	  > aeolus-audrey-agent.spec
 	mkdir -p dist/aeolus-audrey-agent-$(VERSION)
 	cp -a aeolus-audrey-agent.spec aeolus-audrey-agent.spec.in \
-		COPYING Makefile audrey_startup.in.py \
+		COPYING Makefile audrey_agent.in.py \
 		audrey.$(man_section) \
-		test_audrey_startup.py dist/aeolus-audrey-agent-$(VERSION)
+		test_audrey_agent.py dist/aeolus-audrey-agent-$(VERSION)
 	tar -C dist -zcvf aeolus-audrey-agent-$(VERSION).tar.gz aeolus-audrey-agent-$(VERSION)
 
-# cp audrey_starup.in.py to audrey_startup.py
-audrey_startup.py: audrey_startup.in.py
+# cp audrey_agent.in.py to audrey_agent.py
+audrey_agent.py: audrey_agent.in.py
 	sed -e 's/@VERSION@/$(VERSION)/' $< > $@-t
 	chmod a+x,a-w $@-t
 	mv $@-t $@
 
 # cp audrey_starup.py to audrey.
-audrey: audrey_startup.py
+audrey: audrey_agent.py
 	cp $< $@
 
 # Generate the man page using help2man from the --help text output from the Audrey agent.
 #    Run the audrey target before geneeerating the man page.
 audrey.$(man_section): audrey
-	help2man --name='Aeolus startup agent' --section $(man_section) \
+	help2man --name='Aeolus agent' --section $(man_section) \
 	    --no-info ./$< > $@-t
 	mv $@-t $@
 
 # Run the automated tests
-#    Run the audrey_startup.py target before running the automated tests.
-check: audrey_startup.py
-	python test_audrey_startup.py
+#    Run the audrey_agent.py target before running the automated tests.
+check: audrey_agent.py
+	python test_audrey_agent.py
 
 # Build the rpms
 #    Run the check target followed by the dist target before building the rpms.
@@ -87,7 +87,7 @@ srpms: check dist
 clean:
 	rm -rf dist aeolus-audrey-agent-$(VERSION).tar.gz \
 	aeolus-audrey-agent.spec audrey.$(man_section) audrey \
-	audrey.log audrey_startup.py audrey_startup.pyc \
+	audrey.log audrey_agent.py audrey_agent.pyc \
 	test_toolinglog test_toolinguser \
 	toolinglog toolinguser
 

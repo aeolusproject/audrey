@@ -18,9 +18,9 @@
 '''
 
 '''
- test_audrey_startup.py
+ test_audrey_agent.py
 
- Test program for audrey_startup
+ Test program for audrey_agent
 '''
 
 import base64
@@ -32,18 +32,18 @@ import unittest
 import sys
 import tarfile
 
-from audrey_startup import CSClient
-from audrey_startup import ConfigTooling
-from audrey_startup import ASError
-from audrey_startup import parse_args
-from audrey_startup import parse_provides_params
-from audrey_startup import parse_require_config
-from audrey_startup import audrey_script_main
-from audrey_startup import gen_env
-from audrey_startup import _run_cmd, _run_pipe_cmd
-from audrey_startup import generate_provides
-from audrey_startup import setup_logging
-from audrey_startup import discover_config_server
+from audrey_agent import CSClient
+from audrey_agent import ConfigTooling
+from audrey_agent import ASError
+from audrey_agent import parse_args
+from audrey_agent import parse_provides_params
+from audrey_agent import parse_require_config
+from audrey_agent import audrey_script_main
+from audrey_agent import gen_env
+from audrey_agent import _run_cmd, _run_pipe_cmd
+from audrey_agent import generate_provides
+from audrey_agent import setup_logging
+from audrey_agent import discover_config_server
 
 # Helpers and utils
 DUMMY_USER_DATA = '1|http://example.com/|oauthConsumer|oauthSecret'
@@ -167,7 +167,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         '''
         Perform required setup including setting up logging.
         '''
-        setup_logging(logging.DEBUG, './test_audrey_startup.log')
+        setup_logging(logging.DEBUG, './test_audrey_agent.log')
 
     def test_success_service_n_params(self):
         '''
@@ -327,7 +327,7 @@ class TestAudreyStartupDiscovery(unittest.TestCase):
         '''
         Perform required setup including setting up logging.
         '''
-        setup_logging(logging.DEBUG, 'test_audrey_startup.log')
+        setup_logging(logging.DEBUG, 'test_audrey_agent.log')
         self.cloud_info_file = 'cloud_info'
         self.condor_addr_file = 'condor_addr'
         self.condor_uuid_file = 'condor_uuid'
@@ -390,7 +390,7 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         '''
         Perform required setup including setting up logging.
         '''
-        setup_logging(logging.DEBUG, './test_audrey_startup.log')
+        setup_logging(logging.DEBUG, './test_audrey_agent.log')
 
     def test_success_parameters(self):
         '''
@@ -569,7 +569,7 @@ class TestConfigServerClient(unittest.TestCase):
         Set up logging.
         '''
 
-        setup_logging(logging.DEBUG, './test_audrey_startup.log')
+        setup_logging(logging.DEBUG, './test_audrey_agent.log')
 
         # Create the client Object
         self.cs_client = CSClient(**DUMMY_CS_CONFIG)
@@ -655,7 +655,7 @@ class TestAudreyScript(unittest.TestCase):
         This test currently require to be run in a cloud VM
         with a live Config Server.
         '''
-        setup_logging(logging.DEBUG, './test_audrey_startup.log')
+        setup_logging(logging.DEBUG, './test_audrey_agent.log')
         # make a copy of argv
         self.argv = list(sys.argv)
 
@@ -688,5 +688,5 @@ class TestAudreyScript(unittest.TestCase):
 
 if __name__ == '__main__':
 
-    setup_logging(logging.DEBUG, logfile_name='./test_audrey_startup.log')
+    setup_logging(logging.DEBUG, logfile_name='./test_audrey_agent.log')
     unittest.main()

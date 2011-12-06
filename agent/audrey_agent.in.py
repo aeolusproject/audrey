@@ -20,8 +20,8 @@
 '''
 Audrey Startup (AS)
 
-Note: The source file is named audrey_start.in.py The make process generates
-      audrey_start.py. audrey_start.py should not be manually modified.
+Note: The source file is named audrey_agent.in.py The make process generates
+      audrey_agent.py. audrey_agent.py should not be manually modified.
 
 Invoked at instance launch to interface with the Config Server (CS)
 

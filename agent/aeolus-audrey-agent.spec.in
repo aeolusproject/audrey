@@ -55,8 +55,8 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_mandir}/man8
 
-# copy over the audrey startup agent bits
-install audrey_startup.py %{buildroot}%{_bindir}/audrey
+# copy over the audrey agent bits
+install audrey_agent.py %{buildroot}%{_bindir}/audrey
 cp audrey.8 %{buildroot}%{_mandir}/man8
 
 %files

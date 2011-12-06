@@ -1,6 +1,6 @@
 *.swp
 configserver/pkg/*
-audrey_start/pkg/*
+agent/pkg/*
 job*.cnd
 *-*-*-*-*
 *.pyc

@@ -27,7 +27,7 @@
     Required to build: help2man
 
     Summary of how to build the software: 
-    % cd <repo>/audrey_start
+    % cd <repo>/agent
     % make rpms
     % cd <repo>/configserver
     % rake rpm
