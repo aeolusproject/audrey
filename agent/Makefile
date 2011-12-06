@@ -62,9 +62,11 @@ audrey_agent.py: audrey_agent.in.py
 audrey: audrey_agent.py
 	cp $< $@
 
-# Generate the man page using help2man from the --help text output from the Audrey agent.
-#    Run the audrey target before geneeerating the man page.
+# Generate the man page using help2man from the --help text output
+# from the Audrey agent.
+#    Run the audrey target before generating the man page.
 audrey.$(man_section): audrey
+	./$< --help
 	help2man --name='Aeolus agent' --section $(man_section) \
 	    --no-info ./$< > $@-t
 	mv $@-t $@

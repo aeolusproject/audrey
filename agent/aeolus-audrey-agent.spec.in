@@ -15,7 +15,7 @@
 #
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    12%{?dist}
+Release:    13%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
@@ -65,6 +65,8 @@ cp audrey.8 %{buildroot}%{_mandir}/man8
 %doc COPYING
 
 %changelog
+* Tue Dec 06 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-13
+- Made run with Python2.4 for RHEL5 compatibility
 * Thu Nov 18 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-12
 - Fixed Auto help file generation induced build failure
 * Thu Nov 17 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-11
