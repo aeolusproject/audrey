@@ -15,7 +15,7 @@
 #
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    13%{?dist}
+Release:    14%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
@@ -34,6 +34,7 @@ BuildRequires: python-argparse
 Requires:   facter python-httplib2 python-oauth2
 Requires:   python-argparse
 %if (0%{?fedora} <= 14 || 0%{?rhel} <= 6)
+BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Requires:   python-argparse
 %endif
 
@@ -65,6 +66,8 @@ cp audrey.8 %{buildroot}%{_mandir}/man8
 %doc COPYING
 
 %changelog
+* Wed Dec 07 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-14
+- Define BuildRoot to address RHEL5 rpmbuild incompatibility
 * Tue Dec 06 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-13
 - Made run with Python2.4 for RHEL5 compatibility
 * Thu Nov 18 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-12
