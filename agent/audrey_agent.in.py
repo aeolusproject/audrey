@@ -862,15 +862,21 @@ class CSClient(object):
         Description:
             Issue the http get to the the Config Server.
         '''
-        return self.http.request(url, method='GET', headers=headers)
+        try:
+            return self.http.request(url, method='GET', headers=headers)
+        except Exception, e:
+            return (e, None)
 
     def _put(self, url, body=None, headers=None):
         '''
         Description:
             Issue the http put to the the Config Server.
         '''
-        return self.http.request(url, method='PUT',
-                            body=body, headers=headers)
+        try:
+            return self.http.request(url, method='PUT',
+                                body=body, headers=headers)
+        except Exception, e:
+            return (e, None)
 
     def _validate_http_status(self, status):
         '''
@@ -1297,6 +1303,19 @@ def audrey_script_main(client_http=None):
     cs_client = CSClient(**conf)
     if client_http:
         cs_client.http = client_http
+    # test connectivity, try and wait for it if it's not there
+    url = cs_client._cs_url('version')
+    while isinstance(cs_client._get(url)[0], Exception):
+        if max_retry:
+            max_retry-=1
+            LOGGER.info('Failed attempt to contact config server')
+            sleep(10)
+        else:
+            LOGGER.error('Failed to connect to the Configserver')
+            exit(1)
+
+    max_retry = 5
+
     LOGGER.info(str(cs_client))
 
     LOGGER.debug('Get optional tooling from the Config Server')
