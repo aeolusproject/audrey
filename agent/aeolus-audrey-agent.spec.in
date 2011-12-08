@@ -29,6 +29,7 @@ BuildRequires: help2man
 BuildRequires: facter python-httplib2 python-oauth2
 %if (0%{?fedora} <= 14 || 0%{?rhel} <= 6)
 BuildRequires: python-argparse
+BuildRequires: python-setuptools
 %endif
 
 Requires:   facter python-httplib2 python-oauth2
@@ -36,6 +37,7 @@ Requires:   python-argparse
 %if (0%{?fedora} <= 14 || 0%{?rhel} <= 6)
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Requires:   python-argparse
+Requires:   python-setuptools
 %endif
 
 BuildArch:  noarch
