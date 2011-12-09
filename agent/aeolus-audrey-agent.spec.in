@@ -15,7 +15,7 @@
 #
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    1%{?dist}
+Release:    0%{?dist}%{?_release}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
