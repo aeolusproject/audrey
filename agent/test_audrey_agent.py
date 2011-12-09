@@ -84,12 +84,18 @@ class HttpUnitTest(object):
     ok_response = HttpUnitTestResponse(200)
     not_found_response = HttpUnitTestResponse(404)
 
+    def __init__(self, always_404=False):
+        self.always_404 = always_404
+
     def request(self, url, method='GET', body=None, headers=None):
         '''
         Handle request when not running live but in test environment.
         '''
         body = ''
-        response = HttpUnitTest.ok_response
+        if self.always_404 and not url.endswith('/user-data'):
+            return HttpUnitTest.not_found_response, body
+        else:
+            response = HttpUnitTest.ok_response
         if method == 'GET':
             if url.find('/configs/') > -1:
                 body = '|service|s1|parameters|param1&%s|param2&%s|' % \
@@ -113,7 +119,6 @@ class HttpUnitTest(object):
                 body = base64.b64encode(DUMMY_USER_DATA)
                 response = HttpUnitTest.not_found_response
             else:
-                print url
                 response = HttpUnitTest.not_found_response
         #elif method == 'POST' and url.find('/params/') > -1:
         #    body = ''
@@ -133,6 +138,10 @@ class TestAudreyStarupRunCmds(unittest.TestCase):
     def test_success_run_pipe_cmd(self):
         self.assertEqual("'test'\n",
             _run_pipe_cmd(["echo", "'test'"], ["grep", "test"])['out'])
+
+    def test_fail_run_cmd(self):
+        self.assertEqual("[Errno 2] No such file or directory",
+            _run_cmd(["notreal"])['err'])
 
     def test_cmd2_fail_run_pipe_cmd(self):
         self.assertEqual("[Errno 2] No such file or directory",
@@ -322,6 +331,24 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
             print 'parse_require_config returned: ' + \
                 str(parse_require_config(src))
 
+    def test_failure_service_tag_not_found(self):
+        '''
+        Failure Case:
+        - |service| not in src to parse_require_config()
+        '''
+        src = '|notservice|blah|'
+        with self.assertRaises(ASError):
+            parse_require_config(src)
+
+    def test_failure_no_amp_delim(self):
+        '''
+        Failure Case:
+        - no delim in param token
+        '''
+        src = '|service|blah|parameters|blah|'
+        with self.assertRaises(ASError):
+            parse_require_config(src)
+
 class TestAudreyStartupDiscovery(unittest.TestCase):
     def setUp(self):
         '''
@@ -425,6 +452,18 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         self.assertTrue('audrey_data=%7Coperatingsystem' in provides)
         for param in expected_params_list:
             self.assertTrue('%7C' + str(param) in provides)
+
+    def test_success_empty_params(self):
+        '''
+        Success case:
+        - Exercise parse_provides_params() and generate_provides()
+          with valid demlims but empty input
+        '''
+        src = '||'
+        params_list = parse_provides_params(src)
+        provides = generate_provides(src)
+        self.assertEqual(params_list, [''])
+        self.assertEqual(provides, 'audrey_data=%7C%26%7C')
 
     def test_success_no_params(self):
         '''
@@ -678,6 +717,16 @@ class TestAudreyScript(unittest.TestCase):
         Perform what the audrey script will do.
         '''
         self.assertRaises(ASError, audrey_script_main)
+
+    def test_fail_audrey_script_main_404(self):
+        '''
+        Perform what the audrey script will do.
+        '''
+        cloud_info_file = 'cloud_info'
+        sys.argv.extend(['-p'])
+        _write_info_file(cloud_info_file, 'EC2')
+        self.assertRaises(ASError, audrey_script_main, HttpUnitTest(True))
+        os.remove(cloud_info_file)
 
     def test_empty_gen_env(self):
         self.assertRaises(ASError, gen_env, '', '')
