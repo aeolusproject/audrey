@@ -144,14 +144,22 @@ end
 ## DELETE /configs/
 # Permanently delete the configuration data for an instance
 delete '/configs/:version/:uuid' do
-  configs.delete(params[:uuid])
+  if not configs.exists?(params[:uuid])
+    not_found
+  else
+    configs.delete(params[:uuid])
+  end
 end
 
 ## DELETE /deployment/
 # Permanently delete the configuration data for an entire deployment
 #  - delete all instance configurations under that deployment
 delete '/deployment/:version/:uuid' do
-  configs.delete_deployment(params[:uuid])
+  if not configs.exists?(params[:uuid])
+    not_found
+  else
+    configs.delete_deployment(params[:uuid])
+  end
 end
 
 ## GET /files/

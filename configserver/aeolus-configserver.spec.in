@@ -17,7 +17,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    2%{?dist}
+Release:    1%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -169,6 +169,9 @@ fi
 %doc COPYING
 
 %changelog
+* Fri Dec 09 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.3-1
+- Fix 500 on HTTP DELETE of deployment data
+- (https://bugzilla.redhat.com/show_bug.cgi?id=766012)
 * Tue Nov 29 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.2-2
 - Allow deletion of deployment configs
 * Tue Nov 29 2011 Joe VLcek <jvlcek@redhat.com> 0.4.1-4
