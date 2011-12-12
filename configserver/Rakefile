@@ -179,6 +179,21 @@ task :srpm => [ :package ] do |t|
   end
 end
 
+desc 'Run tests'
+task :test do
+  Dir::chdir("src") do |dir|
+    sh "rspec spec"
+ end
+end
+
+desc 'Mesures test coverage'
+task :coverage do
+  Dir::chdir("src") do |dir|
+    rm_f "coverage"
+    sh "rcov -TIspec --exclude ruby\/,spec\/ spec/*_spec.rb"
+ end
+end
+
 # Default Build all
 desc "Build (S)RPMs for #{pkg_name}"
 task :default => [ :rpm ]
