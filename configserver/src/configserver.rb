@@ -135,7 +135,7 @@ post '/configs/:version/:uuid' do
     logger.debug("Post data: #{params[:data]}")
     begin
       configs.create(params[:uuid], params[:data])
-    rescue ConfigServer::InvalidInstanceConfigError
+    rescue ConfigServer::Model::InvalidInstanceConfigError
       400
     end
   #end
