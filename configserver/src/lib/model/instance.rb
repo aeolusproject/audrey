@@ -53,12 +53,14 @@ module ConfigServer
     class InvalidInstanceConfigError < StandardError
       attr_reader :errors
       attr_reader :cause
+      attr_reader :message
 
       def initialize(errors=nil, cause=nil)
         @errors = (errors.nil?) ? [] : errors
         if not @errors.is_a? Array
           @errors = [@errors]
         end
+        @message = errors
         @cause = cause if not cause.nil?
       end
 

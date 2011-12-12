@@ -36,9 +36,11 @@ module ConfigServer
 
   class InvalidInstanceConfigError < StandardError
     attr_reader :errors
+    attr_reader :message
 
     def initialize(errors = nil)
       @errors = errors
+      @message = errors
     end
   end
 
