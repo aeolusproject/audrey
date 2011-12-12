@@ -220,7 +220,11 @@ module ConfigServer
       (data.split "|").map do |d|
         next if d.nil? or d.empty?
         k, v = d.split "&"
-        {k => v.b64_decode}
+        # the value for "k" can be nil if the audrey-agent hasn't been able to
+        # collect this value yet
+        if v
+          {k => v.b64_decode}
+        end
       end.compact.inject(:merge)
     end
 
