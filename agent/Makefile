@@ -93,4 +93,12 @@ clean:
 	test_toolinglog test_toolinguser \
 	toolinglog toolinguser
 
+# run tests
+test: audrey_agent.py
+	coverage run test_audrey_agent.py
+
+# report coverage
+coverage: test
+	coverage report -m audrey_agent.py
+
 .PHONY: dist check rpms srpms
