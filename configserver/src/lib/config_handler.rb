@@ -59,6 +59,10 @@ module ConfigServer
       Model::Instance.exists?(uuid)
     end
 
+    def deployment_exists?(uuid)
+      Model::Deployable.exists?(uuid)
+    end
+
     def get_configs(uuid, options={})
       options[:as] ||= :text
 

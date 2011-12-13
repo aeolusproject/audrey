@@ -155,7 +155,7 @@ end
 # Permanently delete the configuration data for an entire deployment
 #  - delete all instance configurations under that deployment
 delete '/deployment/:version/:uuid' do
-  if not configs.exists?(params[:uuid])
+  if not configs.deployment_exists?(params[:uuid])
     not_found
   else
     configs.delete_deployment(params[:uuid])
