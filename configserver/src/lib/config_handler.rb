@@ -34,16 +34,6 @@ end
 
 module ConfigServer
 
-  class InvalidInstanceConfigError < StandardError
-    attr_reader :errors
-    attr_reader :message
-
-    def initialize(errors = nil)
-      @errors = errors
-      @message = errors
-    end
-  end
-
   # There is a silly conventions used in this class.  Everywhere that "data" is
   # passed as argument to a method, it's assumed that it hasn't been validated
   # yet.  If it's called "config", then it has been validated.  To be validated

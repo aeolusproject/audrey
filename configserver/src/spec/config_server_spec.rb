@@ -81,11 +81,6 @@ describe 'Config Server' do
     last_response.should.be.ok
   end
 
-  it "should return 200 from delete /configs/:version/:uuid" do
-    delete '/configs/1/' + instance_uuid
-    last_response.should.be.ok
-  end
-
   it "should return 200 from delete /deployments/:version/:uuid" do
     delete '/deployment/1/' + deployment_uuid
     last_response.should.be.ok

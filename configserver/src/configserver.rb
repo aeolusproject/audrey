@@ -141,16 +141,6 @@ post '/configs/:version/:uuid' do
   #end
 end
 
-## DELETE /configs/
-# Permanently delete the configuration data for an instance
-delete '/configs/:version/:uuid' do
-  if not configs.exists?(params[:uuid])
-    not_found
-  else
-    configs.delete(params[:uuid])
-  end
-end
-
 ## DELETE /deployment/
 # Permanently delete the configuration data for an entire deployment
 #  - delete all instance configurations under that deployment
