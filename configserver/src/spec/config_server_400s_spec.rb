@@ -36,8 +36,8 @@ describe 'Config Server 400s' do
     last_response.status.should == 400
   end
 
-  it "should return 404 from delete /configs/:version/:uuid" do
-    delete '/configs/1/fakeUUID'
+  it "should return 404 from delete /deployment/:version/:uuid" do
+    delete '/deployment/1/fakeUUID'
     last_response.status.should == 404
   end
 
