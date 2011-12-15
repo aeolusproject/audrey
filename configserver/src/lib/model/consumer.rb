@@ -35,6 +35,13 @@ module ConfigServer
         super()
         @key = key
         @secret = nil
+        @consumer_dir = Consumer.storage_path
+        Consumer.ensure_storage_path
+        ensure_consumer_dir
+      end
+
+      def ensure_consumer_dir
+        FileUtils.mkdir_p(@consumer_dir, :mode => 0700) if not File.directory?(@consumer_dir)
       end
 
       def store(secret)
