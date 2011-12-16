@@ -1195,7 +1195,7 @@ def setup_logging(level=logging.INFO, logfile_name=LOG):
     LOG_NAME_INPUT = 'INPUT'
 
     logging.basicConfig(filename=logfile_name,
-        level=level, filemode='w', format=LOG_FORMAT)
+        level=level, filemode='a', format=LOG_FORMAT)
 
     logging.addLevelName(LOG_LEVEL_INPUT, LOG_NAME_INPUT)
 
