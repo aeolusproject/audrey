@@ -17,7 +17,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    1%{?dist}
+Release:    2%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -169,8 +169,9 @@ fi
 %doc COPYING
 
 %changelog
-* Fri Dec 16 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.4-1
+* Fri Dec 16 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.4-2
 - https://bugzilla.redhat.com/show_bug.cgi?id=760377
+- https://bugzilla.redhat.com/show_bug.cgi?id=768425
 * Mon Dec 12 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.3-2
 - Fix 500 on audrey-agent HTTP PUT of partial params
 - https://bugzilla.redhat.com/show_bug.cgi?id=766967
