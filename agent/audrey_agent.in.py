@@ -1183,6 +1183,19 @@ def setup_logging(level=logging.INFO, logfile_name=LOG):
 
     global LOGGER
 
+    class StreamToLogger(object):
+        """
+        Fake file-like stream object that redirects writes to a logger instance.
+        """
+        def __init__(self, logger, log_level=logging.INFO):
+           self.logger = logger
+           self.log_level = log_level
+           self.linebuf = ''
+     
+        def write(self, buf):
+           for line in buf.rstrip().splitlines():
+              self.logger.log(self.log_level, line.rstrip())
+
     # If not run as root create the log file in the current directory.
     # This allows minimal functionality, e.g.: --help
     if not os.geteuid() == 0:
@@ -1200,6 +1213,10 @@ def setup_logging(level=logging.INFO, logfile_name=LOG):
     logging.addLevelName(LOG_LEVEL_INPUT, LOG_NAME_INPUT)
 
     LOGGER = logging.getLogger('Audrey')
+
+    # redirect the stderr and out to the logger
+    sys.stdout = StreamToLogger(LOGGER, logging.INFO)
+    sys.stderr = StreamToLogger(LOGGER, logging.ERROR)
 
 def parse_args():
     '''
