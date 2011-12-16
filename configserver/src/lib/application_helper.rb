@@ -46,14 +46,26 @@ module ApplicationHelper
   end
 
   def authenticate!
-    if not authenticated?
+    if not authenticated? and not legacy_authenticated?
       logger.debug("  **AUTHENTICATING** NOT AUTHENTICATED! (returning 401)")
       throw :halt, [401, "Not Authorized\n"]
     end
   end
 
   def authenticated?
-    unsigned_parameters = settings.oauth_ignore_post_body ? ["data", "audrey_data"] : []
+    authd?
+  end
+
+  # Attempts to authenticate the request by not including the request body
+  # parameters ("data" or "audrey_data") in the oauth signature validation.
+  # Some older OAuth libraries don't include the request parameters in the OAuth
+  # Signature value for HTTP PUT requests.
+  def legacy_authenticated?
+    authd?(true)
+  end
+
+  def authd?(ignore_request_body=false)
+    unsigned_parameters = ignore_request_body ? ["data", "audrey_data"] : []
     OAuth::Signature.verify(request, :unsigned_parameters => unsigned_parameters) do |request_proxy|
       logger.debug("**AUTHENTICATING** key = #{request_proxy.consumer_key}")
       consumer = ConfigServer::Model::Consumer.find(request_proxy.consumer_key)

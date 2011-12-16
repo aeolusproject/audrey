@@ -7,7 +7,6 @@ require 'logger'
 ENV['INSTANCE_CONFIG_RNG'] = '../schema/instance-config.rng'
 require 'common_config'
 # HACK, see config.in.ru for details
-set :oauth_ignore_post_body, false
 set :environment, :test
 
 $LOGGER = Logger.new('DEBUG')
