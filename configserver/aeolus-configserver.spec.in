@@ -76,7 +76,7 @@ install -d %{buildroot}/%{app_root}/lib/model
 
 install -m 0644 \
     src/config.ru \
-    src/config.in.ru \
+    src/common_config.rb \
     src/configserver.rb %{buildroot}/%{app_root}
 
 install -m 0644 \

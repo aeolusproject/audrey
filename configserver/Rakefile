@@ -30,15 +30,15 @@ pkg_name = 'aeolus-configserver'
 
 SPEC_FILE_IN="aeolus-configserver.spec.in"
 SPEC_FILE="aeolus-configserver.spec"
-CONFIG_RU_IN="src/config.in.ru"
-CONFIG_RU="src/config.ru"
+CONFIG_IN="src/common_config.in.rb"
+CONFIG="src/common_config.rb"
 SETUP="configure/bin/config_httpd.sh"
 MAN="aeolus-configserver-setup.8"
 LOGS="*/log/*"
 
 GENERATED_FILES=[
   [SPEC_FILE_IN,SPEC_FILE,"version",true,nil],
-  [CONFIG_RU_IN,CONFIG_RU,"version",true,nil],
+  [CONFIG_IN,CONFIG,"version",true,nil],
   [SETUP,MAN,"man",true,nil]
 ]
 
@@ -46,13 +46,13 @@ GENERATED_FILES=[
 # Package tasks
 #
 
-# This FileList explicitly excludes both the spec file and the config.ru
+# This FileList deliberatly does not include both the spec and common_config.ru
 # files, since these both go through variable substitution in the RPM task
 # below.  And, rake uses hard links to copy files into the package location,
 # which would change both the packaged file and the file in the source tree.
 configserver_files = FileList[
   SPEC_FILE_IN,
-  CONFIG_RU_IN,
+  CONFIG_IN,
   "Rakefile", "COPYING",
   "schema/*.rng",
   "src/**/*.*",
