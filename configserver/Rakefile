@@ -125,13 +125,27 @@ CLEAN.include('aeolus-configserver-setup.8')
 CLEAN.include(SPEC_FILE)
 CLEAN.include(CONFIG)
 
+desc 'Run tests'
+task :test do
+  Dir::chdir("src") do |dir|
+    sh "rspec spec"
+  end
+end
+
+desc 'Mesures test coverage'
+task :coverage do
+  Dir::chdir("src") do |dir|
+    rm_f "coverage"
+    sh "rcov -TIspec --exclude ruby\/,spec\/ spec/*_spec.rb"
+ end
+end
+
 spec_path  = "#{p.package_name}/#{SPEC_FILE}"
 setup_path = "#{p.package_name}/#{SETUP}"
 
-
 # Build the (S)RPMs
 desc "Build (S)RPMs for #{pkg_name}"
-task :rpm => [ :package ] do |t|
+task :rpm => [ :test, :package ] do |t|
   Dir::chdir("pkg") do |dir|
     dir = File::expand_path(".")
     system("which rpmbuild &> /dev/null")
@@ -154,7 +168,7 @@ end
 
 # Build the SRPM
 desc "Build SRPM for #{pkg_name}"
-task :srpm => [ :package ] do |t|
+task :srpm => [ :test, :package ] do |t|
   Dir::chdir("pkg") do |dir|
     dir = File::expand_path(".")
     system("which rpmbuild &> /dev/null")
@@ -175,20 +189,6 @@ task :srpm => [ :package ] do |t|
   end
 end
 
-desc 'Run tests'
-task :test do
-  Dir::chdir("src") do |dir|
-    sh "rspec spec"
-  end
-end
-
-desc 'Mesures test coverage'
-task :coverage do
-  Dir::chdir("src") do |dir|
-    rm_f "coverage"
-    sh "rcov -TIspec --exclude ruby\/,spec\/ spec/*_spec.rb"
- end
-end
 
 # Default Build all
 desc "Build (S)RPMs for #{pkg_name}"
