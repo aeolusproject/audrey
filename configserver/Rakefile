@@ -37,9 +37,9 @@ MAN="aeolus-configserver-setup.8"
 LOGS="*/log/*"
 
 GENERATED_FILES=[
-  [SPEC_FILE_IN,SPEC_FILE,"version",true,nil],
-  [CONFIG_IN,CONFIG,"version",true,nil],
-  [SETUP,MAN,"man",true,nil]
+  [SPEC_FILE_IN,SPEC_FILE,:version],
+  [CONFIG_IN,CONFIG,:version],
+  [SETUP,MAN,:man]
 ]
 
 #
@@ -51,8 +51,8 @@ GENERATED_FILES=[
 # below.  And, rake uses hard links to copy files into the package location,
 # which would change both the packaged file and the file in the source tree.
 configserver_files = FileList[
-  SPEC_FILE_IN,
-  CONFIG_IN,
+  SPEC_FILE,
+  CONFIG,
   "Rakefile", "COPYING",
   "schema/*.rng",
   "src/**/*.*",
@@ -83,33 +83,27 @@ end
 # In this case, we allow for files that replace the "@VERSION@" text with the
 # actual package version.  Some generated files are packaged, while others are
 # simply used during packaging.
-GENERATED_FILES.each do |(source_file,dest_file,action,is_packaged,block)|
+GENERATED_FILES.each do |(source_file,dest_file,action)|
   # create the file task to generate the file
-  if is_packaged
-    packaged_name = "#{p.package_name}/#{dest_file}"
-    dependencies = [p.package_dir_path] + p.package_files
-  else
-    packaged_name = dest_file
-    dependencies = [p.package_dir] + p.package_files
-  end
+  target_file = "#{p.package_dir}/#{p.package_name}/#{dest_file}"
+  dependencies = [p.package_dir_path] + p.package_files
 
-  if block != nil
-    block.call(source_file, packaged_name, dependencies, p)
-  elsif action == "version"
-    cmd = "sed -e 's/@VERSION@/#{version}/' #{source_file} " \
-        "> #{p.package_dir}/#{packaged_name}"
-    file "#{p.package_dir}/#{packaged_name}" => dependencies do
+  case action
+    when :version
+      cmd = "sed -e 's/@VERSION@/#{version}/' #{source_file} " \
+        "> #{dest_file}"
       system("#{cmd}")
-    end
-  elsif action == "man"
-    cmd = "help2man --name='Aeolus Config Server Setup' " \
-      "--section #{man_section} " \
-      "--no-info #{source_file} > #{p.package_dir}/#{packaged_name}"
-    file "#{p.package_dir}/#{packaged_name}" => dependencies do
-      system("#{cmd}")
-    end
-  else
-    puts "Unrecognized action: #{action}, continuing."
+      file "#{target_file}" do
+      end
+    when :man
+      cmd = "help2man --name='Aeolus Config Server Setup' " \
+        "--section #{man_section} " \
+        "--no-info #{source_file} > #{target_file}"
+      file "#{target_file}" => dependencies do
+        system("#{cmd}")
+      end
+    else
+      puts "Unrecognized action: #{action}, continuing."
   end
 
   # make the zip/tar/etc. task depend on the created file task
@@ -120,7 +114,7 @@ GENERATED_FILES.each do |(source_file,dest_file,action,is_packaged,block)|
     [p.need_zip, p.zip_file]
   ].each do |(need, ar_file)|
     if need
-      task "#{p.package_dir}/#{ar_file}" => ["#{p.package_dir}/#{packaged_name}"]
+      task "#{p.package_dir}/#{ar_file}" => ["#{target_file}"]
     end
   end
 end
@@ -128,6 +122,8 @@ end
 # Clean up the build destination
 CLEAN.include('pkg')
 CLEAN.include('aeolus-configserver-setup.8')
+CLEAN.include(SPEC_FILE)
+CLEAN.include(CONFIG)
 
 spec_path  = "#{p.package_name}/#{SPEC_FILE}"
 setup_path = "#{p.package_name}/#{SETUP}"
@@ -183,7 +179,7 @@ desc 'Run tests'
 task :test do
   Dir::chdir("src") do |dir|
     sh "rspec spec"
- end
+  end
 end
 
 desc 'Mesures test coverage'
