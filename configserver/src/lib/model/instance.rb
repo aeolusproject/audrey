@@ -219,7 +219,7 @@ module ConfigServer
           #FIXME: only handles scalar values
           (pp / xpath).map do |p|
             {p['name'] => ((p%'value').nil? ? nil : (p%'value').content)}
-          end.inject(:merge)
+          end.inject(:merge) || {}
         else
           (pp / xpath).map do |p|
             p['name']
