@@ -63,9 +63,10 @@ describe 'Config Server' do
     last_response.status.should == 202
   end
 
-  it "should return 200 from put /params/:version/:uuid with blank data" do
+  it "should return 202 from put /params/:version/:uuid with blank data on first put" do
+    # the first HTTP PUT should be allowed to be empty
     put '/params/1/' + instance_uuid, {:audrey_data=>"|&|"}
-    last_response.should.be.ok
+    last_response.status.should == 202
   end
 
   it "should return 202 from put /params/:version/:uuid with param 1/2" do
@@ -76,6 +77,11 @@ describe 'Config Server' do
   it "should return 200 from put /params/:version/:uuid with param 2/2" do
     put '/params/1/' + instance_uuid, {:audrey_data=>"|hostname&example.com|"}
     last_response.status.should == 200
+  end
+
+  it "should return 200 from put /params/:version/:uuid with blank data" do
+    put '/params/1/' + instance_uuid, {:audrey_data=>"|&|"}
+    last_response.should.be.ok
   end
 
   it "should return 200 from get /configs/:version/:uuid" do
