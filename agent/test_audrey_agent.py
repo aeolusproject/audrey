@@ -310,9 +310,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         print 'Expect: parse_require_config() success'
 
         # Exersise code segment
-        with self.assertRaises(ASError):
-            print 'parse_require_config returned: ' + \
-                str(parse_require_config(src))
+        self.assertRaises(ASError, parse_require_config, src)
 
     def test_failure_bad_service_name(self):
         '''
@@ -327,9 +325,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         print 'Expect: parse_require_config() ASError'
 
         # Exersise code segment
-        with self.assertRaises(ASError):
-            print 'parse_require_config returned: ' + \
-                str(parse_require_config(src))
+        self.assertRaises(ASError, parse_require_config, src)
 
     def test_failure_service_tag_not_found(self):
         '''
@@ -337,8 +333,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         - |service| not in src to parse_require_config()
         '''
         src = '|notservice|blah|'
-        with self.assertRaises(ASError):
-            parse_require_config(src)
+        self.assertRaises(ASError, parse_require_config, src)
 
     def test_failure_no_amp_delim(self):
         '''
@@ -346,8 +341,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         - no delim in param token
         '''
         src = '|service|blah|parameters|blah|'
-        with self.assertRaises(ASError):
-            parse_require_config(src)
+        self.assertRaises(ASError, parse_require_config, src)
 
 class TestAudreyStartupDiscovery(unittest.TestCase):
     def setUp(self):
@@ -588,11 +582,8 @@ class TestAudreyStartupProvidesParameters(unittest.TestCase):
         expected_params_list = ['unavailable_dogs']
 
         # Exersise code segment and validate results
-        with self.assertRaises(ASError):
-            params_list = parse_provides_params(src)
-
-        with self.assertRaises(ASError):
-            provides = generate_provides(src)
+        self.assertRaises(ASError, parse_provides_params, src)
+        self.assertRaises(ASError, generate_provides, src)
 
 class TestConfigServerClient(unittest.TestCase):
     '''
