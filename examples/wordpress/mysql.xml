@@ -1,0 +1,23 @@
+<template>
+  <name>Fedora 15 Template</name>
+  <os>
+    <name>Fedora</name>
+    <version>15</version>
+    <arch>x86_64</arch>
+    <install type='url'>
+      <url>http://ftp.linux.ncsu.edu/pub/fedora/linux/releases/15/Everything/x86_64/os/</url>
+    </install>
+    <rootpw>changeme</rootpw>
+  </os>
+  <repositories>
+    <repository name="aeolus-conductor">
+      <url>http://repos.fedorapeople.org/repos/aeolus/conductor/testing/fedora-15/x86_64/</url>
+      <signed>False</signed>
+    </repository>
+  </repositories>
+  <packages>
+    <package name="mysql-server"/>
+    <package name="aeolus-audrey-agent"/>
+  </packages>
+  <description>A Fedora 15 Image Factory Template</description>
+</template>

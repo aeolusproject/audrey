@@ -1,0 +1,123 @@
+<!-- A deployable represents a set of instances to launch and configure at the
+     same time. -->
+<deployable name="multi-instance-inline-example">
+  <description>Deploys multiple instances and contains inline script and file examples</description>
+  <assemblies>
+    <!-- When a deployable is launched, each assembly defition in this file
+         will map to a launched instance.
+         The assembly name should uniquely identify the assembly in this file.
+         The assembly "hwp" (hardware profile) should match a hardware profile
+         setup in Cloud Engine.-->
+    <assembly name="Instance-1" hwp="large">
+      <!-- This image element references an image that exists in the image
+           warehouse.
+           Images get into the image warehouse either by building the
+           image from a template XML file, or by importing from an
+           external source (such as an Amazon AMI). -->
+      <image id="INSERT IMAGE ID"/>
+      <services>
+        <!-- A "service" in a deployable is simply a way to group common
+             post-launch configurations together.
+             Each service contains:
+               - an executable script that performs the configuration
+               - parameters collected at launch time that are fed into the
+                 executable script by the Audrey Agent post-launch
+               - additional files that can be used by the executable script for
+                 configuring the guest -->
+        <service name="service1">
+          <!-- This is an inline configuration executable.
+               The contents of this element will be used to create an executable
+               file on the guest by the Audrey Agent during post-launch
+               configuration.
+               The user will be responsible for authoring and providing
+               this script. -->
+          <executable>
+            <!-- A bash script that echoes the value of all the service
+                 parameters collected below. -->
+            <contents><![CDATA[#!/bin/bash
+
+for x in `env | grep "^AUDREY_VAR"`; do echo "$x"; done
+              ]]>
+            </contents>
+          </executable>
+          <files>
+            <!-- A simple file with inline contents -->
+            <file>
+              <contents filename="inline-file"><![CDATA[Inline file contents]]>
+              </contents>
+            </file>
+          </files>
+          <!-- The parameters that are fed into the service's executable script
+               above are identified here in the "parameters" section.
+               Each parameter is supplied to the script as environment variables
+               with the name:
+                 AUDREY_VAR_${service_name}_${parameter_name} -->
+          <parameters>
+            <!-- Parameter values will be collected at launch time.
+                 The user launching the deployment will have an opportunity to
+                 provide values for all parameters, whether they have default
+                 values or not. -->
+            <!-- Only scalar parameter types are going to be supported
+                 initially. -->
+            <parameter name="service_1_param_1" type="scalar">
+              <!-- Default values can be provided directly in the deployable. -->
+              <value><![CDATA[value 1]]></value>
+            </parameter>
+            <parameter name="service_1_param_2" type="scalar"/>
+          </parameters>
+        </service>
+        <service name="service2">
+          <executable url="https://www.aeolusproject.org/redmine/attachments/download/169/start_simple"/>
+          <parameters>
+            <parameter name="service_2_param_1" type="scalar">
+              <value><![CDATA[value 1]]></value>
+            </parameter>
+            <parameter name="service_2_param_2" type="scalar">
+              <value><![CDATA[value 2]]></value>
+            </parameter>
+          </parameters>
+        </service>
+      </services>
+      <!-- The elements listed under the "returns" element are values that
+           are collected by the launched guest and returned to the
+           configuration server.
+           The values that are returned to the configuration server can be
+           shared with other launched instances in this deployable. -->
+      <returns>
+        <return name="hostname"/>
+      </returns>
+    </assembly>
+    <assembly name="Instance-2" hwp="large">
+      <image id="INSERT IMAGE ID"/>
+      <services>
+        <service name="service3">
+          <executable url="https://www.aeolusproject.org/redmine/attachments/download/169/start_simple"/>
+          <parameters>
+            <parameter name="service_3_param_1" type="scalar">
+              <value><![CDATA[value 1]]></value>
+            </parameter>
+            <parameter name="service_3_param_2" type="scalar">
+              <value><![CDATA[value 2]]></value>
+            </parameter>
+          </parameters>
+        </service>
+        <service name="service4">
+          <executable url="https://www.aeolusproject.org/redmine/attachments/download/169/start_simple"/>
+          <parameters>
+            <parameter name="service_4_param_1" type="scalar">
+              <value><![CDATA[value 1]]></value>
+            </parameter>
+            <!-- Parameters can also reference "returns" from other assemblies.
+                 In this example, Instance-2 requests the "hostname" return value from Instance-1. -->
+            <parameter name="service_4_param_2" type="scalar">
+              <reference assembly="Instance-1" parameter="hostname"/>
+            </parameter>
+          </parameters>
+        </service>
+      </services>
+      <returns>
+        <return name="hostname"/>
+      </returns>
+    </assembly>
+  </assemblies>
+</deployable>

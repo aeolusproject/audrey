@@ -1,0 +1,100 @@
+<deployable name="Wordpress Multi-Instance Deployable">
+  <description>This is an example of a multi deployment that deploys wordpress across an apache and mysql instance</description>
+  <assemblies>
+    <assembly name="apache" hwp="hwp1">
+      <image id=""/>
+      <services>
+        <service name="http">
+          <executable url="http://radez.fedorapeople.org/wordpress-http.sh"/>
+          <parameters>
+            <parameter name="wp_name" type="scalar">
+                <value>wordpress</value>
+            </parameter>
+            <parameter name="wp_user" type="scalar">
+                <value>wordpress</value>
+            </parameter>
+            <parameter name="wp_pw" type="scalar">
+                <value>wordpress</value>
+            </parameter>
+            <parameter name="mysql_ip" type="scalar">
+              <reference assembly="mysql" parameter="ipaddress"/>
+            </parameter>
+            <parameter name="mysql_hostname" type="scalar">
+              <reference assembly="mysql" parameter="hostname"/>
+            </parameter>
+            <parameter name="mysql_dbup" type="scalar">
+              <reference assembly="mysql" parameter="dbup"/>
+            </parameter>
+          </parameters>
+        </service>
+        <service name="pubkey">
+          <executable>
+            <contents><![CDATA[#!/bin/bash
+                cat pubkey >> authorized_keys
+              ]]>
+            </contents>
+          </executable>
+          <files>
+            <file>
+              <contents filename="pubkey">
+                pubkey contents
+              </contents>
+            </file>
+          </file>
+        </service>
+      </services>
+      <returns>
+        <return name="hostname"/>
+        <return name="ipaddress"/>
+      </returns>
+    </assembly>
+    <assembly name="mysql" hwp="hwp1">
+      <image id=""/>
+      <services>
+        <service name="mysql">
+          <executable url="http://radez.fedorapeople.org/wordpress-mysql.sh"/>
+          <files>
+            <file url="http://radez.fedorapeople.org/dbup.rb"/>
+          </files>
+          <parameters>
+            <parameter name="wp_name" type="scalar">
+                <value>wordpress</value>
+            </parameter>
+            <parameter name="wp_user" type="scalar">
+                <value>wordpress</value>
+            </parameter>
+            <parameter name="wp_pw" type="scalar">
+                <value>wordpress</value>
+            </parameter>
+            <parameter name="apache_ip" type="scalar">
+              <reference assembly="apache" parameter="ipaddress"/>
+            </parameter>
+            <parameter name="apache_hostname" type="scalar">
+              <reference assembly="apache" parameter="hostname"/>
+            </parameter>
+          </parameters>
+        </service>
+        <service name="pubkey">
+          <executable>
+            <contents><![CDATA[#!/bin/bash
+                cat pubkey >> authorized_keys
+              ]]>
+            </contents>
+          </executable>
+          <files>
+            <file>
+              <contents filename="pubkey">
+                pubkey contents
+              </contents>
+            </file>
+          </file>
+        </service>
+      </services>
+      <returns>
+        <return name="hostname"/>
+        <return name="ipaddress"/>
+        <return name="dbup"/>
+      </returns>
+    </assembly>
+  </assemblies>
+</deployable>

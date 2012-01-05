@@ -1,0 +1,24 @@
+<template>
+  <!--
+    Builds an F15 Audrey Agent VM
+  -->
+  <name>Fedora 15 Audrey Agent</name>
+  <os>
+    <name>Fedora</name>
+    <version>15</version>
+    <arch>x86_64</arch>
+    <install type='url'>
+      <url>http://download.fedoraproject.org/pub/fedora/linux/releases/15/Fedora/x86_64/os/</url>
+    </install>
+    <rootpw>changeme</rootpw>
+  </os>
+  <repositories>
+    <repository name="aeolus">
+      <url>http://repos.fedorapeople.org/repos/aeolus/conductor/testing/fedora-15/x86_64/</url>
+    </repository>
+  </repositories>
+  <packages>
+    <package name="aeolus-audrey-agent"/>
+  </packages>
+  <description>A Fedora 15 Template for Audrey Agent</description>
+</template>

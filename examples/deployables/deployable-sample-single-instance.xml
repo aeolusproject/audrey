@@ -1,0 +1,79 @@
+<!-- A deployable represents a set of instances to launch and configure at the
+     same time. -->
+<deployable name="single-instance-multi-service">
+  <description>Deploys a single instance with multiple services</description>
+  <assemblies>
+    <!-- When a deployable is launched, each assembly defition in this file
+         will map to a launched instance.
+         The assembly name should uniquely identify the assembly in this file.
+         The assembly "hwp" (hardware profile) should match a hardware profile
+         setup in Cloud Engine.-->
+    <assembly name="Instance-1" hwp="large">
+      <!-- This image element references an image that exists in the image
+           warehouse.
+           Images get into the image warehouse either by building the
+           image from a template XML file, or by importing from an
+           external source (such as an Amazon AMI). -->
+      <image id="INSERT IMAGE ID"/>
+      <services>
+        <!-- A "service" in a deployable is simply a way to group common
+             post-launch configurations together.
+             Each service contains:
+               - an executable script that performs the configuration
+               - parameters collected at launch time that are fed into the
+                 executable script by the Audrey Agent post-launch
+               - additional files that can be used by the executable script for
+                 configuring the guest -->
+        <service name="service1">
+          <!-- This is a URL that the Audrey Configuration Server must be
+               able to access, and points to a script that is meant to
+               setup the service.
+               The user will be responsible for authoring and providing
+               this script. -->
+          <executable url="https://www.aeolusproject.org/redmine/attachments/download/169/start_simple"/>
+          <!-- These are files that can be used by the "start_simple" script
+               during its execution to setup the instance.
+               The file URLs must be accessible by the Audrey Configuration Server -->
+          <files>
+            <file url="https://www.aeolusproject.org/redmine/attachments/download/169/start_simple"/>
+            <file url="https://www.aeolusproject.org/redmine/attachments/download/169/start_simple"/>
+          </files>
+          <!-- The parameters that are fed into the "start_simple" script
+               above are identified here in the "parameters" section. -->
+          <parameters>
+            <!-- Parameter values will be collected at launch time.
+                 The user launching the deployment will have an opportunity to
+                 provide values for all parameters, whether they have default
+                 values or not. -->
+            <!-- Only scalar parameter types are going to be supported
+                 initially. -->
+            <parameter name="service_1_param_1" type="scalar">
+              <!-- Default values can be provided directly in the deployable. -->
+              <value><![CDATA[value 1]]></value>
+            </parameter>
+            <parameter name="service_1_param_2" type="scalar"/>
+          </parameters>
+        </service>
+        <service name="service2">
+          <executable url="https://www.aeolusproject.org/redmine/attachments/download/169/start_simple"/>
+          <parameters>
+            <parameter name="service_2_param_1" type="scalar">
+              <value><![CDATA[value 1]]></value>
+            </parameter>
+            <parameter name="service_2_param_2" type="scalar">
+              <value><![CDATA[value 2]]></value>
+            </parameter>
+          </parameters>
+        </service>
+      </services>
+      <!-- The elements listed under the "returns" element are values that
+           are collected by the launched guest and returned to the
+           configuration server.
+           The values that are returned to the configuration server can be
+           shared with other launched instances in this deployable. -->
+      <returns>
+        <return name="hostname"/>
+      </returns>
+    </assembly>
+  </assemblies>
+</deployable>

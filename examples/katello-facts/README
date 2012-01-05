@@ -1,0 +1,10 @@
+This example will configure a guest to place common facts shared with katello in
+the /etc/rhsm/facts directory.
+
+Prerequisite:
+  The Aeolus Conductor must be installed and configured.
+  An Aeolus "Config Server" must be running.
+  The Audrey Start Agent must be built into the image being launched.
+
+  For instructions on how to satisfy the prerequisites see the
+  Aeolus documentation.

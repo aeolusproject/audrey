@@ -1,0 +1,8 @@
+<deployable name="simple-single-instance">
+  <description>A very simple single instance deployable with no post-launch configuration.</description>
+  <assemblies>
+    <assembly name="Instance-1" hwp="large">
+      <image id="INSERT IMAGE ID"/>
+    </assembly>
+  </assemblies>
+</deployable>

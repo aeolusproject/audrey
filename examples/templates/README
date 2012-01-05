@@ -1,0 +1,25 @@
+The templates in this directory are provided as a starting point for building
+various images with the Aeolus CLI.
+
+Audrey Agent Templates:
+ * audrey-agent-template.f15.xml
+
+   Contains information for building a Fedora15 guest with the Audrey Agent
+   packages pre-installed.
+
+ * audrey-agent-template.f15.dev.xml
+
+   Same as audrey-agent-template.f15.xml, but this template pulls packages from
+   the Audrey Development yum repositories.
+
+
+Config Server Templates:
+ * audrey-configserver.f15.xml
+
+   Contains information for building a Fedora15 guest with the Audrey Config
+   Server packages pre-installed.
+
+ * audrey-configserver.f15.dev.xml
+
+   Same as audyre-configserver.f15.xml, but this template pulls packages from
+   the Audrey Development yum repositories.
