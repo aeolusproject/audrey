@@ -855,7 +855,7 @@ class CSClient(object):
             Generate the Config Server (CS) URL.
         '''
         return '%s/%s/%s/%s' % \
-            (self.cs_endpoint, url_type, self.version, self.cs_oauth_key)
+            (self.cs_endpoint.lower(), url_type, self.version, self.cs_oauth_key)
 
     def _get(self, url, headers=None):
         '''
