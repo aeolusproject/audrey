@@ -1,4 +1,4 @@
-<deployable name="simple-single-instance">
+<deployable version="1.0" name="simple-single-instance">
   <description>A very simple single instance deployable with no post-launch configuration.</description>
   <assemblies>
     <assembly name="Instance-1" hwp="large">

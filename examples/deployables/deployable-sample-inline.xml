@@ -1,6 +1,6 @@
 <!-- A deployable represents a set of instances to launch and configure at the
      same time. -->
-<deployable name="multi-instance-inline-example">
+<deployable version="1.0" name="multi-instance-inline-example">
   <description>Deploys multiple instances and contains inline script and file examples</description>
   <assemblies>
     <!-- When a deployable is launched, each assembly defition in this file

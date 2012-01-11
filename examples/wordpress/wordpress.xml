@@ -1,4 +1,4 @@
-<deployable name="Wordpress Multi-Instance Deployable">
+<deployable version="1.0" name="Wordpress Multi-Instance Deployable">
   <description>This is an example of a multi deployment that deploys wordpress across an apache and mysql instance</description>
   <assemblies>
     <assembly name="apache" hwp="hwp1">

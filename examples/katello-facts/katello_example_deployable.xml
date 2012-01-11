@@ -6,7 +6,7 @@ The tooling for service "katello" populates the facts file:
 /etc/rhsm/facts//aeolus.facts with the instance UUID from
 Conductor.
 -->
-<deployable name="dep6_katello">
+<deployable version="1.0" name="dep6_katello">
   <description>Deployable for testing the creation of the facts file for Katello</description>
   <assemblies>
     <assembly name="katello_facts" hwp="hwp1">
