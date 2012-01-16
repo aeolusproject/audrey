@@ -17,7 +17,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    1%{?dist}
+Release:    2%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -169,6 +169,12 @@ fi
 %doc COPYING
 
 %changelog
+* Mon Jan 16 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.5-2
+- https://bugzilla.redhat.com/show_bug.cgi?id=781459
+- https://bugzilla.redhat.com/show_bug.cgi?id=768433
+- https://bugzilla.redhat.com/show_bug.cgi?id=773036
+* Tue Jan 03 2012 Dan Radez <dradez@redhat.com> 0.4.5-1
+- https://bugzilla.redhat.com/show_bug.cgi?id=769656
 * Fri Dec 16 2011 Greg Blomquist <gblomqui@redhat.com> 0.4.4-2
 - https://bugzilla.redhat.com/show_bug.cgi?id=760377
 - https://bugzilla.redhat.com/show_bug.cgi?id=768425
