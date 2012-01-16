@@ -57,8 +57,8 @@ class apache {
       notify => Exec["graceful-apache"],
     }
 
-    exec { "pk-gen":
-      command => "/usr/bin/ssh-keygen -t rsa -f ${pk_file} -N ''",
+    exec { "pk-file":
+      command => "/usr/sbin/selinuxenabled && /usr/bin/runcon -t unconfined_t /usr/bin/ssh-keygen -t rsa -f ${pk_file} -N ''",
       creates => "$pk_file",
       require => Package["mod_ssl"],
       notify => Exec["graceful-apache"],
@@ -67,7 +67,7 @@ class apache {
     exec { "sign-request":
       command => "/usr/bin/openssl req -batch -new -key ${pk_file} -out /etc/pki/tls/config-server.csr",
       creates => "/etc/pki/tls/config-server.csr",
-      require => Exec["pk-gen"],
+      require => Exec["pk-file"],
     }
 
     exec { "cert":
@@ -99,7 +99,16 @@ class apache {
     exec { "config-iptables-for-443":
       command   => "/sbin/iptables -I INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT",
       logoutput => true,
+      onlyif    => "/usr/bin/test `iptables -L | /bin/grep -E 'ACCEPT .* tcp .*(https|443)' | /usr/bin/wc -l` -eq 0",
       require => Package["apache"],
+      notify  => Exec["graceful-apache"]
+    }
+
+    exec { "config-iptables-save":
+      command   => "/usr/bin/test -x /usr/libexec/iptables.init && /usr/libexec/iptables.init save || /sbin/service iptables save",
+      logoutput => true,
+      onlyif    => "/usr/bin/test `/bin/grep -E 'dport (https|443)' /etc/sysconfig/iptables | /usr/bin/wc -l` -eq 0",
+      require => [Package["apache"], Exec["config-iptables-for-443"]],
       notify  => Exec["graceful-apache"]
     }
   }
