@@ -25,8 +25,8 @@ License:    ASL 2.0
 URL:        http://aeolusproject.org
 Source0:    http://joev.fedorapeople.org/configserver/aeolus-configserver-%{version}.tgz
 
-BuildRequires:   ruby
-BuildRequires:   ruby-devel
+BuildRequires:   ruby-devel rubygem-ruby-debug
+BuildRequires:   rubygem-test-spec rubygem-archive-tar-minitar
 BuildRequires:   help2man
 
 Requires:        httpd
