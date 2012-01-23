@@ -56,11 +56,13 @@ make %{?_smp_mflags}
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
+mkdir -p %{buildroot}%{python_sitelib}
 mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_mandir}/man8
 
 # copy over the audrey agent bits
-install audrey %{buildroot}%{_bindir}/audrey
+cp -r src/audrey %{buildroot}%{python_sitelib}
+install bin/audrey %{buildroot}%{_bindir}/audrey
 cp audrey.8 %{buildroot}%{_mandir}/man8
 touch %{buildroot}%{_sysconfdir}/sysconfig/cloud-info
 
@@ -78,6 +80,7 @@ sed -i "/[Aa]udrey/d" /etc/rc.d/rc.local
 %files
 %defattr(-,root,root,-)
 %{_bindir}/audrey
+%{python_sitelib}/audrey/*
 %{_mandir}/man8/audrey.8*
 %doc COPYING
 
@@ -141,6 +144,7 @@ echo "VSPHERE" > %{_sysconfdir}/sysconfig/cloud-info
 %changelog
 * Wed Jan 25 2012 Dan Radez <dradez@redhat.com> 0.5.0-1
 - adding rc.local modifications
+- putting the agent files in site-packages now that it's split up
 - adding cloud-info file support for each provider
 * Wed Dec 07 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-14
 - Define BuildRoot to address RHEL5 rpmbuild incompatibility

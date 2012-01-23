@@ -7,4 +7,5 @@ job*.cnd
 *.log
 agent/.coverage
 agent/dist/
+agent/src/audrey/agent.py
 configserver/src/coverage/
