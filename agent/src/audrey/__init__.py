@@ -16,8 +16,54 @@
 *
 '''
 
+import os
+import sys
 import logging
-logger = logging.getLogger('Audrey')
+
+# Log file
+LOG = '/var/log/audrey.log'
+
+class StreamToLogger(object):
+    """
+    Fake file-like stream object that redirects writes to a logger instance.
+    """
+    def __init__(self, logger, log_level=logging.INFO):
+       self.logger = logger
+       self.log_level = log_level
+       self.linebuf = ''
+ 
+    def write(self, buf):
+       for line in buf.rstrip().splitlines():
+          self.logger.log(self.log_level, line.rstrip())
+
+def setup_logging(level=logging.INFO, logfile_name=LOG):
+    '''
+    Description:
+        Establish the output logging.
+    '''
+
+    # If not run as root create the log file in the current directory.
+    # This allows minimal functionality, e.g.: --help
+    if not os.geteuid() == 0:
+        logfile_name = './audrey.log'
+
+    # set up logging
+    LOG_FORMAT = ('%(asctime)s - %(levelname)-8s: '
+        '%(filename)s:%(lineno)d %(message)s')
+    LOG_LEVEL_INPUT = 5
+    LOG_NAME_INPUT = 'INPUT'
+
+    logging.basicConfig(filename=logfile_name,
+        level=level, filemode='a', format=LOG_FORMAT)
+
+    logging.addLevelName(LOG_LEVEL_INPUT, LOG_NAME_INPUT)
+
+    logger = logging.getLogger('Audrey')
+
+    if level != logging.DEBUG:
+        # redirect the stderr and out to the logger
+        sys.stdout = StreamToLogger(logger, logging.INFO)
+        sys.stderr = StreamToLogger(logger, logging.ERROR)
 
 #
 # Error Handling methods:
@@ -26,7 +72,8 @@ class ASError(Exception):
     '''
     Some sort of error occurred. The exact cause of the error should
     have been logged. So, this just indicates that something is wrong.
+    when invoked from rc.local we redirect stderr to the log so
+    logging here is not really nessesary
+    TODO: Should really have more of these that are more specific to the error.
     '''
-    def __init__(self, msg):
-        Exception.__init__(self, msg)
-        logger.error(msg)
+    pass

@@ -1,4 +1,3 @@
-#!/usr/bin/python2.6
 '''
 *
 *   Copyright [2011] [Red Hat, Inc.]
@@ -20,7 +19,7 @@
 import unittest
 
 from audrey import ASError
-from audrey.cs_client import CSClient
+from audrey.config_server.client import CSClient
 
 from tests.mocks import HttpUnitTest
 

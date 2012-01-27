@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 '''
 *
 *   Copyright [2011] [Red Hat, Inc.]
@@ -25,14 +25,13 @@ import httplib2
 
 sys.path.append('src')
 
-from audrey.agent import setup_logging
-
 ####
 # import the tests
 ####
 from tests.agent import *
 from tests.shell import *
-from tests.cs_client import *
+from tests.config_server_client import *
+from tests.config_server import *
 from tests.user_data import *
 
 ####
@@ -65,7 +64,7 @@ from tests.mocks import HttpUnitTest
 oauth2.Client = HttpUnitTest
 httplib2.Http = HttpUnitTest
 
-if __name__ == '__main__':
+raw_input = lambda: 'raw_input'
 
-    setup_logging(logging.DEBUG, logfile_name='./test_audrey_agent.log')
+if __name__ == '__main__':
     unittest.main()

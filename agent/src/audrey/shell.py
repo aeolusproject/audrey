@@ -18,6 +18,8 @@
 
 from subprocess import Popen, PIPE
 
+from audrey import ASError
+
 class run_cmd_return_subproc(object):
     '''
     Used to pass return code to caller if no subprocess object
@@ -166,3 +168,33 @@ def run_pipe_cmd(cmd1, cmd2):
         return ret
 
     return ret
+
+def get_system_info():
+    '''
+    Description:
+        Get the system info to be used for generating this instances
+        provides back to the Config Server.
+
+        Currently utilizes Puppet's facter via a Python subprocess call.
+
+    Input:
+        None
+
+    Returns:
+        A dictionary of system info name/value pairs.
+
+    '''
+
+    cmd = ['/usr/bin/facter']
+    ret = run_cmd(cmd)
+    if ret['subproc'].returncode != 0:
+        raise ASError(('Failed command: \n%s \nError: \n%s') % \
+            (' '.join(cmd), str(ret['err'])))
+
+    facts = {}
+    for fact in ret['out'].split('\n'):
+        if fact: # Handle the new line at the end of the facter output
+            name, val = fact.split(' => ')
+            facts[ name ] = val.rstrip()
+
+    return facts

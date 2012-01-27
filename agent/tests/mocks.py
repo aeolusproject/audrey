@@ -1,4 +1,3 @@
-#!/usr/bin/python2.6
 '''
 *
 *   Copyright [2011] [Red Hat, Inc.]
@@ -78,7 +77,7 @@ class HttpUnitTest(object):
         '''
         body = ''
         response = HttpUnitTest.ok_response
-        if url.endswith('/raiseException'):
+        if '/raiseException' in url:
             raise Exception
         if method == 'GET':
             if url.find('/configs/') > -1:
@@ -99,7 +98,7 @@ class HttpUnitTest(object):
                 body = base64.b64encode('0|endpoint')
             elif url.endswith('/empty-user-data'):
                 body = base64.b64encode('')
-            elif url.endswith('/gimmie-404'):
+            elif '/gimmie-404' in url:
                 body = base64.b64encode(DUMMY_USER_DATA)
                 response = HttpUnitTest.not_found_response
             else:
@@ -115,3 +114,34 @@ class MockPopen(object):
 def mock_run_cmd(cmd, my_cwd=None):
     return {'subproc' : MockPopen(),
                 'err' : '' , 'out' : ''}
+
+def mock_run_cmd_facter_fail(cmd, my_cwd=None):
+    if cmd == ['/usr/bin/facter']:
+        return {'subproc' : MockPopen(1),
+                'err' : '' , 'out' : ''}
+
+def mock_run_cmd_modprobe_floppy_fail(cmd, my_cwd=None):
+    if cmd == ['/sbin/modprobe', 'floppy']:
+        return {'subproc' : MockPopen(1),
+                'err' : '' , 'out' : ''}
+
+def mock_run_cmd_mkdir_media_fail(cmd, my_cwd=None):
+    if cmd == ['/bin/mkdir', '/media']:
+        return {'subproc' : MockPopen(2),
+                'err' : '' , 'out' : ''}
+    else:
+        return mock_run_cmd(cmd, my_cwd)
+
+def mock_run_cmd_mount_floppy_fail(cmd, my_cwd=None):
+    if cmd == ['/bin/mount', '/dev/fd0', '/media']:
+        return {'subproc' : MockPopen(2),
+                'err' : '' , 'out' : ''}
+    else:
+        return mock_run_cmd(cmd, my_cwd)
+
+def mock_run_cmd_mount_cdrom_fail(cmd, my_cwd=None):
+    if cmd == ['/bin/mount', '/dev/cdrom', '/media']:
+        return {'subproc' : MockPopen(2),
+                'err' : '' , 'out' : ''}
+    else:
+        return mock_run_cmd(cmd, my_cwd)

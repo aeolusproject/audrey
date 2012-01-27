@@ -16,6 +16,8 @@
 *
 '''
 
+import base64
+
 from audrey import ASError
 from audrey.user_data import UserDataBase
 from audrey.shell import run_cmd
@@ -75,12 +77,11 @@ class UserData(UserDataBase):
         # in Python 2.4 as used on RHEL5
         try:
             fp = open(DELTA_CLOUD_USER_DATA, 'r')
-            try:
-                line = fp.read().strip()
-                if '|' not in line:
-                    line = base64.b64decode(line)
-                return self._parse_user_data(line)
-            finally:
-                fp.close()
+            ud = fp.read().strip()
+            fp.close()
         except:
-            raise ASError('Failed accessing RHEVm user data.')
+            raise ASError('Failed accessing RHEVm user data file.')
+
+        if '|' not in ud:
+            ud = base64.b64decode(ud)
+        return self._parse_user_data(ud)

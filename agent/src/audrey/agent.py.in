@@ -39,615 +39,27 @@ Algorithim:
 
 '''
 
-import argparse
-import base64
-import logging
-import os
 import sys
-import tarfile
-import tarfile as tf # To simplify exception names.
-import urllib
+import argparse
+import logging
 
 from time import sleep
-from collections import deque
 
-from audrey import user_data
 from audrey import ASError
-from audrey.cs_client import CSClient
-from audrey.shell import run_cmd
+from audrey import user_data
+from audrey.config_server.client import CSClient
+from audrey.config_server.tooling import ConfigTooling
+from audrey.config_server import parse_require_config
+from audrey.config_server import generate_provides
+from audrey import setup_logging
 
-# Location of the config tooling.
-TOOLING_DIR = '/var/audrey/tooling/'
 SLEEP_SECS = 10
+VERSION_URL = 'version'
 
-# Log file
-LOG = '/var/log/audrey.log'
-LOGGER = None
+logger = logging.getLogger('Audrey')
+
 # The VERSION string is filled in during the make process.
 AUDREY_VER = '@VERSION@'
-
-class ServiceParams(object):
-    '''
-    Description:
-        Used for storing a service and all of it's associated parameters
-        as provided by the Config Server in the "required" parameters
-        API message.
-
-        services = [
-                ServiceParams('serviceA', ['n&v', 'n&v', 'n&v',...]),
-                ServiceParams('serviceB', ['n&v', 'n&v', 'n&v',...]),
-                ServiceParams('serviceB', ['n&v', 'n&v', 'n&v',...]),
-        ]
-
-        This structure aids in tracking the parsed required config
-        parameters which is useful when doing UNITTESTing.
-
-    '''
-    def __init__(self, name=None):
-        if name == None:
-            name = ''
-        self.name = name # string
-        self.params = [] # start with an empty list
-    def add_param(self, param):
-        '''
-        Description:
-            Add a parameter provided by   the Config Server to the list.
-        '''
-        self.params.append(param)
-    def __repr__(self):
-        return repr((self.name, self.params))
-
-#
-# Methods used to parse the CS<->AS text based API
-#
-def _common_validate_message(src):
-    '''
-    Perform validation of the text message sent from the Config Server.
-    '''
-
-    if not src.startswith('|') or not src.endswith('|'):
-        raise ASError(('Invalid start and end characters: %s') % (src))
-
-def gen_env(serv_name, param_val):
-    '''
-    Description:
-        Generate the os environment variables from the required config string.
-
-    Input:
-        serv_name - A service name
-            e.g.:
-            jon_agent_config
-
-        param_val - A parameter name&val pair. The value is base64 encoded.
-            e.g.:
-            jon_server_ip&MTkyLjE2OC4wLjE=
-
-    Output:
-        Set environment variables of the form:
-        <name>=<value>
-            e.g.:
-            jon_server_ip=base64.b64decode('MTkyLjE2OC4wLjE=')
-            jon_server_ip='192.168.0.1
-
-    Raises ASError when encountering an error.
-
-    '''
-    LOGGER.debug('Invoked gen_env()')
-
-    # If the param_val is missing treat as an exception.
-    if param_val == '':
-        raise ASError(('Missing parameter name. %s') % \
-            (str(param_val)))
-
-    # If serv_name is not blank an extra "_" must be added to
-    # the environment variable name.
-    if serv_name != '':
-        serv_name = serv_name + '_'
-
-    name_val = param_val.split('&')
-    var_name = 'AUDREY_VAR_' + serv_name + name_val[0]
-    os.environ[var_name] = \
-        base64.b64decode(name_val[1])
-
-    # Get what was set and log it.
-    cmd = ['/usr/bin/printenv', var_name]
-    ret = run_cmd(cmd)
-    LOGGER.debug(var_name + '=' + str(ret['out'].strip()))
-
-def parse_require_config(src):
-    '''
-    Description:
-        Parse the required config text message sent from the Config Server.
-
-    Input:
-        The required config string obtained from the Config Server,
-        delimited by an | and an &
-
-        Two tags will mark the sections of the data,
-        '|service|' and  '|parameters|'
-
-        To ensure all the data was received the entire string will be
-        terminated with an "|".
-
-        The string "|service|" will precede a service names.
-
-        The string "|parameters|" will precede the parameters for
-        the preceeding service, in the form: names&<b64 encoded values>.
-
-    This will be a continuous text string (no CR or New Line).
-
-        Format (repeating for each service):
-
-        |service|<s1>|parameters|name1&<b64val>|name2&<b64val>...|nameN&<b64v>|
-
-
-        e.g.:
-        |service|ssh::server|parameters|ssh_port&<b64('22')>
-        |service|apache2::common|apache_port&<b64('8081')>|
-
-    Returns:
-        - A list of ServiceParams objects.
-    '''
-
-    services = []
-    new = None
-
-    _common_validate_message(src)
-
-    # Message specific validation
-    if src == '||':
-        # special case indicating no required config needed.
-        return []
-
-    if src.find('|service|') != 0:
-        raise ASError(('|service| is not the first tag found. %s') % (src))
-
-
-    src_q = deque(src.split('|'))
-
-    # remove leading and trailing elements from the src_q since they are
-    # empty strings generated by the split('|') because of the leading
-    # and trailing '|'
-    token = src_q.popleft()
-    token = src_q.pop()
-
-    while True:
-        try:
-            token = src_q.popleft()
-            if token == 'service':
-                token = src_q.popleft() # next token is service name
-
-                # Raise an error if the service name is invalid.
-                if token.find('&') != -1 or \
-                    token == 'service' or \
-                    token == 'parameters':
-                    raise ASError(('ERROR invalid service name: %s') % \
-                       (str(token)))
-
-                new = ServiceParams(token)
-                services.append(new)
-            elif token == 'parameters' or token == '':
-                pass
-            else: # token is a name&value pair.
-                if token.find('&') == -1:
-                    raise ASError(('ERROR name&val: %s missing delimiter') % \
-                       (str(token)))
-                if new:
-                    new.add_param(token)
-                    gen_env(new.name, token)
-                else:
-                    raise ASError(('ERROR missing service tag %s') % \
-                         (str(src)))
-        except IndexError:
-            break
-
-    return services
-
-def _get_system_info():
-    '''
-    Description:
-        Get the system info to be used for generating this instances
-        provides back to the Config Server.
-
-        Currently utilizes Puppet's facter via a Python subprocess call.
-
-    Input:
-        None
-
-    Returns:
-        A dictionary of system info name/value pairs.
-
-    '''
-
-    cmd = ['/usr/bin/facter']
-    ret = run_cmd(cmd)
-    if ret['subproc'].returncode != 0:
-        raise ASError(('Failed command: \n%s \nError: \n%s') % \
-            (' '.join(cmd), str(ret['err'])))
-
-    facts = {}
-    for fact in ret['out'].split('\n'):
-        if fact: # Handle the new line at the end of the facter output
-            name, val = fact.split(' => ')
-            facts[ name ] = val.rstrip()
-
-    return facts
-
-def parse_provides_params(src):
-    '''
-    Description:
-        Parse the provides parameters text message sent from the
-        Config Server.
-
-    Input:
-        The provides parameters string obtained from the Config Server.
-
-        The delimiters will be an | and an &
-
-        To ensure all the data was received the entire string will be
-        terminated with an "|".
-
-        This will be a continuous text string (no CR or New Line).
-
-        Format:
-        |name1&name2...&nameN|
-
-        e.g.:
-        |ipaddress&virtual|
-
-    Returns:
-        - a list of parameter names.
-    '''
-
-    _common_validate_message(src)
-
-    # Message specific validation
-    if src == '||':
-        # special case indicating no provides parameters requested.
-        return ['']
-
-    params_str = src[src.find('|')+1:len(src)-1]
-
-    return params_str.split('&')
-
-def generate_provides(src):
-    '''
-    Description:
-        Generate the provides parameters list.
-        Uses parse_provides_params()
-
-    Input:
-        The provides parameters string obtained from the Config Server.
-
-    Returns:
-        A string to send back to the Config Server  with prifix
-        'audrey_data='<url encoded return data>'
-
-        The return portion will be delimited with an | and an &
-
-        To ensure all the data is transmitted the entire string will be
-        terminated with an "|".
-
-        This will be a continuous text string (no CR or New Line).
-
-        Data portion Format:
-        |name1&val1|name2&val...|nameN$valN|
-
-        e.g.:
-        |ipaddress&<b64/10.118.46.205>|virtual&<b64/xenu>|
-
-        The return string format:
-        "audrey_data=<url encoded data portion>"
-
-
-    '''
-    LOGGER.info('Invoked generate_provides()')
-
-    provides_dict = {}
-    params_list = parse_provides_params(src)
-
-    system_info_dict = _get_system_info()
-
-    for param in params_list:
-        try:
-            provides_dict.update( \
-                {param:base64.b64encode(system_info_dict[param])})
-        except KeyError:
-            # A specified parameter is not found. Provide value ''
-            provides_dict.update({param:''})
-
-
-    # Create string to send to Config Server
-    provides_list = ['']
-    for key in provides_dict.keys():
-        provides_list.append(str(key) + '&' + str(provides_dict[key]))
-    provides_list.append('')
-
-    return urllib.urlencode({'audrey_data':'|'.join(provides_list)})
-
-class ConfigTooling(object):
-    '''
-    TBD - Consider making this class derived from dictionary or a mutable
-    mapping.
-
-    Description:
-        Interface to configuration tooling:
-        - Getting optional user supplied tooling from CS
-        - Verify and Unpack optional user supplied tooling retrieved
-          from CS
-        - Is tooling for a given service user supplied
-        - Is tooling for a given service Red Hat supplied
-        - Find tooling for a given service Red Hat supplied
-        - List tooling for services and indicate if it is user or Red
-          Hat supplied.
-    '''
-
-    def __init__(self, tool_dir=TOOLING_DIR):
-        '''
-        Description:
-            Set initial state so it can be tracked. Valuable for
-            testing and debugging.
-        '''
-        self.tool_dir = tool_dir
-        self.user_dir = tool_dir + 'user/'
-        self.log = tool_dir + 'log'
-        self.tarball = ''
-
-        # Create the extraction destination
-        try:
-            os.makedirs(self.user_dir)
-        except OSError, (errno, strerror):
-            if errno is 17: # File exists
-                pass
-            else:
-                raise ASError(('Failed to create directory %s. ' + \
-                    'Error: %s') % (self.user_dir, strerror))
-
-        self.ct_logger = logging.getLogger('ConfigTooling')
-        self.ct_logger.addHandler(logging.FileHandler(self.log))
-
-    def __str__(self):
-        '''
-        Description:
-            Called by the str() function and by the print statement to
-            produce the informal string representation of an object.
-        '''
-        return('\n<Instance of: %s\n' \
-               '\tTooling Dir: %s\n' \
-               '\tUnpack User Tooling Tarball Dir: %s\n' \
-               '\tLog File: %s\n' \
-               '\ttarball Name: %s\n' \
-               'eot>' %
-            (self.__class__.__name__,
-            str(self.tool_dir),
-            str(self.user_dir),
-            str(self.log),
-            str(self.tarball),
-            ))
-
-    def log_info(self, log_str):
-        '''
-        Description:
-            Used for logging the commands that have been executed
-            along with their output and return codes.
-
-            Simply logs the provided input string.
-        '''
-        self.ct_logger.info(log_str)
-
-    def log_error(self, log_str):
-        '''
-        Description:
-            Used for logging errors encountered when attempting to
-            execute the service command.
-
-            Simply logs the provided input string.
-        '''
-        self.ct_logger.error(log_str)
-
-    def invoke_tooling(self, services):
-        '''
-        Description:
-            Invoke the configuration tooling for the specified services.
-
-        Input:
-            services - A list of ServiceParams objects.
-
-        '''
-
-        # For now invoke them all. Later versions will invoke the service
-        # based on the required params from the Config Server.
-        LOGGER.debug('Invoked ConfigTooling.invoke_tooling()')
-        LOGGER.debug(str(services))
-        for service in services:
-
-            try:
-                top_level, tooling_path = self.find_tooling(service.name)
-            except ASError:
-                # No tooling found. Try the next service.
-                continue
-
-            cmd = [tooling_path]
-            cmd_dir = os.path.dirname(tooling_path)
-            ret = run_cmd(cmd, cmd_dir)
-            self.log_info('Execute Tooling command: ' + ' '.join(cmd))
-
-            retcode = ret['subproc'].returncode
-            if retcode == 0:
-                # Command successed, log the output.
-                self.log_info('return code: ' + str(retcode))
-                self.log_info('\n\tStart Output of: ' + ' '.join(cmd) + \
-                    ' >>>\n' +  \
-                    str(ret['out']) + \
-                    '\n\t<<< End Output')
-            else:
-                # Command failed, log the errors.
-                self.log_info('\n\tStart Output of: ' + ' '.join(cmd) + \
-                    ' >>>\n' +  \
-                    str(ret['out']) + \
-                    '\n\t<<< End Output')
-                self.log_error('error code: ' + str(retcode))
-                self.log_error('error msg:  ' + str(ret['err']))
-
-            # If tooling was provided at the top level only run it once
-            # for all services listed in the required config params.
-            if top_level:
-                break
-
-    def unpack_tooling(self, tarball):
-        '''
-        Description:
-            Methods used to untar the user provided tarball
-
-            Perform validation of the text message sent from the
-            Config Server. Validate, open and write out the contents
-            of the user provided tarball.
-        '''
-        LOGGER.info('Invoked unpack_tooling()')
-        LOGGER.debug('tarball: ' + str(tarball) + \
-            'Target Direcory: ' + str(self.user_dir))
-
-        self.tarball = tarball
-
-        # Validate the specified tarfile.
-        try:
-            if not tarfile.is_tarfile(self.tarball):
-                # If file exists but is not a tar file force IOError.
-                raise IOError
-        except IOError, (errno, strerror):
-            raise ASError(('File was not found or is not a tar file: %s ' + \
-                    'Error: %s %s') % (self.tarball, errno, strerror))
-
-        # Attempt to extract the contents from the specified tarfile.
-        #
-        # If tarfile access or content is bad report to the user to aid
-        # problem resolution.
-        try:
-            tarf = tarfile.open(self.tarball)
-            tarf.extractall(path=self.user_dir)
-            tarf.close()
-        except IOError, (errno, strerror):
-            raise ASError(('Failed to access tar file %s. Error: %s') %  \
-                (self.tarball, strerror))
-        # Capture and report errors with the tarfile
-        except (tf.TarError, tf.ReadError, tf.CompressionError, \
-            tf.StreamError, tf.ExtractError), (strerror):
-
-            raise ASError(('Failed to access tar file %s. Error: %s') %  \
-                (self.tarball, strerror))
-
-    def is_user_supplied(self):
-        '''
-        Description:
-            Is the the configuration tooling for the specified service
-            supplied by the user?
-
-            TBD: Take in a service_name and evaluate.
-            def is_user_supplied(self, service_name):
-        '''
-        return True
-
-    def is_rh_supplied(self):
-        '''
-        Description:
-            Is the the configuration tooling for the specified service
-            supplied by Red Hat?
-
-            TBD: Take in a service_name and evaluate.
-            def is_rh_supplied(self, service_name):
-        '''
-        return False
-
-    def find_tooling(self, service_name):
-        '''
-        Description:
-            Given a service name return the path to the configuration
-            tooling.
-
-            Search for the service start executable in the user
-            tooling directory.
-                self.tool_dir + '/user/<service name>/start'
-
-            If not found there search for the it in the documented directory
-            here built in tooling should be placed.
-                self.tool_dir + '/AUDREY_TOOLING/<service name>/start'
-
-            If not found there search for the it in the Red Hat tooling
-            directory.
-                self.tool_dir + '/REDHAT/<service name>/start'
-
-           If not found there raise an error.
-
-        Returns:
-            return 1 - True if top level tooling found, False otherwise.
-            return 2 - path to tooling
-        '''
-
-        top_path = self.tool_dir + 'user/start'
-        if os.access(top_path, os.X_OK):
-            return True, top_path
-
-        service_user_path = self.tool_dir + 'user/' + \
-            service_name + '/start'
-        if os.access(service_user_path, os.X_OK):
-            return False, service_user_path
-
-        service_redhat_path = self.tool_dir + 'AUDREY_TOOLING/' + \
-            service_name + '/start'
-        if os.access(service_redhat_path, os.X_OK):
-            return False, service_redhat_path
-
-        service_redhat_path = self.tool_dir + 'REDHAT/' + \
-            service_name + '/start'
-        if os.access(service_redhat_path, os.X_OK):
-            return False, service_redhat_path
-
-        # No tooling found. Raise an error.
-        raise ASError(('No configuration tooling found for service: %s') % \
-            (service_name))
-
-def setup_logging(level=logging.INFO, logfile_name=LOG):
-    '''
-    Description:
-        Establish the output logging.
-    '''
-
-    global LOGGER
-
-    class StreamToLogger(object):
-        """
-        Fake file-like stream object that redirects writes to a logger instance.
-        """
-        def __init__(self, logger, log_level=logging.INFO):
-           self.logger = logger
-           self.log_level = log_level
-           self.linebuf = ''
-     
-        def write(self, buf):
-           for line in buf.rstrip().splitlines():
-              self.logger.log(self.log_level, line.rstrip())
-
-    # If not run as root create the log file in the current directory.
-    # This allows minimal functionality, e.g.: --help
-    if not os.geteuid() == 0:
-        logfile_name = './audrey.log'
-
-    # set up logging
-    LOG_FORMAT = ('%(asctime)s - %(levelname)-8s: '
-        '%(filename)s:%(lineno)d %(message)s')
-    LOG_LEVEL_INPUT = 5
-    LOG_NAME_INPUT = 'INPUT'
-
-    logging.basicConfig(filename=logfile_name,
-        level=level, filemode='a', format=LOG_FORMAT)
-
-    logging.addLevelName(LOG_LEVEL_INPUT, LOG_NAME_INPUT)
-
-    LOGGER = logging.getLogger('Audrey')
-
-    # redirect the stderr and out to the logger
-    #sys.stdout = StreamToLogger(LOGGER, logging.INFO)
-    #sys.stderr = StreamToLogger(LOGGER, logging.ERROR)
 
 def parse_args():
     '''
@@ -714,25 +126,23 @@ def main():
     '''
     # parse the args and setup logging
     conf = parse_args()
+    log_file = {}
+    tool_dir = {}
     if 'pwd' in conf and conf.pwd:
-        log_file = 'audrey.log'
-        tool_dir = 'tooling'
-    else:
-        log_file = LOG
-        tool_dir = TOOLING_DIR
+        log_file = { 'logfile_name': 'audrey.log' }
+        tool_dir = { 'tool_dir': 'tooling' }
 
-    setup_logging(level=conf.log_level,
-            logfile_name=log_file)
+    setup_logging(level=conf.log_level, **log_file)
 
     if not conf.endpoint:
         # discover the cloud I'm on
         conf = user_data.discover().read()
 
-    # ensure the conf it a dictionary, not a namespace
+    # ensure the conf is a dictionary, not a namespace
     if hasattr(conf, '__dict__'):
         conf = vars(conf)
 
-    LOGGER.info('Invoked audrey main')
+    logger.info('Invoked audrey main')
 
     # 0 means don't run again
     # -1 is non zero so initial runs will happen
@@ -746,39 +156,39 @@ def main():
     # Create the Client Object
     cs_client = CSClient(**conf)
     # test connectivity, try and wait for it if it's not there
-    url = cs_client._cs_url('version')
+    url = cs_client._cs_url(VERSION_URL)
     while isinstance(cs_client._get(url)[0], Exception):
         if max_retry:
             max_retry-=1
-            LOGGER.info('Failed attempt to contact config server')
+            logger.info('Failed attempt to contact config server')
             sleep(SLEEP_SECS)
         else:
-            LOGGER.error('Failed to connect to the Configserver')
+            logger.error('Failed to connect to the Configserver')
             exit(1)
 
     max_retry = 5
 
-    LOGGER.info(str(cs_client))
+    logger.info(str(cs_client))
 
-    LOGGER.debug('Get optional tooling from the Config Server')
+    logger.debug('Get optional tooling from the Config Server')
     # Get any optional tooling from the Config Server
-    tooling = ConfigTooling(tool_dir=tool_dir)
+    tooling = ConfigTooling(**tool_dir)
     tooling_status, tarball = cs_client.get_cs_tooling()
-    if (tooling_status == 200) or (tooling_status == 202):
+    if tooling_status == 200 or tooling_status == 202:
         tooling.unpack_tooling(tarball)
     else:
-        LOGGER.info('No optional config tooling provided. status: ' + \
+        logger.info('No optional config tooling provided. status: ' + \
                 str(tooling_status))
-    LOGGER.debug(str(tooling))
+    logger.debug(str(tooling))
 
-    LOGGER.debug('Process the Requires and Provides parameters')
+    logger.debug('Process the Requires and Provides parameters')
 
     # Process the Requires and Provides parameters until the HTTP status
     # from the get_cs_configs and the get_cs_params both return 200
     while config_status or param_status:
 
-        LOGGER.debug('Config Parameter status: ' + str(config_status))
-        LOGGER.debug('Return Parameter status: ' + str(param_status))
+        logger.debug('Config Parameter status: ' + str(config_status))
+        logger.debug('Return Parameter status: ' + str(param_status))
 
         # Get the Required Configs from the Config Server
         if config_status:
@@ -792,7 +202,7 @@ def main():
                 # now that the tooling has run
                 config_status = 0
             else:
-                LOGGER.info('No configuration parameters provided. status: ' + \
+                logger.info('No configuration parameters provided. status: ' + \
                     str(config_status))
 
         # Get the requested provides from the Config Server
@@ -813,10 +223,10 @@ def main():
 
         # Retry a number of times if 404 HTTP Not Found is returned.
         if config_status == 404 or param_status == 404:
-            LOGGER.error('Requiest to Config Server failed or more to come.')
-            LOGGER.error('Required Config Parameter status: ' + \
+            logger.error('Requiest to Config Server failed or more to come.')
+            logger.error('Required Config Parameter status: ' + \
                 str(config_status))
-            LOGGER.info('Return Parameter status: ' + str(param_status))
+            logger.info('Return Parameter status: ' + str(param_status))
 
             max_retry -= 1
             if max_retry < 0:

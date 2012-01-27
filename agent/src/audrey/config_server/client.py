@@ -25,6 +25,10 @@ from audrey import ASError
 
 logger = logging.getLogger('Audrey')
 
+TOOLING_URL = 'files'
+CONFIGS_URL = 'configs'
+PARAMS_URL = 'params'
+
 class CSClient(object):
     '''
     Description:
@@ -141,7 +145,7 @@ class CSClient(object):
             get the required configuration from the Config Server.
         '''
         logger.info('Invoked CSClient.get_cs_configs()')
-        url = self._cs_url('configs')
+        url = self._cs_url(CONFIGS_URL)
         headers = {'Accept': 'text/plain'}
 
         response, body = self._get(url, headers=headers)
@@ -156,7 +160,7 @@ class CSClient(object):
             get the provides parameters from the Config Server.
         '''
         logger.info('Invoked CSClient.get_cs_params()')
-        url = self._cs_url('params')
+        url = self._cs_url(PARAMS_URL)
         headers = {'Accept': 'text/plain'}
 
         response, body = self._get(url, headers=headers)
@@ -171,7 +175,7 @@ class CSClient(object):
             put the provides parameters to the Config Server.
         '''
         logger.info('Invoked CSClient.put_cs_params_values()')
-        url = self._cs_url('params')
+        url = self._cs_url(PARAMS_URL)
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
         response, body = self._put(url, body=params_values, headers=headers)
@@ -184,7 +188,7 @@ class CSClient(object):
             provided as a tarball
         '''
         logger.info('Invoked CSClient.get_cs_tooling()')
-        url = self._cs_url('files')
+        url = self._cs_url(TOOLING_URL)
         headers = {'Accept': 'content-disposition'}
 
         tarball = ''

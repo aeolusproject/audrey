@@ -1,4 +1,3 @@
-#!/usr/bin/python2.6
 '''
 *
 *   Copyright [2011] [Red Hat, Inc.]
@@ -19,8 +18,15 @@
 
 import unittest
 
+import audrey.shell
+
+from tests.mocks import mock_run_cmd
+from tests.mocks import mock_run_cmd_facter_fail
+
+from audrey import ASError
 from audrey.shell import run_cmd
 from audrey.shell import run_pipe_cmd
+from audrey.shell import get_system_info
 
 class TestAudreyShell(unittest.TestCase):
     '''
@@ -41,3 +47,8 @@ class TestAudreyShell(unittest.TestCase):
     def test_cmd1_fail_run_pipe_cmd(self):
         self.assertEqual("[Errno 2] No such file or directory",
             run_pipe_cmd(["notreal"], ["echo", "'test'"])['err'])
+
+    def test_get_system_info_fail(self):
+        audrey.shell.run_cmd = mock_run_cmd_facter_fail
+        self.assertRaises(ASError, get_system_info)
+        audrey.shell.run_cmd = mock_run_cmd

@@ -89,6 +89,7 @@ clean:
 
 # report coverage
 coverage: src/audrey/agent.py
+	coverage erase
 	coverage run test_audrey_agent.py
 	coverage report -m test_audrey_agent.py src/audrey/*.py tests/*.py
 
