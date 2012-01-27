@@ -13,6 +13,12 @@
 #   See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+
+%if 0%{?rhel} == 5
+# sitelib for noarch packages
+%{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%endif
+
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
 Release:    1%{?dist}
@@ -21,23 +27,23 @@ Summary:    The Aeolus Audrey Startup Agent
 Group:      Applications/System
 License:    ASL 2.0
 URL:        http://aeolusproject.org
-Source0:    http://joev.fedorapeople.org/audrey-agent/aeolus-audrey-agent-%{version}.tar.gz
+Source0:    https://github.com/aeolusproject/audrey/tarball/master/aeolus-audrey-agent-%{version}.tar.gz
 
 # All of these are required for building since during the build
 # process "audrey --help" is executed to generate the man page.
 BuildRequires: help2man
 BuildRequires: facter python-httplib2 python-oauth2
-%if (0%{?fedora} <= 14 || 0%{?rhel} <= 6)
-BuildRequires: python-argparse
-BuildRequires: python-setuptools
-%endif
-
 Requires:   facter python-httplib2 python-oauth2
 Requires:   python-argparse
-%if (0%{?fedora} <= 14 || 0%{?rhel} <= 6)
+
+%if 0%{?rhel} == 5 || 0%{?rhel} == 6
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+BuildRequires: python-argparse
+BuildRequires: python-setuptools
 Requires:   python-argparse
 Requires:   python-setuptools
+%else
+BuildRequires: systemd-units
 %endif
 
 BuildArch:  noarch
@@ -55,19 +61,118 @@ make %{?_smp_mflags}
 
 %install
 rm -rf %{buildroot}
+mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 mkdir -p %{buildroot}%{_bindir}
+
+#install man files
 mkdir -p %{buildroot}%{_mandir}/man8
+install -m644 audrey.8 %{buildroot}%{_mandir}/man8
 
 # copy over the audrey agent bits
 install audrey_agent.py %{buildroot}%{_bindir}/audrey
-cp audrey.8 %{buildroot}%{_mandir}/man8
+# create the cloud-info file for the subpackages
+mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
+touch %{buildroot}%{_sysconfdir}/sysconfig/cloud-info
+
+if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
+  # install the sysv service script
+  mkdir -p %{buildroot}/%{_initrddir}/%{name}
+  install -Dp -m755 scripts/audrey.sysv %{buildroot}%{_initrddir}/audrey
+else
+  # install the systemd unit file
+  mkdir -p %{buildroot}/%{_unitdir}/
+  install -m644 scripts/audrey.service %{buildroot}/%{_unitdir}/
+fi
+
+%post
+if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
+/sbin/chkconfig --add audrey
+else
+/bin/systemctl enable audrey.service > /dev/null
+fi
+
+
+%preun
+if [ "$1" = 0 ] ; then
+if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
+/sbin/chkconfig --del audrey
+else
+/bin/systemctl disable audrey.service > /dev/null
+fi
+fi
 
 %files
+%defattr(-,root,root,-)
 %{_bindir}/audrey
 %{_mandir}/man8/audrey.8*
+%if 0%{?rhel} == 5 || 0%{?rhel} == 6
+%{_initrddir}/audrey
+%else
+%{_unitdir}/audrey.service
+%endif
 %doc COPYING
 
+###
+# EC2 Cloud Info File
+###
+%package -n aeolus-audrey-agent-ec2
+Summary:        EC2 user data discovery for aeolus-audrey-agent
+Group:          Applications/System
+Requires:       aeolus-audry-agent
+
+%description -n aeolus-audrey-agent-ec2
+Adds logic to the aeolus-audrey-agent that enables
+userdata lookup in EC2.
+
+%files -n aeolus-audrey-agent-ec2
+%defattr(-,root,root,-)
+%{_sysconfdir}/sysconfig/cloud-info
+
+%post -n aeolus-audrey-agent-ec2
+echo "EC2" > %{_sysconfdir}/sysconfig/cloud-info
+
+###
+# RHEV Cloud Info File
+###
+%package -n aeolus-audrey-agent-rhev
+Summary:        RHEV user data discovery for aeolus-audrey-agent
+Group:          Applications/System
+Requires:       aeolus-audry-agent
+
+%description -n aeolus-audrey-agent-rhev
+Adds logic to the aeolus-audrey-agent that enables
+userdata lookup on RHEV.
+
+%files -n aeolus-audrey-agent-rhev
+%defattr(-,root,root,-)
+%{_sysconfdir}/sysconfig/cloud-info
+
+%post -n aeolus-audrey-agent-rhev
+echo "RHEV" > %{_sysconfdir}/sysconfig/cloud-info
+
+###
+# VSPHERE Cloud Info File
+###
+%package -n aeolus-audrey-agent-vsphere
+Summary:        VSPHERE user data discovery for aeolus-audrey-agent
+Group:          Applications/System
+Requires:       aeolus-audry-agent
+
+%description -n aeolus-audrey-agent-vsphere
+Adds logic to the aeolus-audrey-agent that enables
+userdata lookup on VSPHERE.
+
+%files -n aeolus-audrey-agent-vsphere
+%defattr(-,root,root,-)
+%{_sysconfdir}/sysconfig/cloud-info
+
+%post -n aeolus-audrey-agent-vsphere
+echo "VSPHERE" > %{_sysconfdir}/sysconfig/cloud-info
+
 %changelog
+* Wed Jan 25 2012 Dan Radez <dradez@redhat.com> 0.4.4-1
+- adding rc.local modifications
+- adding cloud-info file support for each provider
 * Wed Dec 07 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-14
 - Define BuildRoot to address RHEL5 rpmbuild incompatibility
 * Tue Dec 06 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-13
