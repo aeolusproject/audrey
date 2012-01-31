@@ -25,6 +25,7 @@ require 'rubygems'
 require 'rubygems/package_task'
 
 version = '0.5.0'
+release = '0'
 man_section = '8'
 pkg_name = 'aeolus-configserver'
 
@@ -79,6 +80,15 @@ p = Gem::PackageTask.new(spec) do |pkg|
   pkg.need_zip = false
 end
 
+dir        = File::expand_path(".")
+git_head   = IO.popen("git log -1 --pretty=format:%h").gets.chomp
+date       = IO.popen("date --utc +%Y%m%d%H%M%S").gets.chomp
+if release == '0'
+  release = "#{release}%{?dist}.#{date}git#{git_head}"
+else
+  release = "#{release}%{?dist}"
+end
+
 # Allow for generated files
 # In this case, we allow for files that replace the "@VERSION@" text with the
 # actual package version.  Some generated files are packaged, while others are
@@ -90,8 +100,8 @@ GENERATED_FILES.each do |(source_file,dest_file,action)|
 
   case action
     when :version
-      cmd = "sed -e 's/@VERSION@/#{version}/' #{source_file} " \
-        "> #{dest_file}"
+      cmd = "sed -e 's/@VERSION@/#{version}/' " \
+        "-e 's/@RELEASE@/#{release}/' #{source_file} > #{dest_file}"
       system("#{cmd}")
       file "#{target_file}" do
       end
@@ -142,21 +152,11 @@ end
 
 spec_path  = "#{p.package_name}/#{SPEC_FILE}"
 setup_path = "#{p.package_name}/#{SETUP}"
-
-dir        = File::expand_path(".")
 rpm_flags  = "--define '_sourcedir #{dir}/pkg' "
-release    = IO.popen("grep ^Release: aeolus-configserver.spec.in | " \
-                      "sed -e 's/Release:[ ,   ]*//' |" \
-                      " sed -e 's/%.*//'").gets.chomp
-git_head   = IO.popen("git log -1 --pretty=format:%h").gets.chomp
-date       = IO.popen("date --utc +%Y%m%d%H%M%S").gets.chomp
-if release == '0'
-  rpm_flags += "--define \"_release .#{date}git#{git_head}\" "
-end
 
 # Build the (S)RPMs
 desc "Build (S)RPMs for #{pkg_name}"
-task :rpm => [ :test, :package ] do |t|
+task :rpms => [ :test, :package ] do |t|
   Dir::chdir("pkg") do |dir|
     system("which rpmbuild &> /dev/null")
     if $? != 0
@@ -199,4 +199,4 @@ end
 
 # Default Build all
 desc "Build (S)RPMs for #{pkg_name}"
-task :default => [ :rpm ]
+task :default => [ :rpms ]
