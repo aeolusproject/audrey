@@ -47,10 +47,10 @@ from time import sleep
 
 from audrey import ASError
 from audrey import user_data
-from audrey.config_server.client import CSClient
-from audrey.config_server.tooling import ConfigTooling
-from audrey.config_server import parse_require_config
-from audrey.config_server import generate_provides
+from audrey.csclient.client import CSClient
+from audrey.csclient.tooling import ConfigTooling
+from audrey.csclient import parse_require_config
+from audrey.csclient import generate_provides
 from audrey import setup_logging
 
 SLEEP_SECS = 10

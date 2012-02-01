@@ -24,7 +24,7 @@ import urllib
 from collections import deque
 
 from audrey import ASError
-from audrey.config_server.service import ServiceParams
+from audrey.csclient.service import ServiceParams
 from audrey.shell import run_cmd
 from audrey.shell import get_system_info
 

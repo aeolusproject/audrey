@@ -21,10 +21,90 @@ import base64
 
 from audrey import ASError
 from audrey.shell import run_cmd
-from audrey.config_server.tooling import ConfigTooling
-from audrey.config_server import parse_require_config
-from audrey.config_server import parse_provides_params
-from audrey.config_server import generate_provides
+from audrey.csclient.client import CSClient
+from audrey.csclient.tooling import ConfigTooling
+from audrey.csclient import parse_require_config
+from audrey.csclient import parse_provides_params
+from audrey.csclient import generate_provides
+
+from tests.mocks import HttpUnitTest
+
+DUMMY_CS_CONFIG = {'endpoint': 'http://example.com/',
+                   'oauth_key': 'oauthConsumer',
+                   'oauth_secret': 'oauthSecret',}
+
+class TestAudreyCSClient(unittest.TestCase):
+    '''
+    Class for exercising the gets and put to and from the CS
+    '''
+
+    def setUp(self):
+        '''
+        If the cloud info file is not present assume running in a
+        UNITTEST environment. This will allow for exercising some
+        of the code without having to be running in a cloud VM.
+        '''
+        # Create the client Object
+        self.cs_client = CSClient(**DUMMY_CS_CONFIG)
+        self.cs_client.http = HttpUnitTest()
+
+    def test_success_get_cs_configs(self):
+        '''
+        Success case:
+        - Exercise get_cs_configs()
+        '''
+        self.cs_client.get_cs_configs()
+
+    def test_success_get_cs_tooling(self):
+        '''
+        Success case:
+        - Exercise get_cs_tooling()
+        '''
+        self.cs_client.get_cs_tooling()
+
+    def test_success_get_cs_params(self):
+        '''
+        Success case:
+        - Exercise get_cs_params()
+        '''
+        self.cs_client.get_cs_params()
+
+    def test_success_get_cs_confs_n_params(self):
+        '''
+        Success case:
+        - Exercise get_cs_configs() and get_cs_params()
+        '''
+        self.cs_client.get_cs_configs()
+        self.cs_client.get_cs_params()
+
+
+    def test_success_put_cs_params_values(self):
+        '''
+        Success case:
+        - Exercise put_cs_params_values()
+        '''
+        self.cs_client.put_cs_params_values('')
+
+    def test_error_http_status(self):
+        '''
+        Success case:
+        - Get a 401
+        '''
+        self.assertRaises(ASError, self.cs_client._validate_http_status, 401)
+
+    def test_catch_get_exception(self):
+        '''
+        Success case:
+        - get fails but audrey recovers
+        '''
+        self.cs_client._get('http://hostname/raiseException')
+
+    def test_catch_put_exception(self):
+        '''
+        Success case:
+        - put fails but audrey recovers
+        '''
+        self.cs_client._put('http://hostname/raiseException')
 
 class TestAudreyStartupConfigTooling(unittest.TestCase):
     '''

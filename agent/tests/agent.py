@@ -27,7 +27,7 @@ from audrey import ASError
 from audrey import setup_logging
 from audrey.shell import run_cmd
 from audrey.agent import main
-from audrey.config_server import gen_env
+from audrey.csclient import gen_env
 
 from tests.mocks import CLOUD_INFO_FILE
 from tests.user_data import _write_file
@@ -39,9 +39,9 @@ class TestAudreyAgent(unittest.TestCase):
 
     def setUp(self):
         audrey.user_data_ec2.EC2_USER_DATA_URL='http://169.254.169.254/latest/user-data'
-        audrey.config_server.client.TOOLING_URL = 'files'
-        audrey.config_server.client.PARAMS_URL = 'params'
-        audrey.config_server.client.CONFIGS_URL = 'configs'
+        audrey.csclient.client.TOOLING_URL = 'files'
+        audrey.csclient.client.PARAMS_URL = 'params'
+        audrey.csclient.client.CONFIGS_URL = 'configs'
         # make a copy of argv
         self.argv = list(sys.argv)
         # clean out args before you run me
@@ -110,15 +110,15 @@ class TestAudreyAgent(unittest.TestCase):
 
     def test_404_from_tooling(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
-        audrey.config_server.client.TOOLING_URL = 'gimmie-404'
+        audrey.csclient.client.TOOLING_URL = 'gimmie-404'
         main()
 
     def test_404_from_params(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
-        audrey.config_server.client.PARAMS_URL = 'gimmie-404'
+        audrey.csclient.client.PARAMS_URL = 'gimmie-404'
         main()
 
     def test_404_from_configs(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
-        audrey.config_server.client.CONFIGS_URL = 'gimmie-404'
+        audrey.csclient.client.CONFIGS_URL = 'gimmie-404'
         self.assertRaises(ASError, main)

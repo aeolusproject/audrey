@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 '''
 *
 *   Copyright [2011] [Red Hat, Inc.]
@@ -30,8 +30,7 @@ sys.path.append('src')
 ####
 from tests.agent import *
 from tests.shell import *
-from tests.config_server_client import *
-from tests.config_server import *
+from tests.csclient import *
 from tests.user_data import *
 
 ####
