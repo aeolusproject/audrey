@@ -79,6 +79,7 @@ p = Gem::PackageTask.new(spec) do |pkg|
   pkg.need_tar = true
   pkg.need_zip = false
 end
+task :package => :test
 
 dir        = File::expand_path(".")
 git_head   = IO.popen("git log -1 --pretty=format:%h").gets.chomp
@@ -93,38 +94,41 @@ end
 # In this case, we allow for files that replace the "@VERSION@" text with the
 # actual package version.  Some generated files are packaged, while others are
 # simply used during packaging.
-GENERATED_FILES.each do |(source_file,dest_file,action)|
-  # create the file task to generate the file
-  target_file = "#{p.package_dir}/#{p.package_name}/#{dest_file}"
-  dependencies = [p.package_dir_path] + p.package_files
+desc = "Hello"
+task :generate_files do
+  GENERATED_FILES.each do |(source_file,dest_file,action)|
+    # create the file task to generate the file
+    target_file = "#{p.package_dir}/#{p.package_name}/#{dest_file}"
+    dependencies = [p.package_dir_path] + p.package_files
 
-  case action
-    when :version
-      cmd = "sed -e 's/@VERSION@/#{version}/' " \
-        "-e 's/@RELEASE@/#{release}/' #{source_file} > #{dest_file}"
-      system("#{cmd}")
-      file "#{target_file}" do
-      end
-    when :man
-      cmd = "help2man --name='Aeolus Config Server Setup' " \
-        "--section #{man_section} " \
-        "--no-info #{source_file} > #{target_file}"
-      file "#{target_file}" => dependencies do
+    case action
+      when :version
+        cmd = "sed -e 's/@VERSION@/#{version}/' " \
+          "-e 's/@RELEASE@/#{release}/' #{source_file} > #{dest_file}"
         system("#{cmd}")
-      end
-    else
-      puts "Unrecognized action: #{action}, continuing."
-  end
+        file "#{target_file}" do
+        end
+      when :man
+        cmd = "help2man --name='Aeolus Config Server Setup' " \
+          "--section #{man_section} " \
+          "--no-info #{source_file} > #{target_file}"
+        file "#{target_file}" => dependencies do
+          system("#{cmd}")
+        end
+      else
+        puts "Unrecognized action: #{action}, continuing."
+    end
 
-  # make the zip/tar/etc. task depend on the created file task
-  [
-    [p.need_tar, p.tgz_file],
-    [p.need_tar_gz, p.tar_gz_file],
-    [p.need_tar_bz2, p.tar_bz2_file],
-    [p.need_zip, p.zip_file]
-  ].each do |(need, ar_file)|
-    if need
-      task "#{p.package_dir}/#{ar_file}" => ["#{target_file}"]
+    # make the zip/tar/etc. task depend on the created file task
+    [
+      [p.need_tar, p.tgz_file],
+      [p.need_tar_gz, p.tar_gz_file],
+      [p.need_tar_bz2, p.tar_bz2_file],
+      [p.need_zip, p.zip_file]
+    ].each do |(need, ar_file)|
+      if need
+        task "#{p.package_dir}/#{ar_file}" => ["#{target_file}"]
+      end
     end
   end
 end
@@ -136,7 +140,7 @@ CLEAN.include(SPEC_FILE)
 CLEAN.include(CONFIG)
 
 desc 'Run tests'
-task :test do
+task :test => [:generate_files] do
   Dir::chdir("src") do |dir|
     sh "rspec spec"
   end
