@@ -1,0 +1,27 @@
+<deployable version="1.0" name="ssh-pubkey-example">
+  <description>
+    An example to demonstrate configuring a guest for public key
+    authentication by injecting a public key into the
+    authorized_keys file for root.
+  </description>
+  <assemblies>
+    <assembly name="Instance-1" hwp="large">
+      <image id="INSERT IMAGE ID"/>
+      <services>
+        <service name="pubkey">
+          <executable>
+            <contents><![CDATA[#!/bin/bash
+              mkdir -p /root/.ssh
+              cat pubkey >> /root/.ssh/authorized_keys]]>
+            </contents>
+          </executable>
+          <files>
+            <file>
+              <contents filename="pubkey"><![CDATA[INSERT PUBLIC KEY HERE]]></contents>
+            </file>
+          </files>
+        </service>
+      </services>
+    </assembly>
+  </assemblies>
+</deployable>
