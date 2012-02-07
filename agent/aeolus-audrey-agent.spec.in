@@ -75,7 +75,7 @@ install -m644 audrey.8 %{buildroot}%{_mandir}/man8
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 touch %{buildroot}%{_sysconfdir}/sysconfig/cloud-info
 
-if [ 0%{?rhel} == 05 ]; then
+if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
   # install the sysv service script
   mkdir -p $RPM_BUILD_ROOT/%{_initrddir}/%{name}
   install -Dp -m755 scripts/audrey.sysv %{buildroot}%{_initrddir}/audrey
@@ -86,7 +86,7 @@ else
 fi
 
 %post
-if [ 0%{?rhel} == 05 ]; then
+if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
 /sbin/chkconfig --add audrey
 /sbin/chkconfig audrey on
 else
@@ -96,7 +96,7 @@ fi
 
 %preun
 if [ "$1" = 0 ] ; then
-if [ 0%{?rhel} == 05 ]; then
+if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
 /sbin/chkconfig --del audrey
 else
 /bin/systemctl disable audrey.service > /dev/null
@@ -108,7 +108,7 @@ fi
 %{_bindir}/audrey
 %{python_sitelib}/audrey/*
 %{_mandir}/man8/audrey.8*
-%if 0%{?rhel} == 5
+%if 0%{?rhel} == 5 || 0%{?rhel} == 6
 %{_initrddir}/audrey
 %else
 %{_unitdir}/audrey.service
