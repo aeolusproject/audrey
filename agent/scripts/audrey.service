@@ -1,0 +1,12 @@
+[Unit]
+Description=Audrey Agent
+After=network.target
+Requires=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=True
+ExecStart=/usr/bin/audrey
+
+[Install]
+WantedBy=multi-user.target

@@ -36,12 +36,14 @@ BuildRequires: facter python-httplib2 python-oauth2
 Requires:   facter python-httplib2 python-oauth2
 Requires:   python-argparse
 
-%if 0%{?rhel} == 5
+%if 0%{?rhel} == 5 || 0%{?rhel} == 6
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: python-argparse
 BuildRequires: python-setuptools
 Requires:   python-argparse
 Requires:   python-setuptools
+%else
+BuildRequires: systemd-units
 %endif
 
 BuildArch:  noarch
@@ -77,18 +79,17 @@ touch %{buildroot}%{_sysconfdir}/sysconfig/cloud-info
 
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
   # install the sysv service script
-  mkdir -p $RPM_BUILD_ROOT/%{_initrddir}/%{name}
+  mkdir -p %{buildroot}/%{_initrddir}/%{name}
   install -Dp -m755 scripts/audrey.sysv %{buildroot}%{_initrddir}/audrey
 else
   # install the systemd unit file
-  mkdir -p $RPM_BUILD_ROOT/%{_unitdir}/
-  install -m644 scripts/audrey.service $RPM_BUILD_ROOT/%{_unitdir}/
+  mkdir -p %{buildroot}/%{_unitdir}/
+  install -m644 scripts/audrey.service %{buildroot}/%{_unitdir}/
 fi
 
 %post
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
 /sbin/chkconfig --add audrey
-/sbin/chkconfig audrey on
 else
 /bin/systemctl enable audrey.service > /dev/null
 fi
