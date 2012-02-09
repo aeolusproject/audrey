@@ -410,8 +410,8 @@ module ConfigServer
         if not services.empty?
           xml = "<required-parameters>\n"
           services.each do |s|
-            xml += "  <required-parameter service='#{s['name']}'"
             (services / './parameters/parameter/reference/..').each do |p|
+              xml += "  <required-parameter service='#{s['name']}'"
               xml += " name='#{p['name']}'"
               ref = p % 'reference'
               xml += " assembly='#{ref['assembly']}'"
