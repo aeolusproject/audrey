@@ -21,7 +21,7 @@
 
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    1%{?dist}
+Release:    2%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
@@ -70,9 +70,6 @@ install -m644 audrey.8 %{buildroot}%{_mandir}/man8
 
 # copy over the audrey agent bits
 install audrey_agent.py %{buildroot}%{_bindir}/audrey
-# create the cloud-info file for the subpackages
-mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
-touch %{buildroot}%{_sysconfdir}/sysconfig/cloud-info
 
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
   # install the sysv service script
@@ -112,67 +109,9 @@ fi
 %endif
 %doc COPYING
 
-###
-# EC2 Cloud Info File
-###
-%package -n aeolus-audrey-agent-ec2
-Summary:        EC2 user data discovery for aeolus-audrey-agent
-Group:          Applications/System
-Requires:       aeolus-audry-agent
-
-%description -n aeolus-audrey-agent-ec2
-Adds logic to the aeolus-audrey-agent that enables
-userdata lookup in EC2.
-
-%files -n aeolus-audrey-agent-ec2
-%defattr(-,root,root,-)
-%{_sysconfdir}/sysconfig/cloud-info
-
-%post -n aeolus-audrey-agent-ec2
-echo "EC2" > %{_sysconfdir}/sysconfig/cloud-info
-
-###
-# RHEV Cloud Info File
-###
-%package -n aeolus-audrey-agent-rhev
-Summary:        RHEV user data discovery for aeolus-audrey-agent
-Group:          Applications/System
-Requires:       aeolus-audry-agent
-
-%description -n aeolus-audrey-agent-rhev
-Adds logic to the aeolus-audrey-agent that enables
-userdata lookup on RHEV.
-
-%files -n aeolus-audrey-agent-rhev
-%defattr(-,root,root,-)
-%{_sysconfdir}/sysconfig/cloud-info
-
-%post -n aeolus-audrey-agent-rhev
-echo "RHEV" > %{_sysconfdir}/sysconfig/cloud-info
-
-###
-# VSPHERE Cloud Info File
-###
-%package -n aeolus-audrey-agent-vsphere
-Summary:        VSPHERE user data discovery for aeolus-audrey-agent
-Group:          Applications/System
-Requires:       aeolus-audry-agent
-
-%description -n aeolus-audrey-agent-vsphere
-Adds logic to the aeolus-audrey-agent that enables
-userdata lookup on VSPHERE.
-
-%files -n aeolus-audrey-agent-vsphere
-%defattr(-,root,root,-)
-%{_sysconfdir}/sysconfig/cloud-info
-
-%post -n aeolus-audrey-agent-vsphere
-echo "VSPHERE" > %{_sysconfdir}/sysconfig/cloud-info
-
 %changelog
-* Wed Jan 25 2012 Dan Radez <dradez@redhat.com> 0.4.4-1
+* Wed Jan 25 2012 Dan Radez <dradez@redhat.com> 0.4.4-2
 - adding rc.local modifications
-- adding cloud-info file support for each provider
 * Wed Dec 07 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-14
 - Define BuildRoot to address RHEL5 rpmbuild incompatibility
 * Tue Dec 06 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-13
