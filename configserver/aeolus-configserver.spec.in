@@ -13,7 +13,7 @@
 #   See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-%define app_root %{_datadir}/%{name}
+%global app_root %{_datadir}/%{name}
 
 Name:       aeolus-configserver
 Version:    @VERSION@
@@ -25,15 +25,25 @@ License:    ASL 2.0
 URL:        http://aeolusproject.org
 Source0:    http://joev.fedorapeople.org/configserver/aeolus-configserver-%{version}.tgz
 
-BuildRequires:   ruby
+BuildRequires:   rubygems
+%if 0%{?fedora} >= 17
+BuildRequires:   ruby(abi) >= 1.9
+%else
+BuildRequires:   ruby(abi) = 1.8
+%endif
 BuildRequires:   ruby-devel
 BuildRequires:   help2man
 
 Requires:        httpd
 Requires:        mod_ssl
 Requires:        puppet
-Requires:        ruby >= 1.8.1
-Requires:        ruby-nokogiri
+Requires:        rubygems
+%if 0%{?fedora} >= 17
+Requires:        ruby(abi) >= 1.9
+%else
+Requires:        ruby(abi) = 1.8
+%endif
+Requires:        rubygem(nokogiri)
 Requires:        rubygem(sinatra)
 Requires:        rubygem(thin)
 Requires:        rubygem(archive-tar-minitar)
