@@ -24,6 +24,7 @@ import audrey.user_data
 
 from audrey import ASError
 
+from tests import _write_file
 from tests.mocks import mock_run_cmd
 from tests.mocks import mock_run_cmd_modprobe_floppy_fail
 from tests.mocks import mock_run_cmd_mkdir_media_fail
@@ -31,11 +32,6 @@ from tests.mocks import mock_run_cmd_mount_floppy_fail
 from tests.mocks import mock_run_cmd_mount_cdrom_fail
 from tests.mocks import DUMMY_USER_DATA
 from tests.mocks import CLOUD_INFO_FILE
-
-def _write_file(filepath, cloud):
-    f = open(filepath, 'w')
-    f.write(cloud)
-    f.close()
 
 class TestAudreyUserData(unittest.TestCase):
     def setUp(self):

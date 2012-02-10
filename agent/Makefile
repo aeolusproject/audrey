@@ -92,6 +92,6 @@ clean:
 coverage: src/audrey/agent.py
 	coverage erase
 	coverage run test_audrey_agent.py
-	coverage report -m test_audrey_agent.py src/audrey/*.py tests/*.py
+	coverage report -m test_audrey_agent.py `find src/audrey/ -name "*.py"` tests/*.py
 
 .PHONY: dist test rpms srpm

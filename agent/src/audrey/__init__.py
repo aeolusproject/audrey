@@ -72,8 +72,10 @@ class ASError(Exception):
     '''
     Some sort of error occurred. The exact cause of the error should
     have been logged. So, this just indicates that something is wrong.
-    when invoked from rc.local we redirect stderr to the log so
+    when invoked without args we redirect stderr to the log so
     logging here is not really nessesary
-    TODO: Should really have more of these that are more specific to the error.
     '''
+    pass
+
+class ASErrorInvalidTar(ASError):
     pass

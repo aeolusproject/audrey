@@ -20,7 +20,8 @@ import os
 import logging
 import tarfile
 
-from audrey import ASError
+from audrey import ASError, ASErrorInvalidTar
+from audrey.shell import run_cmd
 
 TOOLING_DIR = '/var/audrey/tooling/'
 
@@ -46,12 +47,12 @@ class ConfigTooling(object):
     def __init__(self, tool_dir=TOOLING_DIR):
         '''
         Description:
-            Set initial state so it can be tracked. Valuable for
-            testing and debugging.
+            Set initial state so it can be tracked.
         '''
         self.tool_dir = tool_dir
-        self.user_dir = tool_dir + 'user/'
-        self.log = tool_dir + 'log'
+        self.user_dir = os.path.join(tool_dir, 'user')
+        self.audrey_dir = os.path.join(tool_dir, 'AUDREY_TOOLING')
+        self.redhat_dir = os.path.join(tool_dir, 'REDHAT')
         self.tarball = ''
 
         # Create the extraction destination
@@ -64,9 +65,6 @@ class ConfigTooling(object):
                 raise ASError(('Failed to create directory %s. ' + \
                     'Error: %s') % (self.user_dir, strerror))
 
-        self.ct_logger = logging.getLogger('ConfigTooling')
-        self.ct_logger.addHandler(logging.FileHandler(self.log))
-
     def __str__(self):
         '''
         Description:
@@ -76,35 +74,13 @@ class ConfigTooling(object):
         return('\n<Instance of: %s\n' \
                '\tTooling Dir: %s\n' \
                '\tUnpack User Tooling Tarball Dir: %s\n' \
-               '\tLog File: %s\n' \
                '\ttarball Name: %s\n' \
                'eot>' %
             (self.__class__.__name__,
             str(self.tool_dir),
             str(self.user_dir),
-            str(self.log),
             str(self.tarball),
             ))
-
-    def log_info(self, log_str):
-        '''
-        Description:
-            Used for logging the commands that have been executed
-            along with their output and return codes.
-
-            Simply logs the provided input string.
-        '''
-        self.ct_logger.info(log_str)
-
-    def log_error(self, log_str):
-        '''
-        Description:
-            Used for logging errors encountered when attempting to
-            execute the service command.
-
-            Simply logs the provided input string.
-        '''
-        self.ct_logger.error(log_str)
 
     def invoke_tooling(self, services):
         '''
@@ -131,24 +107,24 @@ class ConfigTooling(object):
             cmd = [tooling_path]
             cmd_dir = os.path.dirname(tooling_path)
             ret = run_cmd(cmd, cmd_dir)
-            self.log_info('Execute Tooling command: ' + ' '.join(cmd))
+            logger.info('Execute Tooling command: ' + ' '.join(cmd))
 
             retcode = ret['subproc'].returncode
             if retcode == 0:
                 # Command successed, log the output.
-                self.log_info('return code: ' + str(retcode))
-                self.log_info('\n\tStart Output of: ' + ' '.join(cmd) + \
+                logger.info('return code: ' + str(retcode))
+                logger.info('\n\tStart Output of: ' + ' '.join(cmd) + \
                     ' >>>\n' +  \
                     str(ret['out']) + \
                     '\n\t<<< End Output')
             else:
                 # Command failed, log the errors.
-                self.log_info('\n\tStart Output of: ' + ' '.join(cmd) + \
+                logger.info('\n\tStart Output of: ' + ' '.join(cmd) + \
                     ' >>>\n' +  \
                     str(ret['out']) + \
                     '\n\t<<< End Output')
-                self.log_error('error code: ' + str(retcode))
-                self.log_error('error msg:  ' + str(ret['err']))
+                logger.error('error code: ' + str(retcode))
+                logger.error('error msg:  ' + str(ret['err']))
 
             # If tooling was provided at the top level only run it once
             # for all services listed in the required config params.
@@ -171,28 +147,21 @@ class ConfigTooling(object):
         self.tarball = tarball
 
         # Validate the specified tarfile.
-        try:
-            if not tarfile.is_tarfile(self.tarball):
-                # If file exists but is not a tar file force IOError.
-                raise IOError
-        except IOError, (errno, strerror):
-            raise ASError(('File was not found or is not a tar file: %s ' + \
-                    'Error: %s %s') % (self.tarball, errno, strerror))
+        if not os.path.exists(self.tarball):
+            raise ASError('File does not exist: %s ' % self.tarball)
+        if not tarfile.is_tarfile(self.tarball):
+            raise ASErrorInvalidTar('File is not a tar file: %s ' % self.tarball)
 
         # Attempt to extract the contents from the specified tarfile.
-        #
         # If tarfile access or content is bad report to the user to aid
         # problem resolution.
         try:
             tarf = tarfile.open(self.tarball)
             tarf.extractall(path=self.user_dir)
             tarf.close()
-        except IOError, (errno, strerror):
-            raise ASError(('Failed to access tar file %s. Error: %s') %  \
-                (self.tarball, strerror))
         # Capture and report errors with the tarfile
         except (tarfile.TarError, tarfile.ReadError, tarfile.CompressionError, \
-                tarfile.StreamError, tarfile.ExtractError), (strerror):
+                tarfile.StreamError, tarfile.ExtractError, IOError), (strerror):
             raise ASError(('Failed to access tar file %s. Error: %s') %  \
                 (self.tarball, strerror))
 
@@ -242,25 +211,18 @@ class ConfigTooling(object):
             return 1 - True if top level tooling found, False otherwise.
             return 2 - path to tooling
         '''
+        # common join
+        service_start = os.path.join(service_name, 'start')
+        # returns, check the paths and return the tuple
+        tooling_paths = [(True, os.path.join(self.user_dir, 'start')),
+                         (False,os.path.join(self.user_dir, service_start)),
+                         (False, os.path.join(self.audrey_dir, service_start)),
+                         (False, os.path.join(self.redhat_dir, service_start)),
+                        ]
 
-        top_path = self.tool_dir + 'user/start'
-        if os.access(top_path, os.X_OK):
-            return True, top_path
-
-        service_user_path = self.tool_dir + 'user/' + \
-            service_name + '/start'
-        if os.access(service_user_path, os.X_OK):
-            return False, service_user_path
-
-        service_redhat_path = self.tool_dir + 'AUDREY_TOOLING/' + \
-            service_name + '/start'
-        if os.access(service_redhat_path, os.X_OK):
-            return False, service_redhat_path
-
-        service_redhat_path = self.tool_dir + 'REDHAT/' + \
-            service_name + '/start'
-        if os.access(service_redhat_path, os.X_OK):
-            return False, service_redhat_path
+        for p in tooling_paths:
+            if os.access(p[1], os.X_OK):
+                return p
 
         # No tooling found. Raise an error.
         raise ASError(('No configuration tooling found for service: %s') % \

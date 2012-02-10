@@ -16,10 +16,12 @@
 *
 '''
 
+import os
+import shutil
 import unittest
 import base64
 
-from audrey import ASError
+from audrey import ASError, ASErrorInvalidTar
 from audrey.shell import run_cmd
 from audrey.csclient.client import CSClient
 from audrey.csclient.tooling import ConfigTooling
@@ -28,10 +30,32 @@ from audrey.csclient import parse_provides_params
 from audrey.csclient import generate_provides
 
 from tests.mocks import HttpUnitTest
+from tests import _write_file
 
 DUMMY_CS_CONFIG = {'endpoint': 'http://example.com/',
                    'oauth_key': 'oauthConsumer',
                    'oauth_secret': 'oauthSecret',}
+
+DUMMY_NO_SERVICE_CONFIG_DATA = '|service|' + \
+    '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
+    '|jon_server_ip_2&' + base64.b64encode('192.168.1.2') + \
+    '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
+    '|service|jon2|'
+
+VALIDATE_NO_SERVICE_CONFIG_DATA = {'AUDREY_VAR_jon_server_ip' : '192.168.1.1',
+    'AUDREY_VAR_jon_server_ip_2' : '192.168.1.2',
+    'AUDREY_VAR_jon_server_ip_3' : '192.168.1.3' }
+
+DUMMY_SERVICE_CONFIG_DATA = '|service|jon1' + \
+    '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
+    '|jon_server_ip_2&' + base64.b64encode('192.168.1.2') + \
+    '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
+    '|service|jon2|'
+
+VALIDATE_SERVICE_CONFIG_DATA = {'AUDREY_VAR_jon1_jon_server_ip' : '192.168.1.1',
+    'AUDREY_VAR_jon1_jon_server_ip_2' : '192.168.1.2',
+    'AUDREY_VAR_jon1_jon_server_ip_3' : '192.168.1.3' }
+
 
 class TestAudreyCSClient(unittest.TestCase):
     '''
@@ -106,23 +130,87 @@ class TestAudreyCSClient(unittest.TestCase):
         '''
         self.cs_client._put('http://hostname/raiseException')
 
-class TestAudreyStartupConfigTooling(unittest.TestCase):
+class TestAudreyAgentConfigTooling(unittest.TestCase):
     '''
     Make sure all the Config tooling is tested
     '''
-    def test_is_user_supplied(self):
-        ConfigTooling('test_tooling').is_user_supplied()
+    def setUp(self):
+        self.tool_dir=os.path.join(os.path.abspath('.'),'test_tooling')
+        self.csclient=ConfigTooling(self.tool_dir)
 
-    def test_is_rh_supplied(self):
-        ConfigTooling('test_tooling').is_rh_supplied()
-
-    def test_empty_find_tooling(self):
-        self.assertRaises(ASError, ConfigTooling('test_tooling').find_tooling, '')
+    def tearDown(self):
+        if os.path.exists(self.tool_dir):
+            shutil.rmtree(self.tool_dir)
 
     def test_fail_to_create_tooling_dir(self):
         self.assertRaises(ASError, ConfigTooling, tool_dir='/not/real/dir')
 
-class TestAudreyStartupRequiredConfig(unittest.TestCase):
+    ###### Note
+    # the first two are essentially no op
+    # can we remove the code from the agent?
+    def test_is_user_supplied(self):
+        self.csclient.is_user_supplied()
+
+    def test_is_rh_supplied(self):
+        self.csclient.is_rh_supplied()
+    ###### end note
+
+    def test_empty_find_tooling(self):
+        self.assertRaises(ASError, self.csclient.find_tooling, '')
+
+    def test_find_user_tooling(self):
+        start_path = os.path.join(self.csclient.user_dir, 'start')
+        _write_file(start_path, '#!/bin/sh\nexit 0', 0744)
+        self.csclient.find_tooling('')
+
+    def test_find_user_service_tooling(self):
+        service_dir = os.path.join(self.csclient.user_dir, 'test_service')
+        os.mkdir(service_dir)
+        _write_file(os.path.join(service_dir, 'start'), '#!/bin/sh\nexit 0', 0744)
+        self.csclient.find_tooling('test_service')
+
+    def test_find_audrey_service_tooling(self):
+        service_dir = os.path.join(self.csclient.audrey_dir, 'test_service')
+        os.mkdir(self.csclient.audrey_dir)
+        os.mkdir(service_dir)
+        _write_file(os.path.join(service_dir, 'start'), '#!/bin/sh\nexit 0', 0744)
+        self.csclient.find_tooling('test_service')
+
+    def test_find_redhat_service_tooling(self):
+        service_dir = os.path.join(self.csclient.redhat_dir, 'test_service')
+        os.mkdir(self.csclient.redhat_dir)
+        os.mkdir(service_dir)
+        _write_file(os.path.join(service_dir, 'start'), '#!/bin/sh\nexit 0', 0744)
+        self.csclient.find_tooling('test_service')
+
+    def test_missing_file_unpack_tooling(self):
+        self.assertRaises(ASError, self.csclient.unpack_tooling, 'test_tarball')
+
+    def test_invalid_tar_unpack_tooling(self):
+        tar_file = os.path.join(self.csclient.user_dir, 'invalid_tar')
+        _write_file(tar_file, '')    
+        self.assertRaises(ASErrorInvalidTar, self.csclient.unpack_tooling, tar_file)
+
+    def test_fail_execution_invoke_tooling(self):
+        start_path = os.path.join(self.csclient.user_dir, 'start')
+        _write_file(start_path, '#!/bin/sh\nexit 1', 0744)
+        services = parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
+        self.csclient.invoke_tooling(services)
+
+    def test_user_invoke_tooling(self):
+        start_path = os.path.join(self.csclient.user_dir, 'start')
+        _write_file(start_path, '#!/bin/sh\nexit 0', 0744)
+        services = parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
+        self.csclient.invoke_tooling(services)
+
+    def test_user_service_invoke_tooling(self):
+        service_dir = os.path.join(self.csclient.user_dir, 'jon1')
+        os.mkdir(service_dir)
+        _write_file(os.path.join(service_dir, 'start'), '#!/bin/sh\necho', 0744)
+        services = parse_require_config(DUMMY_SERVICE_CONFIG_DATA)
+        self.csclient.invoke_tooling(services)
+
+class TestAudreyAgentRequiredConfig(unittest.TestCase):
     '''
     Class for exercising the parsing of the Required Configs from the CS.
     '''
@@ -132,20 +220,8 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         Success case:
         - Exercise parse_require_config() with valid input
         '''
-        # Establish valid test data:
-
-        src = '|service|jon1' + \
-            '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
-            '|jon_server_ip_2&' + base64.b64encode('192.168.1.2') + \
-            '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
-            '|service|jon2|'
-
-        validation_dict = {'AUDREY_VAR_jon1_jon_server_ip' : '192.168.1.1',
-            'AUDREY_VAR_jon1_jon_server_ip_2' : '192.168.1.2',
-            'AUDREY_VAR_jon1_jon_server_ip_3' : '192.168.1.3' }
-
         # Exersise code segment
-        services = parse_require_config(src)
+        services = parse_require_config(DUMMY_SERVICE_CONFIG_DATA)
 
         # Validate results
         self.assertEqual(services[0].name, 'jon1')
@@ -158,7 +234,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
                 cmd = ['/usr/bin/printenv', env_var]
                 ret = run_cmd(cmd)
                 self.assertEqual(ret['out'][:-1], \
-                    validation_dict[env_var])
+                    VALIDATE_SERVICE_CONFIG_DATA[env_var])
 
     def test_success_empty_source(self):
         '''
@@ -176,17 +252,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         - Exercise parse_require_config() with valid input
         '''
 
-        src = '|service|' + \
-            '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
-            '|jon_server_ip_2&' + base64.b64encode('192.168.1.2') + \
-            '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
-            '|service|jon2|'
-
-        validation_dict = {'AUDREY_VAR_jon_server_ip' : '192.168.1.1',
-            'AUDREY_VAR_jon_server_ip_2' : '192.168.1.2',
-            'AUDREY_VAR_jon_server_ip_3' : '192.168.1.3' }
-
-        services = parse_require_config(src)
+        services = parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
         self.assertEqual(services[0].name, '')
         self.assertEqual(services[1].name, 'jon2')
 
@@ -197,7 +263,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
                 cmd = ['/usr/bin/printenv', env_var]
                 ret = run_cmd(cmd)
                 self.assertEqual(ret['out'][:-1], \
-                    validation_dict[env_var])
+                    VALIDATE_NO_SERVICE_CONFIG_DATA[env_var])
 
     def test_failure_no_services_name(self):
         '''
@@ -252,7 +318,7 @@ class TestAudreyStartupRequiredConfig(unittest.TestCase):
         self.assertRaises(ASError, parse_require_config, src)
 
 
-class TestAudreyStartupProvidesParameters(unittest.TestCase):
+class TestAudreyAgentProvidesParameters(unittest.TestCase):
     '''
     Class for exercising the parsing of the Provides ParametersConfigs
     from the CS.

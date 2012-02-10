@@ -30,7 +30,7 @@ from audrey.agent import main
 from audrey.csclient import gen_env
 
 from tests.mocks import CLOUD_INFO_FILE
-from tests.user_data import _write_file
+from tests import _write_file
 
 class TestAudreyAgent(unittest.TestCase):
     '''

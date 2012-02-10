@@ -15,3 +15,13 @@
 *  limitations under the License.
 *
 '''
+
+import os
+import stat
+
+def _write_file(filepath, content, mode=0664):
+    f = open(filepath, 'w')
+    f.write(content)
+    f.close()
+    # chmod takes 4 digits!
+    os.chmod(filepath, mode)
