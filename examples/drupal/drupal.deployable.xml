@@ -1,0 +1,211 @@
+<deployable version="1.0" name="Drupal Multi-Instance Deployable">
+  <description>This is an example of a multi deployment that deploys drupal across an apache and mysql instance</description>
+  <assemblies>
+    <!-- The Drupal Assembly represents the instance that will be running apache
+         (httpd) with drupal7.-->
+    <assembly name="drupal" hwp="large">
+      <image id="7d5c6612-5c9e-4ee3-bca0-eadeeac1086b"/> <!-- replace your own image ID here -->
+      <services>
+        <service name="http">
+          <executable>
+            <contents><![CDATA[#!/usr/bin/python
+
+import os
+import subprocess
+import shutil
+import random
+import string
+
+chars = string.ascii_uppercase + string.digits + string.ascii_lowercase
+salt = ''.join(random.choice(chars) for x in range(43))
+
+filename = "settings.php"
+conf_base = "/etc/drupal7/default/"
+conf_file = os.path.join(conf_base, filename)
+
+# copy our settings.php to drupal's sites dir
+shutil.copyfile(filename, conf_file)
+
+# get the pre-replaced settings.php file
+conf = open(conf_file, 'r')
+lines = conf.readlines()
+conf.close()
+
+var_prefix = "AUDREY_VAR_http"
+def audrey_var(var):
+  os.environ["%s_%s" % (var_prefix, var)]
+
+# get the audrey vars
+drupal_keys = {'db_name_here': audrey_var('db_name'),
+               'db_user_here': audrey_var('db_user'),
+               'db_pw_here': audrey_var('db_pw'),
+               'db_ip_here': audrey_var('db_ip'),
+               'drupal_salt_here': salt}
+
+# map the drupal key values in to the config
+def sub_drupal_values(line):
+  for key, val in drupal_keys.items():
+    line = line.replace(key, val)
+  return line
+
+lines = map(sub_drupal_values, lines)
+
+# write the conf file back out
+conf = open(conf_file, 'w')
+conf.write("".join(lines))
+conf.close()
+
+# be sure apache is running
+subprocess.call(["/sbin/service", "httpd", "stop"])
+subprocess.call(["/sbin/service", "httpd", "start"])
+
+# complete the drupal installation
+# hostname = subprocess.check_output(["/usr/bin/facter", "ec2_public_hostname"]).strip()
+# subprocess.call(["curl", "-d", "weblog_title=AudreyFTW&user_name=admin&admin_password=admin&admin_password2=admin&admin_email=admin@example.com&blog_public=0", "http://%s/wordpress/wp-admin/install.php?step=2" % hostname])]]>
+            </contents>
+          </executable>
+          <files>
+            <file url="https://raw.github.com/aeolusproject/audrey/master/examples/drupal/settings.php"/>
+          </files>
+          <parameters>
+            <parameter name="db_name" type="scalar">
+                <value>drupal</value>
+            </parameter>
+            <parameter name="db_user" type="scalar">
+                <value>drupal</value>
+            </parameter>
+            <parameter name="db_pw" type="password">
+                <value>password</value>
+            </parameter>
+            <parameter name="db_ip" type="scalar">
+              <reference assembly="mysql" parameter="ipaddress"/>
+            </parameter>
+            <parameter name="db_hostname" type="scalar">
+              <reference assembly="mysql" parameter="hostname"/>
+            </parameter>
+            <parameter name="dbup" type="scalar">
+              <reference assembly="mysql" parameter="dbup"/>
+            </parameter>
+          </parameters>
+        </service>
+        <service name="pubkey">
+          <executable>
+            <contents><![CDATA[#!/bin/bash
+                mkdir -p /root/.ssh
+                chmod 700 /root/.ssh
+                cat pubkey >> /root/.ssh/authorized_keys
+                chmod 600 /root/.ssh/authorized_keys
+              ]]>
+            </contents>
+          </executable>
+          <files>
+            <file>
+              <contents filename="pubkey"><![CDATA[ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAubzg/muv8doBADvQvhc1T5NkjCyOSqJHdnU/RaDeNHjXq7WUs2VLRXTFyfn9PJ6E/ufX7sJmxZcwqbEbZiZ8Ea4IMn1ifzEK+7GpSLUkJlEZPcxq23wb4PJNubiMocvc3FMIGyZLKwDj5z3jzVJOay1iCEDYecy0qerlCfVOwXlQqgxZk5Tw89qG48dEnhC0kPqJV67S6k+FMs71tO3jILoTcwJkAkUrxWsC1YfHiZV0wK9Oj+cbsD8gPo55+3uUqqdDShl69JGXWkxc/+aGuFDdm+ylUgZheKUaOhta8UZZDZoYB/fs8odIl6FuJznBWe3MyNcunm8utl5EfsgDlQ== gblomqui@gblomqui.usersys.redhat.com]]></contents>
+            </file>
+          </files>
+        </service>
+      </services>
+      <returns>
+        <return name="hostname"/>
+        <return name="ipaddress"/>
+      </returns>
+    </assembly>
+    <assembly name="mysql" hwp="large">
+      <image id="7202a287-325a-4a0c-943a-c3e623ce6885"/>
+      <services>
+        <service name="mysql">
+          <executable>
+            <contents><![CDATA[#!/usr/bin/python
+
+import os
+import subprocess
+import shutil
+
+var_prefix = "AUDREY_VAR_mysql"
+
+# Look up an audrey var
+# AUDREY_VAR_mysql_%var
+def audrey_var(var):
+  os.environ["%s_%s" % (var_prefix, var)]
+
+def v(var):
+  audrey_var(var)
+
+def mysql_cmd(cmd):
+  subprocess.call(["/usr/bin/mysql", "-u", "root", "-e", cmd])
+
+# Start mysql
+subprocess.call(["/sbin/service", "mysqld", "start"])
+
+# Setup the drupal database
+mysql_cmd("create database %s;" % v("db_name"))
+mysql_cmd("grant all on %s.* to %s@%s;" % (v("db_name"), v("db_user"), v("apache_ip")))
+mysql_cmd("set password for %s@%s = password('%s');" % (v("db_user"), v("apache_ip"), v("db_pw")))
+
+# Write out the dbup fact
+# When this fact is readable by audrey-agent, it means that the db is ready
+shutil.copyfile('dbup.rb', '/usr/lib/ruby/site_ruby/1.8/facter/dbup.rb')]]>
+            </contents>
+          </executable>
+          <files>
+            <file>
+              <contents filename="dbup.rb"><![CDATA[# Fact: dbup
+#
+# Purpose: Returns true
+#
+# Resolution: Simply returns true
+#
+# Caveats: None
+#
+
+Facter.add(:dbup) do
+  setcode do
+    true
+  end
+end]]>
+              </contents>
+            </file>
+          </files>
+          <parameters>
+            <parameter name="db_name" type="scalar">
+                <value>drupal</value>
+            </parameter>
+            <parameter name="db_user" type="scalar">
+                <value>drupal</value>
+            </parameter>
+            <parameter name="db_pw" type="password">
+                <value>password</value>
+            </parameter>
+            <parameter name="apache_ip" type="scalar">
+              <reference assembly="drupal" parameter="ipaddress"/>
+            </parameter>
+            <parameter name="apache_hostname" type="scalar">
+              <reference assembly="drupal" parameter="hostname"/>
+            </parameter>
+          </parameters>
+        </service>
+        <service name="pubkey">
+          <executable>
+            <contents><![CDATA[#!/bin/bash
+                mkdir -p /root/.ssh
+                chmod 700 /root/.ssh
+                cat pubkey >> /root/.ssh/authorized_keys
+                chmod 600 /root/.ssh/authorized_keys
+              ]]>
+            </contents>
+          </executable>
+          <files>
+            <file>
+              <contents filename="pubkey"><![CDATA[ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAubzg/muv8doBADvQvhc1T5NkjCyOSqJHdnU/RaDeNHjXq7WUs2VLRXTFyfn9PJ6E/ufX7sJmxZcwqbEbZiZ8Ea4IMn1ifzEK+7GpSLUkJlEZPcxq23wb4PJNubiMocvc3FMIGyZLKwDj5z3jzVJOay1iCEDYecy0qerlCfVOwXlQqgxZk5Tw89qG48dEnhC0kPqJV67S6k+FMs71tO3jILoTcwJkAkUrxWsC1YfHiZV0wK9Oj+cbsD8gPo55+3uUqqdDShl69JGXWkxc/+aGuFDdm+ylUgZheKUaOhta8UZZDZoYB/fs8odIl6FuJznBWe3MyNcunm8utl5EfsgDlQ== gblomqui@gblomqui.usersys.redhat.com]]></contents>
+            </file>
+          </files>
+        </service>
+      </services>
+      <returns>
+        <return name="hostname"/>
+        <return name="ipaddress"/>
+        <return name="dbup"/>
+      </returns>
+    </assembly>
+  </assemblies>
+</deployable>
