@@ -5,7 +5,7 @@
       <image id=""/>
       <services>
         <service name="http">
-          <executable url="http://radez.fedorapeople.org/wordpress-http.sh"/>
+          <executable url="https://github.com/aeolusproject/audrey/raw/master/examples/wordpress/wordpress-http.sh"/>
           <parameters>
             <parameter name="wp_name" type="scalar">
                 <value>wordpress</value>
@@ -52,9 +52,9 @@
       <image id=""/>
       <services>
         <service name="mysql">
-          <executable url="http://radez.fedorapeople.org/wordpress-mysql.sh"/>
+          <executable url="https://github.com/aeolusproject/audrey/raw/master/examples/wordpress/wordpress-mysql.sh"/>
           <files>
-            <file url="http://radez.fedorapeople.org/dbup.rb"/>
+            <file url="https://github.com/aeolusproject/audrey/raw/master/examples/wordpress/dbup.rb"/>
           </files>
           <parameters>
             <parameter name="wp_name" type="scalar">
