@@ -129,10 +129,6 @@ module ConfigServer
       Model::Instance.find(uuid).ip if exists?(uuid)
     end
 
-    def delete(uuid)
-      Model::Instance.find(uuid).delete! if exists?(uuid)
-    end
-
     def delete_deployment(uuid)
       Model::Deployable.find(uuid).delete!
     end

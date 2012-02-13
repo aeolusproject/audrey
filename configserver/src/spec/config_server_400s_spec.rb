@@ -3,7 +3,13 @@ require 'spec_helper'
 describe 'Config Server 400s' do
 
   before(:each) do
-    ApplicationHelper.class_eval { def authenticated?; true end }
+    OAuth::Signature.stub!(:verify).and_return true
+  end
+
+  it "should return 401 from /auth" do
+    OAuth::Signature.stub!(:verify).and_return false
+    get '/auth'
+    last_response.status.should == 401
   end
 
   it "should return 404 from get /notrealuri" do

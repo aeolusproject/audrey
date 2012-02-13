@@ -22,10 +22,6 @@ module ConfigServer
 
     @@configurable_mapping = {}
 
-    def self.add_configurable_mapping(name, klass)
-      @@configurable_mapping[name] = klass
-    end
-
     def self.storage_dir=(dir)
       @@storage_dir = dir
     end

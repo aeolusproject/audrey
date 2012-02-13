@@ -150,7 +150,7 @@ desc 'Mesures test coverage'
 task :coverage do
   Dir::chdir("src") do |dir|
     rm_f "coverage"
-    sh "rcov -TIspec --exclude ruby\/,spec\/ spec/*_spec.rb"
+    sh "rcov -TIspec --exclude ruby\/ spec/*_spec.rb"
  end
 end
 

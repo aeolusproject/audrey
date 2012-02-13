@@ -286,10 +286,6 @@ module ConfigServer
         (rp / "//required-parameter[not(value)]").size > 0
       end
 
-      def has_file?
-        File.exists?(get_file)
-      end
-
       def file
         path = get_path("#{@uuid}.tgz")
         return (File.exists?(path)) ? path : nil
@@ -522,12 +518,6 @@ module ConfigServer
         result
       end
 
-      def pending_required_params?(service=nil)
-        xpath = (service.nil?) ?
-          '//required-parameter[not(value)]' :
-          "//required-parameter[@service='#{service}'][not(value)]"
-        not (rp.nil? or (rp / xpath).empty?)
-      end
     end
   end
 end
