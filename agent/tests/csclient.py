@@ -28,6 +28,7 @@ from audrey.csclient.tooling import ConfigTooling
 from audrey.csclient import parse_require_config
 from audrey.csclient import parse_provides_params
 from audrey.csclient import generate_provides
+from audrey.csclient.service import ServiceParams
 
 from tests.mocks import HttpUnitTest
 from tests import _write_file
@@ -50,7 +51,7 @@ DUMMY_SERVICE_CONFIG_DATA = '|service|jon1' + \
     '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
     '|jon_server_ip_2&' + base64.b64encode('192.168.1.2') + \
     '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
-    '|service|jon2|'
+    '|service|jon2||'
 
 VALIDATE_SERVICE_CONFIG_DATA = {'AUDREY_VAR_jon1_jon_server_ip' : '192.168.1.1',
     'AUDREY_VAR_jon1_jon_server_ip_2' : '192.168.1.2',
@@ -445,3 +446,7 @@ class TestAudreyAgentProvidesParameters(unittest.TestCase):
 
         self.assertRaises(ASError, parse_provides_params, src)
         self.assertRaises(ASError, generate_provides, src)
+
+class TestAudreyAgentServiceParams(unittest.TestCase):
+    def test_service_params_name_none(self):
+        ServiceParams(name=None)

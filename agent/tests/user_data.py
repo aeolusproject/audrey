@@ -41,6 +41,8 @@ class TestAudreyUserData(unittest.TestCase):
     def tearDown(self):
         if os.path.exists(self.user_data_file):
             os.remove(self.user_data_file)
+        if os.path.exists(CLOUD_INFO_FILE):
+            os.remove(CLOUD_INFO_FILE)
 
     def test_base_error_on_read(self):
         self.assertRaises(Exception, audrey.user_data.UserDataBase().read)

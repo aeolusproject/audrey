@@ -34,11 +34,14 @@ from tests.csclient import *
 from tests.user_data import *
 
 ####
-# turn down the sleep time in the loop
-# to speed up the test process
+# Override from config params
 ####
 import audrey.agent
 audrey.agent.SLEEP_SECS = 0
+audrey.agent.PWD_TOOLING = 'test_tooling'
+
+import audrey.csclient.tooling
+audrey.csclient.tooling.TOOLING_DIR = os.path.join(os.path.abspath('.'),'test_tooling')
 
 ####
 # Cloud info test file
