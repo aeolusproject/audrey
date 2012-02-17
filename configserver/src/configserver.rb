@@ -95,18 +95,7 @@ get '/configs/:version/:uuid', :provides => 'text' do
       not configs.exists?(params[:uuid])
     not_found
   else
-    confs, more_configs = configs.get_configs(params[:uuid], :as => :text)
-    status = more_configs ? 202 : 200
-    [status, confs]
-  end
-end
-
-get '/configs/:version/:uuid', :provides => 'xml' do
-  if not api_version_valid?(request, params[:version]) or
-      not configs.exists?(params[:uuid])
-    not_found
-  else
-    confs, more_configs = configs.get_configs(params[:uuid], :as => :xml)
+    confs, more_configs = configs.get_configs(params[:uuid])
     status = more_configs ? 202 : 200
     [status, confs]
   end
@@ -117,7 +106,7 @@ get '/configs/:version/:uuid' do
       not configs.exists?(params[:uuid])
     not_found
   else
-    confs, more_configs = configs.get_configs(params[:uuid], :as => :xml)
+    confs, more_configs = configs.get_configs(params[:uuid])
     status = more_configs ? 202 : 200
     [status, confs]
   end
@@ -189,17 +178,7 @@ get '/params/:version/:uuid', :provides => 'text' do
       not configs.exists?(params[:uuid])
     not_found
   else
-    provides = configs.get_provides(params[:uuid], :as => :text)
-    provides
-  end
-end
-
-get '/params/:version/:uuid', :provides => 'xml' do
-  if not api_version_valid?(request, params[:version]) or
-      not configs.exists?(params[:uuid])
-    not_found
-  else
-    provides = configs.get_provides(params[:uuid], :as => :xml)
+    provides = configs.get_provides(params[:uuid])
     provides
   end
 end

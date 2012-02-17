@@ -134,13 +134,7 @@ module ConfigServer
         if xml.instance_of?(String) or xml.kind_of?(IO)
           xml = Nokogiri::XML(xml)
         end
-        errors = []
-        begin
-          errors = get_validator.validate(xml)
-        rescue Exception => e
-          raise InvalidInstanceConfigError.new(), ["The provided instance " +
-              "config for #{uuid} caused an error during validation:  ", e]
-        end
+        errors = get_validator.validate(xml)
         if errors.size > 0
           raise InvalidInstanceConfigError.new(errors),
                 "The provided instance config for #{uuid} is not a valid " +
@@ -240,32 +234,8 @@ module ConfigServer
         end
       end
 
-      def required_parameters(opts={})
-        if opts[:raw]
-          return required_parameters_raw
-        end
-
-        xpath = case
-          when opts[:only_empty]
-            '//required-parameter[not(value)]'
-          when opts[:only_with_values]
-            '//required-parameter/value/..'
-          else # opts[:all]
-            '//required-parameter'
-        end
-
-        params = (rp / xpath).map do |p|
-          {:name      => p['name'],
-           :assembly  => p['assembly'],
-           :parameter => p['parameter']} +
-          if opts[:include_values]
-            #FIXME: only handles scalar values
-            v = p % 'value'
-            {:value   => (v.content if not v.nil?)}
-          else
-            {}
-          end
-        end
+      def required_parameters()
+        return required_parameters_raw
       end
 
       def services
@@ -448,9 +418,6 @@ module ConfigServer
       def get_configuration_scripts(dir, opts={})
         opts[:type] ||= :executable
         config_type = opts[:type]
-        if not [:executable, :file].include? config_type
-          raise RuntimeError, "unknown configuration file type #{config_type}"
-        end
         (config / config_type.to_s).each do |node|
           config_dir = dir
           parent = (:file == config_type) ? node.parent.parent : node.parent

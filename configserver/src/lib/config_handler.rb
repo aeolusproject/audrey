@@ -55,30 +55,10 @@ module ConfigServer
       Model::Deployable.exists?(uuid)
     end
 
-    def get_configs(uuid, options={})
-      options[:as] ||= :text
-
+    def get_configs(uuid)
       if exists?(uuid)
         instance = Model::Instance.find(uuid)
-        configs = case options[:as]
-          when :xml
-            "<node-config ver='#{@version}'>\n" +
-            "  <services>\n" +
-            instance.services.map do |name, params|
-              "    <service name='#{name}'>\n" +
-              "      <parameters>\n" +
-              params.map do |pname, val|
-                "        <parameter name='#{pname}'>\n" +
-                "          <value><![CDATA[#{val}]]></value>\n" +
-                "        </parameter>"
-              end.join("\n") +
-              "\n" +
-              "      </parameters>\n" +
-              "    </service>\n"
-            end.join +
-            "  </services>\n" +
-            "</node-config>\n"
-          when :text
+        configs = 
             services = instance.services
             log "uuid: #{uuid}"
             log "services: #{services.inspect}"
@@ -95,23 +75,6 @@ module ConfigServer
               end
             end.join("|") +
             "|"
-          when :textold
-            #old format for now
-            #|classes&service_name&service_name|parameters|param1&b64(va11)|param2&b64(val2)|
-            #new format soon
-            #|service&<s1>|parameters|<p1name>&b64(<v1>)|<p2name>&b64(<v2>)|service&<s2>|parameters|<p1name>&b64(<v1>)|<p2name>&b64(<v2>)|
-            "|classes&" +
-	    instance.services.keys.join("&") +
-            "|parameters|" +
-            instance.services.values.map do |params|
-              params.map do |pname, val|
-                "#{pname}&" + [val].pack("m0").delete("\n")
-              end.join("|")
-            end.join("|") +
-            "|"
-          else
-            ""
-        end
         return configs, instance.required_parameters_remaining?
       end
     end
@@ -121,11 +84,11 @@ module ConfigServer
       if exists?(uuid)
         instance = Model::Instance.find(uuid)
         parameters = instance.provided_parameters(:only_empty => true)
-        process_provides(parameters, options)
+        process_provides(parameters)
       end
     end
 
-    def get_ip(uuid, options={})
+    def get_ip(uuid)
       Model::Instance.find(uuid).ip if exists?(uuid)
     end
 
@@ -139,7 +102,7 @@ module ConfigServer
       register_with_oauth(instance)
     end
 
-    def update(uuid, data, ip, options={})
+    def update(uuid, data, ip)
       return nil if not exists?(uuid)
       log "update #{uuid} with #{ip} and #{data}"
 
@@ -160,7 +123,7 @@ module ConfigServer
         log "found a dependency"
         other = Model::Instance.find(uuid)
         params = {}
-        required_params = other.required_parameters(:raw => true)
+        required_params = other.required_parameters
         log "required_params: #{required_params.to_xml}"
         match_string = assembly_identifiers.map {|id| "(@assembly='#{id}')"}.join("or")
         required_params.xpath("//required-parameter[#{match_string}]").each do |p|
@@ -172,9 +135,8 @@ module ConfigServer
         other.required_parameters_values = params if not params.empty?
       end
 
-      options[:as] ||= :text
       parameters = instance.provided_parameters(:only_empty => true)
-      process_provides(parameters, options)
+      process_provides(parameters)
     end
 
     def get_file(uuid)
@@ -214,19 +176,8 @@ module ConfigServer
       end.compact.inject(:merge)
     end
 
-    def process_provides(provides, opts={})
-      case opts[:as]
-        when :xml
-          "<parameters>\n" +
-          provides.map do |p|
-            "  <parameter name='#{p}'/>"
-          end.join("\n") +
-          "\n</parameters>"
-        when :text
-          "|" + provides.join('&') + "|"
-        else
-          ""
-      end
+    def process_provides(provides)
+      "|" + provides.join('&') + "|"
     end
 
     def register_with_oauth(instance)

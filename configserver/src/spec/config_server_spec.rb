@@ -2,16 +2,6 @@ require 'spec_helper'
 
 describe 'Config Server' do
 
-  before(:all) do
-    OAuth::Signature.class_eval do
-      def self.verify(request, options = {}, &block)
-        request_proxy = FakeRequestProxy.new
-        request_proxy.consumer_key=INSTANCE_UUID
-        block.call(request_proxy=request_proxy)
-      end
-    end
-  end
-
   it "should return html from get /version" do
     get '/version'
     last_response.body.should.start_with? '<html>'
@@ -32,9 +22,15 @@ describe 'Config Server' do
     last_response.should.be.ok
   end
 
-  it "should return 200 from post /configs/:version/:uuid" do
+  it "should return 200 from post /configs/:version/:uuid with inline" do
     Net::HTTP.stub!(:new).and_return(FakeHttp.new)
-    post '/configs/1/' + INSTANCE_UUID, {:data=>INSTANCE_DATA}
+    post '/configs/1/' + INSTANCE_UUID, {:data=>INSTANCE_DATA_INLINE}
+    last_response.body.should == ''
+  end
+
+  it "should return 200 from post /configs/:version/:uuid with url" do
+    Net::HTTP.stub!(:new).and_return(FakeHttp.new)
+    post '/configs/1/' + INSTANCE_UUID, {:data=>INSTANCE_DATA_W_URL}
     last_response.body.should == ''
   end
 
@@ -77,11 +73,6 @@ describe 'Config Server' do
   it "should return 200 from get /configs/:version/:uuid when asked for xml" do
     get '/configs/1/' + INSTANCE_UUID, {}, {'HTTP_ACCEPT' => "text/plain"}
     last_response.should.be.ok
-  end
-
-  it "should return 200 from get /params/:version/:uuid" do
-    get '/params/1/' + INSTANCE_UUID, {}, {'HTTP_ACCEPT' => "application/xml"}
-    last_response.body.should == "<parameters>\n\n</parameters>"
   end
 
   it "should return 200 from get /params/:version/:uuid" do
