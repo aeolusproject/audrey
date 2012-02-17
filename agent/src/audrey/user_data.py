@@ -24,6 +24,7 @@ from audrey import ASError
 
 CLOUD_INFO_FILE = '/etc/sysconfig/cloud-info'
 
+
 def discover():
     if os.path.exists(CLOUD_INFO_FILE):
         f = open(CLOUD_INFO_FILE)
@@ -44,6 +45,7 @@ def discover():
     else:
         #try imports
         raise ASError('%s is missing.' % CLOUD_INFO_FILE)
+
 
 class UserDataBase(object):
     '''
@@ -79,7 +81,7 @@ class UserDataBase(object):
                 self.oauth_secret = oauth_secret
                 return {'endpoint': self.endpoint,
                         'oauth_key': self.oauth_key,
-                        'oauth_secret': self.oauth_secret,}
+                        'oauth_secret': self.oauth_secret, }
             else:
                 raise ASError('Invalid User Data Version: %s' % user_data[0])
         else:
@@ -90,4 +92,4 @@ class UserDataBase(object):
         Dummy function, indended to be overridden
         should return (endpoint, oauth_jey, oauth_secret)
         '''
-        raise "User Data Read function undefined, UserDataBase was not overridden"
+        raise "UserDataBase.read() was not overridden. Execution Aborted"

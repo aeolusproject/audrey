@@ -24,6 +24,7 @@ from audrey.user_data import UserDataBase
 
 EC2_USER_DATA_URL = 'http://169.254.169.254/latest/user-data'
 
+
 class UserData(UserDataBase):
     '''
     EC2 specific userdata read

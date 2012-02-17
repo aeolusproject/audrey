@@ -24,8 +24,8 @@ from audrey import ASError, ASErrorInvalidTar
 from audrey.shell import run_cmd
 
 TOOLING_DIR = '/var/audrey/tooling/'
-
 logger = logging.getLogger('Audrey')
+
 
 class ConfigTooling(object):
     '''
@@ -59,7 +59,7 @@ class ConfigTooling(object):
         try:
             os.makedirs(self.user_dir)
         except OSError, (errno, strerror):
-            if errno is 17: # File exists
+            if errno is 17:  # File exists
                 pass
             else:
                 raise ASError(('Failed to create directory %s. ' + \
@@ -150,7 +150,7 @@ class ConfigTooling(object):
         if not os.path.exists(self.tarball):
             raise ASError('File does not exist: %s ' % self.tarball)
         if not tarfile.is_tarfile(self.tarball):
-            raise ASErrorInvalidTar('File is not a tar file: %s ' % self.tarball)
+            raise ASErrorInvalidTar('Not a valid tar file: %s' % self.tarball)
 
         # Attempt to extract the contents from the specified tarfile.
         # If tarfile access or content is bad report to the user to aid
@@ -160,8 +160,9 @@ class ConfigTooling(object):
             tarf.extractall(path=self.user_dir)
             tarf.close()
         # Capture and report errors with the tarfile
-        except (tarfile.TarError, tarfile.ReadError, tarfile.CompressionError, \
-                tarfile.StreamError, tarfile.ExtractError, IOError), (strerror):
+        except (tarfile.TarError, tarfile.ReadError, \
+                tarfile.CompressionError, tarfile.StreamError, \
+                tarfile.ExtractError, IOError), (strerror):
             raise ASError(('Failed to access tar file %s. Error: %s') %  \
                 (self.tarball, strerror))
 
@@ -215,7 +216,7 @@ class ConfigTooling(object):
         service_start = os.path.join(service_name, 'start')
         # returns, check the paths and return the tuple
         tooling_paths = [(True, os.path.join(self.user_dir, 'start')),
-                         (False,os.path.join(self.user_dir, service_start)),
+                         (False, os.path.join(self.user_dir, service_start)),
                          (False, os.path.join(self.audrey_dir, service_start)),
                          (False, os.path.join(self.redhat_dir, service_start)),
                         ]
@@ -227,4 +228,3 @@ class ConfigTooling(object):
         # No tooling found. Raise an error.
         raise ASError(('No configuration tooling found for service: %s') % \
             (service_name))
-

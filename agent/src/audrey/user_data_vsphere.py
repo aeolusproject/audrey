@@ -24,6 +24,7 @@ from audrey.shell import run_cmd
 
 DELTA_CLOUD_USER_DATA = '/media/deltacloud-user-data.txt'
 
+
 class UserData(UserDataBase):
     '''
     VSphere specific userdata read

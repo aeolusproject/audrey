@@ -32,13 +32,15 @@ from audrey.csclient import gen_env
 from tests.mocks import CLOUD_INFO_FILE
 from tests import _write_file
 
+
 class TestAudreyAgent(unittest.TestCase):
     '''
     Class for exercising the full audrey script functionality
     '''
 
     def setUp(self):
-        audrey.user_data_ec2.EC2_USER_DATA_URL='http://169.254.169.254/latest/user-data'
+        audrey.user_data_ec2.EC2_USER_DATA_URL = \
+            'http://169.254.169.254/latest/user-data'
         audrey.csclient.client.TOOLING_URL = 'files'
         audrey.csclient.client.PARAMS_URL = 'params'
         audrey.csclient.client.CONFIGS_URL = 'configs'
@@ -62,7 +64,8 @@ class TestAudreyAgent(unittest.TestCase):
         self.assertRaises(ASError, main)
 
     def test_fail_main_404(self):
-        audrey.user_data_ec2.EC2_USER_DATA_URL='http://169.254.169.254/gimmie-404'
+        audrey.user_data_ec2.EC2_USER_DATA_URL = \
+            'http://169.254.169.254/gimmie-404'
         self.assertRaises(ASError, main)
 
     def test_fail_main_invalid_cloudinfo(self):
@@ -78,10 +81,11 @@ class TestAudreyAgent(unittest.TestCase):
     def test_version_and_stream_logger(self):
         # remember std out & err
         self.old_stdout, self.old_stderr = sys.stdout, sys.stderr
-        self.old_stdout.flush(); self.old_stderr.flush()
+        self.old_stdout.flush()
+        self.old_stderr.flush()
 
         # redirects std out & err to log
-        setup_logging(logging.INFO) 
+        setup_logging(logging.INFO)
 
         # test
         sys.stdout.write('test redirect stdout to log')

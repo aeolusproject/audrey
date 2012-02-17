@@ -17,8 +17,8 @@
 '''
 
 from subprocess import Popen, PIPE
-
 from audrey import ASError
+
 
 class run_cmd_return_subproc(object):
     '''
@@ -27,9 +27,7 @@ class run_cmd_return_subproc(object):
     '''
     returncode = 127
 
-#
-# Misc. Supporting Methods
-#
+
 def run_cmd(cmd, my_cwd=None):
     '''
     Description:
@@ -71,7 +69,7 @@ def run_cmd(cmd, my_cwd=None):
     pfail = run_cmd_return_subproc()
 
     # Return dictionary to contain keys: 'cmd', 'subproc', 'err', 'out'
-    ret = {'subproc' : None, 'err' : '' , 'out' : ''}
+    ret = {'subproc': None, 'err': '', 'out': ''}
 
     try:
         ret['subproc'] = Popen(cmd, cwd=my_cwd, stdout=PIPE, stderr=PIPE)
@@ -81,7 +79,7 @@ def run_cmd(cmd, my_cwd=None):
         if not ret['subproc']:
             ret['subproc'] = pfail
 
-        ret['subproc'].returncode = 127 # command not found
+        ret['subproc'].returncode = 127  # command not found
         ret['err'] = str(err)
         return ret
 
@@ -89,6 +87,7 @@ def run_cmd(cmd, my_cwd=None):
     ret.update(zip(['out', 'err'], ret['subproc'].communicate()))
 
     return ret
+
 
 def run_pipe_cmd(cmd1, cmd2):
     '''
@@ -137,7 +136,7 @@ def run_pipe_cmd(cmd1, cmd2):
     '''
 
     # Return dictionary to contain keys: 'cmd', 'subproc', 'err', 'out'
-    ret = {'subproc' : None, 'err' : '' , 'out' : ''}
+    ret = {'subproc': None, 'err': '', 'out': ''}
 
     p1 = None
     p2 = None
@@ -146,7 +145,7 @@ def run_pipe_cmd(cmd1, cmd2):
     # Execute the first command:
     try:
         p1 = Popen(cmd1, stdout=PIPE)
-        p2 = Popen(cmd2, stdin=p1.stdout, stdout=PIPE )
+        p2 = Popen(cmd2, stdin=p1.stdout, stdout=PIPE)
         p1.stdout.close()
 
         # fill ret['out'] with stdout and ret['err'] with stderr
@@ -163,11 +162,12 @@ def run_pipe_cmd(cmd1, cmd2):
         else:
             ret['subproc'] = pfail
 
-        ret['subproc'].returncode = 127 # command not found
+        ret['subproc'].returncode = 127  # command not found
         ret['err'] = str(err)
         return ret
 
     return ret
+
 
 def get_system_info():
     '''
@@ -193,8 +193,8 @@ def get_system_info():
 
     facts = {}
     for fact in ret['out'].split('\n'):
-        if fact: # Handle the new line at the end of the facter output
+        if fact:  # Handle the new line at the end of the facter output
             name, val = fact.split(' => ')
-            facts[ name ] = val.rstrip()
+            facts[name] = val.rstrip()
 
     return facts

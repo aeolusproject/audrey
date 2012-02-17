@@ -94,4 +94,6 @@ coverage: src/audrey/agent.py
 	coverage run test_audrey_agent.py
 	coverage report -m test_audrey_agent.py `find src/audrey/ -name "*.py"` tests/*.py
 
+pep8:
+	find . -name '*.py' -exec pep8 -r {} \;
 .PHONY: dist test rpms srpm

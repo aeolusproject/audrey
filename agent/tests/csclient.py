@@ -33,9 +33,12 @@ from audrey.csclient.service import ServiceParams
 from tests.mocks import HttpUnitTest
 from tests import _write_file
 
+EXIT_ZERO = '#!/bin/sh\nexit 0'
+EXIT_ONE = '#!/bin/sh\nexit 1'
+
 DUMMY_CS_CONFIG = {'endpoint': 'http://example.com/',
                    'oauth_key': 'oauthConsumer',
-                   'oauth_secret': 'oauthSecret',}
+                   'oauth_secret': 'oauthSecret', }
 
 DUMMY_NO_SERVICE_CONFIG_DATA = '|service|' + \
     '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
@@ -43,9 +46,10 @@ DUMMY_NO_SERVICE_CONFIG_DATA = '|service|' + \
     '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
     '|service|jon2|'
 
-VALIDATE_NO_SERVICE_CONFIG_DATA = {'AUDREY_VAR_jon_server_ip' : '192.168.1.1',
-    'AUDREY_VAR_jon_server_ip_2' : '192.168.1.2',
-    'AUDREY_VAR_jon_server_ip_3' : '192.168.1.3' }
+VALIDATE_NO_SERVICE_CONFIG_DATA = {
+    'AUDREY_VAR_jon_server_ip': '192.168.1.1',
+    'AUDREY_VAR_jon_server_ip_2': '192.168.1.2',
+    'AUDREY_VAR_jon_server_ip_3': '192.168.1.3'}
 
 DUMMY_SERVICE_CONFIG_DATA = '|service|jon1' + \
     '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
@@ -53,9 +57,10 @@ DUMMY_SERVICE_CONFIG_DATA = '|service|jon1' + \
     '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
     '|service|jon2||'
 
-VALIDATE_SERVICE_CONFIG_DATA = {'AUDREY_VAR_jon1_jon_server_ip' : '192.168.1.1',
-    'AUDREY_VAR_jon1_jon_server_ip_2' : '192.168.1.2',
-    'AUDREY_VAR_jon1_jon_server_ip_3' : '192.168.1.3' }
+VALIDATE_SERVICE_CONFIG_DATA = {
+    'AUDREY_VAR_jon1_jon_server_ip': '192.168.1.1',
+    'AUDREY_VAR_jon1_jon_server_ip_2': '192.168.1.2',
+    'AUDREY_VAR_jon1_jon_server_ip_3': '192.168.1.3'}
 
 
 class TestAudreyCSClient(unittest.TestCase):
@@ -102,7 +107,6 @@ class TestAudreyCSClient(unittest.TestCase):
         self.cs_client.get_cs_configs()
         self.cs_client.get_cs_params()
 
-
     def test_success_put_cs_params_values(self):
         '''
         Success case:
@@ -131,13 +135,14 @@ class TestAudreyCSClient(unittest.TestCase):
         '''
         self.cs_client._put('http://hostname/raiseException')
 
+
 class TestAudreyAgentConfigTooling(unittest.TestCase):
     '''
     Make sure all the Config tooling is tested
     '''
     def setUp(self):
-        self.tool_dir=os.path.join(os.path.abspath('.'),'test_tooling')
-        self.csclient=ConfigTooling(self.tool_dir)
+        self.tool_dir = os.path.join(os.path.abspath('.'), 'test_tooling')
+        self.csclient = ConfigTooling(self.tool_dir)
 
     def tearDown(self):
         if os.path.exists(self.tool_dir):
@@ -161,55 +166,58 @@ class TestAudreyAgentConfigTooling(unittest.TestCase):
 
     def test_find_user_tooling(self):
         start_path = os.path.join(self.csclient.user_dir, 'start')
-        _write_file(start_path, '#!/bin/sh\nexit 0', 0744)
+        _write_file(start_path, EXIT_ZERO, 0744)
         self.csclient.find_tooling('')
 
     def test_find_user_service_tooling(self):
         service_dir = os.path.join(self.csclient.user_dir, 'test_service')
         os.mkdir(service_dir)
-        _write_file(os.path.join(service_dir, 'start'), '#!/bin/sh\nexit 0', 0744)
+        _write_file(os.path.join(service_dir, 'start'), EXIT_ZERO, 0744)
         self.csclient.find_tooling('test_service')
 
     def test_find_audrey_service_tooling(self):
         service_dir = os.path.join(self.csclient.audrey_dir, 'test_service')
         os.mkdir(self.csclient.audrey_dir)
         os.mkdir(service_dir)
-        _write_file(os.path.join(service_dir, 'start'), '#!/bin/sh\nexit 0', 0744)
+        _write_file(os.path.join(service_dir, 'start'), EXIT_ZERO, 0744)
         self.csclient.find_tooling('test_service')
 
     def test_find_redhat_service_tooling(self):
         service_dir = os.path.join(self.csclient.redhat_dir, 'test_service')
         os.mkdir(self.csclient.redhat_dir)
         os.mkdir(service_dir)
-        _write_file(os.path.join(service_dir, 'start'), '#!/bin/sh\nexit 0', 0744)
+        _write_file(os.path.join(service_dir, 'start'), EXIT_ZERO, 0744)
         self.csclient.find_tooling('test_service')
 
     def test_missing_file_unpack_tooling(self):
-        self.assertRaises(ASError, self.csclient.unpack_tooling, 'test_tarball')
+        self.assertRaises(ASError,
+                          self.csclient.unpack_tooling, 'test_tarball')
 
     def test_invalid_tar_unpack_tooling(self):
         tar_file = os.path.join(self.csclient.user_dir, 'invalid_tar')
-        _write_file(tar_file, '')    
-        self.assertRaises(ASErrorInvalidTar, self.csclient.unpack_tooling, tar_file)
+        _write_file(tar_file, '')
+        self.assertRaises(ASErrorInvalidTar,
+                          self.csclient.unpack_tooling, tar_file)
 
     def test_fail_execution_invoke_tooling(self):
         start_path = os.path.join(self.csclient.user_dir, 'start')
-        _write_file(start_path, '#!/bin/sh\nexit 1', 0744)
+        _write_file(start_path, EXIT_ONE, 0744)
         services = parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
         self.csclient.invoke_tooling(services)
 
     def test_user_invoke_tooling(self):
         start_path = os.path.join(self.csclient.user_dir, 'start')
-        _write_file(start_path, '#!/bin/sh\nexit 0', 0744)
+        _write_file(start_path, EXIT_ZERO, 0744)
         services = parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
         self.csclient.invoke_tooling(services)
 
     def test_user_service_invoke_tooling(self):
         service_dir = os.path.join(self.csclient.user_dir, 'jon1')
         os.mkdir(service_dir)
-        _write_file(os.path.join(service_dir, 'start'), '#!/bin/sh\necho', 0744)
+        _write_file(os.path.join(service_dir, 'start'), EXIT_ZERO, 0744)
         services = parse_require_config(DUMMY_SERVICE_CONFIG_DATA)
         self.csclient.invoke_tooling(services)
+
 
 class TestAudreyAgentRequiredConfig(unittest.TestCase):
     '''
@@ -231,7 +239,7 @@ class TestAudreyAgentRequiredConfig(unittest.TestCase):
         for service in services:
             for param in service.params:
                 name_val = param.split('&')
-                env_var  = 'AUDREY_VAR_' + service.name + '_' + name_val[0]
+                env_var = 'AUDREY_VAR_' + service.name + '_' + name_val[0]
                 cmd = ['/usr/bin/printenv', env_var]
                 ret = run_cmd(cmd)
                 self.assertEqual(ret['out'][:-1], \
@@ -260,7 +268,7 @@ class TestAudreyAgentRequiredConfig(unittest.TestCase):
         for service in services:
             for param in service.params:
                 name_val = param.split('&')
-                env_var  = 'AUDREY_VAR_' + name_val[0]
+                env_var = 'AUDREY_VAR_' + name_val[0]
                 cmd = ['/usr/bin/printenv', env_var]
                 ret = run_cmd(cmd)
                 self.assertEqual(ret['out'][:-1], \
@@ -287,9 +295,9 @@ class TestAudreyAgentRequiredConfig(unittest.TestCase):
             '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
             '|service|jon2|'
 
-        validation_dict = {'AUDREY_VAR_jon_server_ip' : '192.168.1.1',
-            'AUDREY_VAR_jon_server_ip_2' : '192.168.1.2',
-            'AUDREY_VAR_jon_server_ip_3' : '192.168.1.3' }
+        validation_dict = {'AUDREY_VAR_jon_server_ip': '192.168.1.1',
+            'AUDREY_VAR_jon_server_ip_2': '192.168.1.2',
+            'AUDREY_VAR_jon_server_ip_3': '192.168.1.3'}
 
         self.assertRaises(ASError, parse_require_config, src)
 
@@ -446,6 +454,7 @@ class TestAudreyAgentProvidesParameters(unittest.TestCase):
 
         self.assertRaises(ASError, parse_provides_params, src)
         self.assertRaises(ASError, generate_provides, src)
+
 
 class TestAudreyAgentServiceParams(unittest.TestCase):
     def test_service_params_name_none(self):

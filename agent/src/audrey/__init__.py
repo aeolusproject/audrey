@@ -23,18 +23,20 @@ import logging
 # Log file
 LOG = '/var/log/audrey.log'
 
+
 class StreamToLogger(object):
     """
     Fake file-like stream object that redirects writes to a logger instance.
     """
     def __init__(self, logger, log_level=logging.INFO):
-       self.logger = logger
-       self.log_level = log_level
-       self.linebuf = ''
- 
+        self.logger = logger
+        self.log_level = log_level
+        self.linebuf = ''
+
     def write(self, buf):
-       for line in buf.rstrip().splitlines():
-          self.logger.log(self.log_level, line.rstrip())
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.log_level, line.rstrip())
+
 
 def setup_logging(level=logging.INFO, logfile_name=LOG):
     '''
@@ -65,9 +67,7 @@ def setup_logging(level=logging.INFO, logfile_name=LOG):
         sys.stdout = StreamToLogger(logger, logging.INFO)
         sys.stderr = StreamToLogger(logger, logging.ERROR)
 
-#
-# Error Handling methods:
-#
+
 class ASError(Exception):
     '''
     Some sort of error occurred. The exact cause of the error should
@@ -76,6 +76,7 @@ class ASError(Exception):
     logging here is not really nessesary
     '''
     pass
+
 
 class ASErrorInvalidTar(ASError):
     pass

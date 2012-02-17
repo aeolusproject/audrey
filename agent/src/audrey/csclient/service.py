@@ -16,6 +16,7 @@
 *
 '''
 
+
 class ServiceParams(object):
     '''
     Description:
@@ -36,13 +37,15 @@ class ServiceParams(object):
     def __init__(self, name=None):
         if name == None:
             name = ''
-        self.name = name # string
-        self.params = [] # start with an empty list
+        self.name = name
+        self.params = []
+
     def add_param(self, param):
         '''
         Description:
             Add a parameter provided by   the Config Server to the list.
         '''
         self.params.append(param)
+
     def __repr__(self):
         return repr((self.name, self.params))

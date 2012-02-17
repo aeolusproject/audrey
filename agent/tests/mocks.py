@@ -27,7 +27,7 @@ import tarfile
 
 try:
     from cStringIO import StringIO as BIO
-except ImportError: # python 3
+except ImportError:  # python 3
     from io import BytesIO as BIO
 
 #####
@@ -38,6 +38,7 @@ except ImportError: # python 3
 
 DUMMY_USER_DATA = '1|http://example.com/|oauthConsumer|oauthSecret'
 CLOUD_INFO_FILE = 'test_cloud_info'
+
 
 class HttpUnitTest(object):
     '''
@@ -61,7 +62,6 @@ class HttpUnitTest(object):
 
         def __getitem__(self, key):
             return self.__dict__[key]
-
 
     # simple HTTP Response with 200 status code
     ok_response = HttpUnitTestResponse(200)
@@ -87,7 +87,7 @@ class HttpUnitTest(object):
                 body = '|param1&param2|'
             elif url.find('/files/') > -1:
                 file_out = BIO()
-                tar = tarfile.open(mode = "w:gz", fileobj = file_out)
+                tar = tarfile.open(mode="w:gz", fileobj=file_out)
                 tar.add('/etc/passwd')
                 tar.close()
                 body = file_out.getvalue()
@@ -107,41 +107,48 @@ class HttpUnitTest(object):
         #    body = ''
         return response, body
 
+
 class MockPopen(object):
     def __init__(self, returncode=0):
         self.returncode = returncode
 
+
 def mock_run_cmd(cmd, my_cwd=None):
-    return {'subproc' : MockPopen(),
-                'err' : '' , 'out' : ''}
+    return {'subproc': MockPopen(),
+                'err': '', 'out': ''}
+
 
 def mock_run_cmd_facter_fail(cmd, my_cwd=None):
     if cmd == ['/usr/bin/facter']:
-        return {'subproc' : MockPopen(1),
-                'err' : '' , 'out' : ''}
+        return {'subproc': MockPopen(1),
+                'err': '', 'out': ''}
+
 
 def mock_run_cmd_modprobe_floppy_fail(cmd, my_cwd=None):
     if cmd == ['/sbin/modprobe', 'floppy']:
-        return {'subproc' : MockPopen(1),
-                'err' : '' , 'out' : ''}
+        return {'subproc': MockPopen(1),
+                'err': '', 'out': ''}
+
 
 def mock_run_cmd_mkdir_media_fail(cmd, my_cwd=None):
     if cmd == ['/bin/mkdir', '/media']:
-        return {'subproc' : MockPopen(2),
-                'err' : '' , 'out' : ''}
+        return {'subproc': MockPopen(2),
+                'err': '', 'out': ''}
     else:
         return mock_run_cmd(cmd, my_cwd)
+
 
 def mock_run_cmd_mount_floppy_fail(cmd, my_cwd=None):
     if cmd == ['/bin/mount', '/dev/fd0', '/media']:
-        return {'subproc' : MockPopen(2),
-                'err' : '' , 'out' : ''}
+        return {'subproc': MockPopen(2),
+                'err': '', 'out': ''}
     else:
         return mock_run_cmd(cmd, my_cwd)
 
+
 def mock_run_cmd_mount_cdrom_fail(cmd, my_cwd=None):
     if cmd == ['/bin/mount', '/dev/cdrom', '/media']:
-        return {'subproc' : MockPopen(2),
-                'err' : '' , 'out' : ''}
+        return {'subproc': MockPopen(2),
+                'err': '', 'out': ''}
     else:
         return mock_run_cmd(cmd, my_cwd)

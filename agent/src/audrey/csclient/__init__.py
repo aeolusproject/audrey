@@ -15,7 +15,9 @@
 *  limitations under the License.
 *
 '''
-
+'''
+Methods used to parse the CS<->AS text based API
+'''
 import os
 import logging
 import base64
@@ -30,9 +32,7 @@ from audrey.shell import get_system_info
 
 logger = logging.getLogger('Audrey')
 
-#
-# Methods used to parse the CS<->AS text based API
-#
+
 def _common_validate_message(src):
     '''
     Perform validation of the text message sent from the Config Server.
@@ -40,6 +40,7 @@ def _common_validate_message(src):
 
     if not src.startswith('|') or not src.endswith('|'):
         raise ASError(('Invalid start and end characters: %s') % (src))
+
 
 def gen_env(serv_name, param_val):
     '''
@@ -86,6 +87,7 @@ def gen_env(serv_name, param_val):
     cmd = ['/usr/bin/printenv', var_name]
     ret = run_cmd(cmd)
     logger.debug(var_name + '=' + str(ret['out'].strip()))
+
 
 def parse_require_config(src):
     '''
@@ -135,7 +137,6 @@ def parse_require_config(src):
     if src.find('|service|') != 0:
         raise ASError(('|service| is not the first tag found. %s') % (src))
 
-
     src_q = deque(src.split('|'))
 
     # remove leading and trailing elements from the src_q since they are
@@ -148,7 +149,7 @@ def parse_require_config(src):
         try:
             token = src_q.popleft()
             if token == 'service':
-                token = src_q.popleft() # next token is service name
+                token = src_q.popleft()  # next token is service name
 
                 # Raise an error if the service name is invalid.
                 if token.find('&') != -1 or \
@@ -161,7 +162,7 @@ def parse_require_config(src):
                 services.append(new)
             elif token == 'parameters' or token == '':
                 pass
-            else: # token is a name&value pair.
+            else:  # token is a name&value pair.
                 if token.find('&') == -1:
                     raise ASError(('ERROR name&val: %s missing delimiter') % \
                        (str(token)))
@@ -175,6 +176,7 @@ def parse_require_config(src):
             break
 
     return services
+
 
 def parse_provides_params(src):
     '''
@@ -209,9 +211,10 @@ def parse_provides_params(src):
         # special case indicating no provides parameters requested.
         return ['']
 
-    params_str = src[src.find('|')+1:len(src)-1]
+    params_str = src[src.find('|') + 1:len(src) - 1]
 
     return params_str.split('&')
+
 
 def generate_provides(src):
     '''
@@ -254,11 +257,10 @@ def generate_provides(src):
     for param in params_list:
         try:
             provides_dict.update( \
-                {param:base64.b64encode(system_info_dict[param])})
+                {param: base64.b64encode(system_info_dict[param])})
         except KeyError:
             # A specified parameter is not found. Provide value ''
-            provides_dict.update({param:''})
-
+            provides_dict.update({param: ''})
 
     # Create string to send to Config Server
     provides_list = ['']
@@ -266,4 +268,4 @@ def generate_provides(src):
         provides_list.append(str(key) + '&' + str(provides_dict[key]))
     provides_list.append('')
 
-    return urllib.urlencode({'audrey_data':'|'.join(provides_list)})
+    return urllib.urlencode({'audrey_data': '|'.join(provides_list)})

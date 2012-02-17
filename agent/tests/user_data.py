@@ -33,9 +33,11 @@ from tests.mocks import mock_run_cmd_mount_cdrom_fail
 from tests.mocks import DUMMY_USER_DATA
 from tests.mocks import CLOUD_INFO_FILE
 
+
 class TestAudreyUserData(unittest.TestCase):
     def setUp(self):
-        audrey.user_data_ec2.EC2_USER_DATA_URL = 'http://169.254.169.254/latest/user-data'
+        audrey.user_data_ec2.EC2_USER_DATA_URL = \
+            'http://169.254.169.254/latest/user-data'
         self.user_data_file = 'test_user_data.txt'
 
     def tearDown(self):
@@ -51,7 +53,8 @@ class TestAudreyUserData(unittest.TestCase):
         audrey.user_data_ec2.UserData().read()
 
     def test_ec2_404(self):
-        audrey.user_data_ec2.EC2_USER_DATA_URL='http://169.254.169.254/gimmie-404'
+        audrey.user_data_ec2.EC2_USER_DATA_URL = \
+            'http://169.254.169.254/gimmie-404'
         self.assertRaises(ASError, audrey.user_data_ec2.UserData().read)
 
     def test_rhev(self):
@@ -89,11 +92,13 @@ class TestAudreyUserData(unittest.TestCase):
         self.assertRaises(ASError, audrey.user_data.discover().read)
 
     def test_invalid_user_data_version(self):
-        audrey.user_data_ec2.EC2_USER_DATA_URL='http://169.254.169.254/no-version-user-data'
+        audrey.user_data_ec2.EC2_USER_DATA_URL = \
+            'http://169.254.169.254/no-version-user-data'
         self.assertRaises(ASError, audrey.user_data_ec2.UserData().read)
 
     def test_invalid_user_data_no_delim(self):
-        audrey.user_data_ec2.EC2_USER_DATA_URL='http://169.254.169.254/empty-user-data'
+        audrey.user_data_ec2.EC2_USER_DATA_URL = \
+            'http://169.254.169.254/empty-user-data'
         self.assertRaises(ASError, audrey.user_data_ec2.UserData().read)
 
     def test_rhev_modprobe_floppy_fail(self):

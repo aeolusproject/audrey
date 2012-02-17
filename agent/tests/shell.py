@@ -28,6 +28,7 @@ from audrey.shell import run_cmd
 from audrey.shell import run_pipe_cmd
 from audrey.shell import get_system_info
 
+
 class TestAudreyShell(unittest.TestCase):
     '''
     Test the _run*cmd functions

@@ -29,6 +29,7 @@ TOOLING_URL = 'files'
 CONFIGS_URL = 'configs'
 PARAMS_URL = 'params'
 
+
 class CSClient(object):
     '''
     Description:
@@ -54,7 +55,7 @@ class CSClient(object):
         # create an oauth client for communication with the cs
         consumer = oauth.Consumer(self.cs_oauth_key, self.cs_oauth_secret)
         # 2 legged auth, token unnessesary
-        token = None #oauth.Token('access-key-here','access-key-secret-here')
+        token = None  # oauth.Token('access-key-here','access-key-secret-here')
         client = oauth.Client(consumer, token)
         self.http = client
 
@@ -66,7 +67,7 @@ class CSClient(object):
         try:
             shutil.rmtree(self.tmpdir)
         except OSError:
-            pass # ignore any errors when attempting to remove the temp dir.
+            pass  # ignore any errors when attempting to remove the temp dir.
 
     def __str__(self):
         '''
@@ -200,13 +201,13 @@ class CSClient(object):
         # as: 'attachment; tarball="tarball.tgz"'
         if (response.status == 200) or (response.status == 202):
             tarball = response['content-disposition']. \
-                lstrip('attachment; filename=').replace('"','')
+                lstrip('attachment; filename=').replace('"', '')
 
             # Create the temporary tarfile
             try:
                 self.tmpdir = tempfile.mkdtemp()
                 self.tarball = self.tmpdir + '/' + tarball
-                f  = open(self.tarball, 'w')
+                f = open(self.tarball, 'w')
                 f.write(body)
                 f.close()
             except IOError, (errno, strerror):
