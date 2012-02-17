@@ -95,7 +95,12 @@ describe 'Config Server' do
     last_response.should.be.ok
   end
 
-  it "should return 200 from put /files/:version/:uuid" do
+  it "should return 200 from put /files/:version/:uuid with file" do
+    put '/files/1/' + INSTANCE_UUID, "file" => Rack::Test::UploadedFile.new("config.ru")
+    last_response.should.be.ok
+  end
+
+  it "should return 200 from put /files/:version/:uuid with out file" do
     put '/files/1/' + INSTANCE_UUID
     last_response.should.be.ok
   end
