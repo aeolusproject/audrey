@@ -4,7 +4,7 @@
     <!-- The Drupal Assembly represents the instance that will be running apache
          (httpd) with drupal7.-->
     <assembly name="drupal" hwp="large">
-      <image id="7d5c6612-5c9e-4ee3-bca0-eadeeac1086b"/> <!-- replace your own image ID here -->
+      <image id="DRUPAL_IMAGE_ID"/> <!-- replace your own image ID here -->
       <services>
         <service name="http">
           <executable url="https://raw.github.com/aeolusproject/audrey/master/examples/drupal/drupal-http.py"/>
@@ -32,22 +32,6 @@
             </parameter>
           </parameters>
         </service>
-        <service name="pubkey">
-          <executable>
-            <contents><![CDATA[#!/bin/bash
-                mkdir -p /root/.ssh
-                chmod 700 /root/.ssh
-                cat pubkey >> /root/.ssh/authorized_keys
-                chmod 600 /root/.ssh/authorized_keys
-              ]]>
-            </contents>
-          </executable>
-          <files>
-            <file>
-              <contents filename="pubkey"><![CDATA[ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAubzg/muv8doBADvQvhc1T5NkjCyOSqJHdnU/RaDeNHjXq7WUs2VLRXTFyfn9PJ6E/ufX7sJmxZcwqbEbZiZ8Ea4IMn1ifzEK+7GpSLUkJlEZPcxq23wb4PJNubiMocvc3FMIGyZLKwDj5z3jzVJOay1iCEDYecy0qerlCfVOwXlQqgxZk5Tw89qG48dEnhC0kPqJV67S6k+FMs71tO3jILoTcwJkAkUrxWsC1YfHiZV0wK9Oj+cbsD8gPo55+3uUqqdDShl69JGXWkxc/+aGuFDdm+ylUgZheKUaOhta8UZZDZoYB/fs8odIl6FuJznBWe3MyNcunm8utl5EfsgDlQ== gblomqui@gblomqui.usersys.redhat.com]]></contents>
-            </file>
-          </files>
-        </service>
       </services>
       <returns>
         <return name="hostname"/>
@@ -55,7 +39,7 @@
       </returns>
     </assembly>
     <assembly name="mysql" hwp="large">
-      <image id="7202a287-325a-4a0c-943a-c3e623ce6885"/>
+      <image id="MYSQL_IMAGE_ID"/>
       <services>
         <service name="mysql">
           <executable url="https://raw.github.com/aeolusproject/audrey/master/examples/drupal/drupal-mysql.py"/>
@@ -79,22 +63,6 @@
               <reference assembly="drupal" parameter="hostname"/>
             </parameter>
           </parameters>
-        </service>
-        <service name="pubkey">
-          <executable>
-            <contents><![CDATA[#!/bin/bash
-                mkdir -p /root/.ssh
-                chmod 700 /root/.ssh
-                cat pubkey >> /root/.ssh/authorized_keys
-                chmod 600 /root/.ssh/authorized_keys
-              ]]>
-            </contents>
-          </executable>
-          <files>
-            <file>
-              <contents filename="pubkey"><![CDATA[ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAubzg/muv8doBADvQvhc1T5NkjCyOSqJHdnU/RaDeNHjXq7WUs2VLRXTFyfn9PJ6E/ufX7sJmxZcwqbEbZiZ8Ea4IMn1ifzEK+7GpSLUkJlEZPcxq23wb4PJNubiMocvc3FMIGyZLKwDj5z3jzVJOay1iCEDYecy0qerlCfVOwXlQqgxZk5Tw89qG48dEnhC0kPqJV67S6k+FMs71tO3jILoTcwJkAkUrxWsC1YfHiZV0wK9Oj+cbsD8gPo55+3uUqqdDShl69JGXWkxc/+aGuFDdm+ylUgZheKUaOhta8UZZDZoYB/fs8odIl6FuJznBWe3MyNcunm8utl5EfsgDlQ== gblomqui@gblomqui.usersys.redhat.com]]></contents>
-            </file>
-          </files>
         </service>
       </services>
       <returns>
