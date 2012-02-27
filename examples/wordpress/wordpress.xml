@@ -2,7 +2,7 @@
   <description>This is an example of a multi deployment that deploys wordpress across an apache and mysql instance</description>
   <assemblies>
     <assembly name="apache" hwp="hwp1">
-      <image id=""/>
+      <image id="APACHE_IMAGE_ID"/>
       <services>
         <service name="http">
           <executable url="https://github.com/aeolusproject/audrey/raw/master/examples/wordpress/wordpress-http.sh"/>
@@ -30,7 +30,10 @@
         <service name="pubkey">
           <executable>
             <contents><![CDATA[#!/bin/bash
-                cat pubkey >> authorized_keys
+                mkdir -p /root/.ssh
+                chmod 700 /root/.ssh
+                cat pubkey >> /root/.ssh/authorized_keys
+                chmod 600 /root/.ssh/authorized_keys
               ]]>
             </contents>
           </executable>
@@ -40,7 +43,7 @@
                 pubkey contents
               </contents>
             </file>
-          </file>
+          </files>
         </service>
       </services>
       <returns>
@@ -49,7 +52,7 @@
       </returns>
     </assembly>
     <assembly name="mysql" hwp="hwp1">
-      <image id=""/>
+      <image id="MYSQL_IMAGE_ID"/>
       <services>
         <service name="mysql">
           <executable url="https://github.com/aeolusproject/audrey/raw/master/examples/wordpress/wordpress-mysql.sh"/>
@@ -77,7 +80,10 @@
         <service name="pubkey">
           <executable>
             <contents><![CDATA[#!/bin/bash
-                cat pubkey >> authorized_keys
+                mkdir -p /root/.ssh
+                chmod 700 /root/.ssh
+                cat pubkey >> /root/.ssh/authorized_keys
+                chmod 600 /root/.ssh/authorized_keys
               ]]>
             </contents>
           </executable>
@@ -87,7 +93,7 @@
                 pubkey contents
               </contents>
             </file>
-          </file>
+          </files>
         </service>
       </services>
       <returns>
