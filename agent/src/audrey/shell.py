@@ -17,7 +17,7 @@
 '''
 
 from subprocess import Popen, PIPE
-from audrey import ASError
+from audrey.errors import ASError
 
 
 class run_cmd_return_subproc(object):

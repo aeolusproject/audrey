@@ -20,7 +20,7 @@ import os
 import logging
 logger = logging.getLogger('Audrey')
 
-from audrey import ASError
+from audrey.errors import ASError
 
 CLOUD_INFO_FILE = '/etc/sysconfig/cloud-info'
 

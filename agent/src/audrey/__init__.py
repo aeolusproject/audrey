@@ -66,17 +66,3 @@ def setup_logging(level=logging.INFO, logfile_name=LOG):
         # redirect the stderr and out to the logger
         sys.stdout = StreamToLogger(logger, logging.INFO)
         sys.stderr = StreamToLogger(logger, logging.ERROR)
-
-
-class ASError(Exception):
-    '''
-    Some sort of error occurred. The exact cause of the error should
-    have been logged. So, this just indicates that something is wrong.
-    when invoked without args we redirect stderr to the log so
-    logging here is not really nessesary
-    '''
-    pass
-
-
-class ASErrorInvalidTar(ASError):
-    pass

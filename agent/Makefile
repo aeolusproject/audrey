@@ -89,11 +89,11 @@ clean:
 	toolinglog toolinguser
 
 # report coverage
-coverage: src/audrey/agent.py
+coverage: clean src/audrey/agent.py
 	coverage erase
 	coverage run test_audrey_agent.py
 	coverage report -m test_audrey_agent.py `find src/audrey/ -name "*.py"` tests/*.py
 
-pep8:
+pep8: clean src/audrey/agent.py
 	find . -name '*.py' -exec pep8 -r {} \;
 .PHONY: dist test rpms srpm

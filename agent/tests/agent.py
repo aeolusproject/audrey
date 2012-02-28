@@ -23,7 +23,7 @@ import logging
 
 import audrey.user_data_ec2
 
-from audrey import ASError
+from audrey.errors import ASError
 from audrey import setup_logging
 from audrey.shell import run_cmd
 from audrey.agent import main

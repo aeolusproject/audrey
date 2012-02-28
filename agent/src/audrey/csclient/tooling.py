@@ -20,7 +20,7 @@ import os
 import logging
 import tarfile
 
-from audrey import ASError, ASErrorInvalidTar
+from audrey.errors import ASError, ASErrorInvalidTar
 from audrey.shell import run_cmd
 
 TOOLING_DIR = '/var/audrey/tooling/'

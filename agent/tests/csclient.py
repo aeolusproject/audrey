@@ -21,7 +21,7 @@ import shutil
 import unittest
 import base64
 
-from audrey import ASError, ASErrorInvalidTar
+from audrey.errors import ASError, ASErrorInvalidTar
 from audrey.shell import run_cmd
 from audrey.csclient.client import CSClient
 from audrey.csclient.tooling import ConfigTooling

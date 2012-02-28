@@ -18,7 +18,7 @@
 
 import base64
 
-from audrey import ASError
+from audrey.errors import ASError
 from audrey.user_data import UserDataBase
 from audrey.shell import run_cmd
 

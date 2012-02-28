@@ -21,7 +21,7 @@ import logging
 import tempfile
 import oauth2 as oauth
 
-from audrey import ASError
+from audrey.errors import ASError
 
 logger = logging.getLogger('Audrey')
 

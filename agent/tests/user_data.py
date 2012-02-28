@@ -22,7 +22,7 @@ import base64
 
 import audrey.user_data
 
-from audrey import ASError
+from audrey.errors import ASError
 
 from tests import _write_file
 from tests.mocks import mock_run_cmd

@@ -19,7 +19,7 @@
 import httplib2
 import base64
 
-from audrey import ASError
+from audrey.errors import ASError
 from audrey.user_data import UserDataBase
 
 EC2_USER_DATA_URL = 'http://169.254.169.254/latest/user-data'

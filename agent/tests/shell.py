@@ -23,7 +23,7 @@ import audrey.shell
 from tests.mocks import mock_run_cmd
 from tests.mocks import mock_run_cmd_facter_fail
 
-from audrey import ASError
+from audrey.errors import ASError
 from audrey.shell import run_cmd
 from audrey.shell import run_pipe_cmd
 from audrey.shell import get_system_info
