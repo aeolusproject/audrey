@@ -178,10 +178,12 @@ def main():
     # Get any optional tooling from the Config Server
     tooling = ConfigTooling(**tool_dir)
     tooling_status, tarball = cs_client.get_cs_tooling()
-    tooling.unpack_tooling(tarball)
-    services = tooling.get_services_list()
+    if tooling_status == 200 or tooling_status == 202:
+        tooling.unpack_tooling(tarball)
+    else:
+        logger.info('No optional config tooling provided. status: ' + \
+                str(tooling_status))
     logger.debug(str(tooling))
-
     logger.debug('Process the Requires and Provides parameters')
 
     # Process the Requires and Provides parameters until the HTTP status
