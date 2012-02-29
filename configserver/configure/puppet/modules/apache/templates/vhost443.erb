@@ -10,11 +10,6 @@ NameVirtualHost *:443
   TransferLog /etc/httpd/logs/ssl_access_log
   LogLevel <%= scope.lookupvar("apache::variables::httpd_log_level") %>
 
-  ProxyRequests off
-
-  ProxyPass /<%= scope.lookupvar("apache::variables::config_server_context") %> <%= scope.lookupvar("apache::variables::config_server_url") %>
-  ProxyPassReverse /<%= scope.lookupvar("apache::variables::config_server_context") %> <%= scope.lookupvar("apache::variables::config_server_url") %>
-
   Include conf.d/cs443/*.conf
 
 </VirtualHost>

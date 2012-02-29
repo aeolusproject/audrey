@@ -18,7 +18,6 @@ class apache {
       ''        => 'apache',
       default   => $proxy_type
     }
-
   }
 
   class base {
@@ -40,6 +39,35 @@ class apache {
       refreshonly => true,
       require => Package["apache"],
     }
+  }
+
+  define proxy ( $drop_file_dir = 'cs443') {
+    $apache_path      = "/etc/httpd"
+    $apache_conf_path = "${apache_path}/conf.d"
+    $drop_file_path   = "${apache_conf_path}/${drop_file_dir}"
+
+    $drop_file = "${drop_file_path}/config_server_proxy.conf"
+
+    file { $drop_file:
+      ensure  => $ensure,
+      content => template("apache/proxy.erb"),
+      notify  => Exec["graceful-apache"],
+      require => Package["apache"],
+    }
+  }
+
+  class conductor::ssl {
+    $drop_file_dir = "aeolus-conductor.d"
+    # Make sure the aeolus-conductor.d drop file directory is available
+    file { 'vhost-443-addl':
+      name => "/etc/httpd/conf.d/${drop_file_dir}",
+      ensure => directory,
+      mode => 0644, owner => root, group => root,
+      require => Package["apache"],
+      notify  => Exec["graceful-apache"]
+    }
+
+    proxy { "configserver_proxy": drop_file_dir => "$drop_file_dir" }
   }
 
   class ssl {
@@ -86,15 +114,18 @@ class apache {
       notify => Exec["graceful-apache"],
     }
 
+    $drop_file_dir = "cs443"
     # The aeolus-configserver-vhost443.conf file allows for additional configs
     # for the vhost to be placed in the following directory
     file { 'vhost-443-addl':
-      name => "/etc/httpd/conf.d/cs443",
+      name => "/etc/httpd/conf.d/${drop_file_dir}",
       ensure => directory,
       mode => 0644, owner => root, group => root,
       require => Package["apache"],
       notify  => Exec["graceful-apache"]
     }
+
+    proxy { "configserver_proxy": drop_file_dir => "$drop_file_dir" }
 
     exec { "config-iptables-for-443":
       command   => "/sbin/iptables -I INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT",

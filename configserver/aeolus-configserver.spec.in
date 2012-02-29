@@ -125,7 +125,7 @@ install -m 0644 \
     configure/puppet/modules/configserver/manifests/init.pp \
     %{buildroot}%{app_root}/configure/puppet/modules/configserver/manifests
 
-install configure/bin/config_httpd.sh \
+install configure/bin/aeolus-configserver-setup.sh \
     %{buildroot}%{_bindir}/aeolus-configserver-setup
 
 # copy the generated man page from the buildroot

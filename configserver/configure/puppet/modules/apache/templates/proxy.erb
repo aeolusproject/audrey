@@ -1,0 +1,6 @@
+# Include this file inside of an existing vhost configuration
+
+ProxyRequests off
+
+ProxyPass /<%= scope.lookupvar("apache::variables::config_server_context") %> <%= scope.lookupvar("apache::variables::config_server_url") %>
+ProxyPassReverse /<%= scope.lookupvar("apache::variables::config_server_context") %> <%= scope.lookupvar("apache::variables::config_server_url") %>
