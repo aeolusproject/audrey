@@ -17,13 +17,13 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    0%{?dist}
+Release:    1%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
 License:    ASL 2.0
 URL:        http://aeolusproject.org
-Source0:    http://joev.fedorapeople.org/configserver/aeolus-configserver-%{version}.tgz
+Source0:    https://github.com/aeolusproject/audrey/tarball/1.0/aeolus-configserver-%{version}.tgz
 
 BuildRequires:   rubygems
 %if 0%{?fedora} >= 17
@@ -154,13 +154,15 @@ getent passwd aeolus >/dev/null || \
 
 %post
 # Register the service
-chkconfig --add %{name}
+/sbin/chkconfig --add %{name}
+/sbin/chkconfig %{name} on
+/sbin/chkconfig httpd on
 
 %preun
 # stop and unregister the service before package deletion
 if [ $1 = 0 ]; then
-  service %{name} stop > /dev/null 2>&1
-  chkconfig --del %{name}
+  /sbin/service %{name} stop > /dev/null 2>&1
+  /sbin/chkconfig --del %{name}
 fi
 
 %files
@@ -179,6 +181,9 @@ fi
 %doc COPYING
 
 %changelog
+* Mon Mar 05 2012 Dan Radez <dradez@redhat.com> 0.4.6-1
+- https://bugzilla.redhat.com/show_bug.cgi?id=798787
+- chkconfig on for http and configserver
 * Thu Feb 09 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.6-0
 - https://bugzilla.redhat.com/show_bug.cgi?id=788996
 * Mon Jan 16 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.5-2

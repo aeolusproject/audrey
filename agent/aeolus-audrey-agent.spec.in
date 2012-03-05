@@ -21,13 +21,13 @@
 
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    2%{?dist}
+Release:    3%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
 License:    ASL 2.0
 URL:        http://aeolusproject.org
-Source0:    https://github.com/aeolusproject/audrey/tarball/master/aeolus-audrey-agent-%{version}.tar.gz
+Source0:    https://github.com/aeolusproject/audrey/tarball/1.0/aeolus-audrey-agent-%{version}.tar.gz
 
 # All of these are required for building since during the build
 # process "audrey --help" is executed to generate the man page.
@@ -84,6 +84,7 @@ fi
 %post
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
 /sbin/chkconfig --add audrey
+/sbin/chkconfig audrey on
 else
 /bin/systemctl enable audrey.service > /dev/null
 fi
@@ -110,6 +111,9 @@ fi
 %doc COPYING
 
 %changelog
+* Mon Mar 05 2012 Dan Radez <dradez@redhat.com> 0.4.4-3
+- https://bugzilla.redhat.com/show_bug.cgi?id=798787
+- chkconfig on for http and configserver
 * Wed Jan 25 2012 Dan Radez <dradez@redhat.com> 0.4.4-2
 - adding rc.local modifications
 * Wed Dec 07 2011 Joe VLcek <jvlcek@redhat.com> 0.4.0-14
