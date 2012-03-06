@@ -58,7 +58,10 @@
                     <element name="value"><text/></element>
                     <element name="reference">
                       <attribute name="assembly"><text/></attribute>
-                      <attribute name="provided-parameter"><text/></attribute>
+                      <choice>
+                        <attribute name="provided-parameter"><text/></attribute>
+                        <attribute name="service-parameter"><text/></attribute>
+                      </choice>
                     </element>
                   </choice>
                 </element>

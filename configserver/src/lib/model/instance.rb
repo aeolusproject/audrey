@@ -28,6 +28,7 @@ require 'archive/tar/minitar'
 include Archive::Tar
 
 require 'lib/model/base'
+require 'lib/model/service'
 
 class Dir
   class << self
@@ -96,8 +97,12 @@ module ConfigServer
 
       attr_reader :instance_config, :ip, :secret, :uuid
 
-      def self.exists?(uuid)
-        File.exist?(storage_path uuid)
+      def self.exists?(uuid, service=nil)
+        if service
+          File.exist?(storage_path uuid) and self.services service
+        else
+          File.exist?(storage_path uuid)
+        end
       end
 
       def self.storage_path(uuid=nil)
@@ -181,6 +186,14 @@ module ConfigServer
         replace_ip(ip)
       end
 
+      def service_return_code_values=(params={})
+        params.each do |name,val|
+          s = Service.find_or_create name
+          s.return_code = val
+          s.store
+        end
+      end
+
       def provided_parameters_values=(params={})
         logger.debug("provided params: #{params.inspect}")
         if not (params.nil? or params.empty?)
@@ -238,9 +251,10 @@ module ConfigServer
         return required_parameters_raw
       end
 
-      def services
+      def services(service=nil)
+        service_xpath = service ? "//service[@name='#{service}']" : '//service'
         services = ActiveSupport::OrderedHash.new
-        (config / '//service').each do |s|
+        (config / service_xpath).each do |s|
           name = s["name"]
           params_with_values = (s / './parameters/parameter/value/..') +
             (rp / "//required-parameter[@service='#{name}']/value/..")
@@ -326,7 +340,7 @@ module ConfigServer
         replace_tarball
 
         @secret = get_secret
-
+ 
         deployable
         @deployable.add_instance(@uuid)
 
@@ -351,11 +365,15 @@ module ConfigServer
 
       def replace_provided_parameters
         provided_params = config / '//provided-parameter'
+        services = config / '//service'
         xml = ""
         if not provided_params.empty?
           xml = "<provided-parameters>\n"
           provided_params.each do |p|
             xml += "  <provided-parameter name='#{p['name']}'/>\n"
+          end
+          services.each do |s|
+            xml += "  <service-parameter name='#{s['name']}'/>\n"
           end
           xml += "</provided-parameters>\n"
         end
@@ -377,11 +395,17 @@ module ConfigServer
           xml = "<required-parameters>\n"
           services.each do |s|
             (services / './parameters/parameter/reference/..').each do |p|
-              xml += "  <required-parameter service='#{s['name']}'"
-              xml += " name='#{p['name']}'"
               ref = p % 'reference'
+              if ref.key? 'service-parameter'
+                xml += "  <service-parameter service='#{s['name']}'"
+                param_type = 'service-parameter'
+              else
+                xml += "  <required-parameter service='#{s['name']}'"
+                param_type = 'provided-parameter'
+              end
+              xml += " name='#{p['name']}'"
               xml += " assembly='#{ref['assembly']}'"
-              xml += " parameter='#{ref['provided-parameter']}'/>\n"
+              xml += " parameter='#{ref[param_type]}'/>\n"
             end
           end
           xml += "</required-parameters>\n"

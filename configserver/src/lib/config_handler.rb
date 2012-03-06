@@ -47,18 +47,18 @@ module ConfigServer
       @version = @settings.version || "0.2.0"
     end
 
-    def exists?(uuid)
-      Model::Instance.exists?(uuid)
+    def exists?(uuid, service=nil)
+      Model::Instance.exists?(uuid, service)
     end
 
     def deployment_exists?(uuid)
       Model::Deployable.exists?(uuid)
     end
 
-    def get_configs(uuid)
+    def get_configs(uuid, service=nil)
       if exists?(uuid)
         instance = Model::Instance.find(uuid)
-            services = instance.services
+            services = instance.services service
             log "uuid: #{uuid}"
             log "services: #{services.inspect}"
         configs = "|" +
@@ -83,7 +83,12 @@ module ConfigServer
       if exists?(uuid)
         instance = Model::Instance.find(uuid)
         parameters = instance.provided_parameters(:only_empty => true)
-        process_provides(parameters)
+        if options[:apiv] == "1"
+          process_provides(parameters)
+        else
+          services = instance.services()
+          process_provides(parameters, services)
+        end
       end
     end
 
@@ -109,7 +114,11 @@ module ConfigServer
       instance.ip = ip
 
       params = parse_audrey_data(data)
-      instance.provided_parameters_values = params
+      if data.start_with? '||'
+        instance.service_return_code_values = params
+      else
+        instance.provided_parameters_values = params
+      end
 
       provided_params = instance.provided_parameters(
         :only_with_values => true,
@@ -175,8 +184,12 @@ module ConfigServer
       end.compact.inject(:merge)
     end
 
-    def process_provides(provides)
-      "|" + provides.join('&') + "|"
+    def process_provides(provides, services=nil)
+      provides = "|" + provides.join('&') + "|"
+      if services
+        provides += services.keys.join('&') + "|"
+      end
+      provides
     end
 
     def register_with_oauth(instance)

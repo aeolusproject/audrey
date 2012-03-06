@@ -34,11 +34,31 @@ module ApplicationHelper
   end
 
   def api_version
-    "1"
+    (1..2)
   end
 
-  def api_version_valid?(request, version)
-    return api_version == version.to_s
+  def api_version_valid?(version)
+    api_version.include? version.to_i
+  end
+
+  def api_version_negotiate(agent_versions)
+    if agent_versions
+      # start with a 0, we'll return this if we don't find
+      # a compatible version so the client know's we can't communicate
+      version = 0
+      agent_versions = agent_versions.split('-')
+      agent_versions = agent_versions.map { |x| x.to_i }
+      agent_versions.sort.reverse.each do |v|
+        if api_version.include?(v)
+          return v
+        end
+      end
+    else
+      # if an api version is not provided then
+      # return the most current api version
+      version = api_version.max
+    end
+    version
   end
 
   def authenticate!

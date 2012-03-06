@@ -44,7 +44,7 @@ get '/version', :provides => ['text', 'xml'] do
   logger.debug("Getting the version as text or XML")
   "<config-server>\n" +
   "  <application-version>#{app_version}</application-version>\n" +
-  "  <api-version>#{api_version}</api-version>\n" +
+  "  <api-version>#{api_version_negotiate(params[:api_compat])}</api-version>\n" +
   "</config-server>"
 end
 
@@ -52,7 +52,7 @@ get '/version' do
   logger.debug("Getting the version as HTML")
   "<html><body>\n" +
   "<li>Application Version: #{app_version}</li>\n" +
-  "<li>API Version: #{api_version}<li/>\n" +
+  "<li>API Version: #{api_version_negotiate(params[:api_compat])}<li/>\n" +
   "</body></html>"
 end
 
@@ -68,6 +68,12 @@ before '/files/*' do
 end
 before '/auth*' do
   authenticate!
+end
+before '/*/:version/*' do
+  # Validate the api version
+  if not api_version_valid?(params[:version])
+    not_found
+  end 
 end
 
 # Test OAuth
@@ -90,23 +96,11 @@ end
 
 ## GET /configs/
 # Retrieve the configuration information for an instance
-get '/configs/:version/:uuid', :provides => 'text' do
-  if not api_version_valid?(request, params[:version]) or
-      not configs.exists?(params[:uuid])
+get '/configs/:version/:uuid/?:service?' do
+  if not configs.exists?(params[:uuid])
     not_found
   else
-    confs, more_configs = configs.get_configs(params[:uuid])
-    status = more_configs ? 202 : 200
-    [status, confs]
-  end
-end
-
-get '/configs/:version/:uuid' do
-  if not api_version_valid?(request, params[:version]) or
-      not configs.exists?(params[:uuid])
-    not_found
-  else
-    confs, more_configs = configs.get_configs(params[:uuid])
+    confs, more_configs = configs.get_configs(params[:uuid], params[:service])
     status = more_configs ? 202 : 200
     [status, confs]
   end
@@ -115,19 +109,12 @@ end
 ## POST /configs/
 # Create (or completely replace) the configuration data for an instance
 post '/configs/:version/:uuid' do
-  # For now, we're not going to validate the version here
-  # The current XML validation should be enough for the moment
-  # Really handling version checking here will require a patch to conductor
-  #if not api_version_valid?(request, params[:version])
-    #not_found
-  #else
-    logger.debug("Post data: #{params[:data]}")
-    begin
-      configs.create(params[:uuid], params[:data])
-    rescue ConfigServer::Model::InvalidInstanceConfigError
-      400
-    end
-  #end
+  logger.debug("Post data: #{params[:data]}")
+  begin
+    configs.create(params[:uuid], params[:data])
+  rescue ConfigServer::Model::InvalidInstanceConfigError
+    400
+  end
 end
 
 ## DELETE /deployment/
@@ -144,25 +131,20 @@ end
 ## GET /files/
 # Retrieve the configuration files for an instance
 get '/files/:version/:uuid' do
-  if not api_version_valid?(request, params[:version])
+  file = configs.get_file(params[:uuid])
+  if file.nil?
     not_found
   else
-    file = configs.get_file(params[:uuid])
-    if file.nil?
-      not_found
-    else
-      send_file file,
-        :filename => "#{params[:uuid]}.tgz",
-        :type => "application/x-tar"
-    end
+    send_file file,
+      :filename => "#{params[:uuid]}.tgz",
+      :type => "application/x-tar"
   end
 end
 
 ## PUT /files/
 # Add configuration files for an instance
 put '/files/:version/:uuid' do
-  if not api_version_valid?(request, params[:version]) or
-      not configs.exists?(params[:uuid])
+  if not configs.exists?(params[:uuid])
     not_found
   else
     uuid = params[:uuid]
@@ -174,20 +156,17 @@ end
 ## GET /params/
 # Retrieve the list of "return" parameters names for an instance
 get '/params/:version/:uuid', :provides => 'text' do
-  if not api_version_valid?(request, params[:version]) or
-      not configs.exists?(params[:uuid])
+  if not configs.exists?(params[:uuid])
     not_found
   else
-    provides = configs.get_provides(params[:uuid])
-    provides
+    provides = configs.get_provides(params[:uuid], :apiv => params[:version])
   end
 end
 
 ## PUT /params/
 # Set the live of "return" parameter values for an instance
 put '/params/:version/:uuid' do
-  if not api_version_valid?(request, params[:version]) or
-      not configs.exists?(params[:uuid])
+  if not configs.exists?(params[:uuid])
     not_found
   else
     logger.debug("PUT params: #{params[:audrey_data]}")
