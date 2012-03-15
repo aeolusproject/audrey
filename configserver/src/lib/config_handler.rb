@@ -58,11 +58,10 @@ module ConfigServer
     def get_configs(uuid)
       if exists?(uuid)
         instance = Model::Instance.find(uuid)
-        configs = 
             services = instance.services
             log "uuid: #{uuid}"
             log "services: #{services.inspect}"
-            "|" +
+        configs = "|" +
             services.map do |svc_name,params|
               "service|#{svc_name}" +
               if not params.empty?
