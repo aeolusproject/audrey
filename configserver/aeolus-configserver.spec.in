@@ -42,12 +42,12 @@ BuildRequires:   help2man
   # test target BuildRequires
   # Only run the automated test on Fedora because not all the
   # required packages are available on RHEL.
-  BuildRequires:   rubygem-test-spec rubygem-archive-tar-minitar
-  BuildRequires:   rubygem-activesupport rubygem-nokogiri
-  BuildRequires:   rubygem-oauth rubygem-rack
-  BuildRequires:   rubygem-rack-test rubygem-rake
-  BuildRequires:   rubygem-rspec rubygem-rspec-core
-  BuildRequires:   rubygem-ruby-debug rubygem-sinatra
+BuildRequires:   rubygem-test-spec rubygem-archive-tar-minitar
+BuildRequires:   rubygem-activesupport rubygem-nokogiri
+BuildRequires:   rubygem-oauth rubygem-rack
+BuildRequires:   rubygem-rack-test rubygem-rake
+BuildRequires:   rubygem-rspec rubygem-rspec-core
+BuildRequires:   rubygem-ruby-debug rubygem-sinatra
 %endif
 
 Requires:        httpd
@@ -82,10 +82,6 @@ configurations.
 
 %install
 rm -rf %{buildroot}
-
-echo "JJV"
-echo %{ruby_abi}
-echo "JJV"
 
 ##
 # aeolus-configserver
@@ -123,7 +119,7 @@ install -m 0644 \
 # copy over init scripts and configs
 %if 0%{?rhel}
   # install the sysv service script
-  mkdir -p %{buildroot}/%{_initrddir}/%{name}
+  mkdir -p %{buildroot}/%{_initrddir}
   install -Dp -m755 conf/%{name}.sysv %{buildroot}/%{_initrddir}/%{name}
 %else
   # install the systemd unit file
