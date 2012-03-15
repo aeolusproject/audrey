@@ -13,8 +13,6 @@
 #   See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-%define app_root %{_datadir}/%{name}
-
 Name:       aeolus-configserver
 Version:    @VERSION@
 Release:    @RELEASE@
@@ -23,17 +21,45 @@ Summary:    The Aeolus Config Server
 Group:      Applications/System
 License:    ASL 2.0
 URL:        http://aeolusproject.org
-Source0:    https://github.com/aeolusproject/audrey/tarball/master/aeolus-audrey-agent-%{version}.tar.gz
+Source0:    http://joev.fedorapeople.org/configserver/aeolus-configserver-%{version}.tgz
+
+%global app_root %{_datadir}/%{name}
+%if 0%{?fedora} >= 17
+  %global ruby_abi 1.9.1
+%else
+  %global ruby_abi 1.8
+%endif
+
+BuildRequires:   rubygems
+BuildRequires:   ruby(abi) = %{ruby_abi}
 
 BuildRequires:   ruby-devel
-BuildRequires:   rubygem-test-spec rubygem-archive-tar-minitar
+BuildRequires:   ruby-devel
+BuildRequires:   rubygems
 BuildRequires:   help2man
+
+%if 0%{?fedora}
+  # test target BuildRequires
+  # Only run the automated test on Fedora because not all the
+  # required packages are available on RHEL.
+  BuildRequires:   rubygem-test-spec rubygem-archive-tar-minitar
+  BuildRequires:   rubygem-activesupport rubygem-nokogiri
+  BuildRequires:   rubygem-oauth rubygem-rack
+  BuildRequires:   rubygem-rack-test rubygem-rake
+  BuildRequires:   rubygem-rspec rubygem-rspec-core
+  BuildRequires:   rubygem-ruby-debug rubygem-sinatra
+%endif
 
 Requires:        httpd
 Requires:        mod_ssl
 Requires:        puppet
-Requires:        ruby >= 1.8.1
+
 Requires:        ruby-nokogiri
+Requires:        rubygems
+
+Requires:        ruby(abi) = %{ruby_abi}
+Requires:        rubygem(nokogiri)
+
 Requires:        rubygem(sinatra)
 Requires:        rubygem(thin)
 Requires:        rubygem(archive-tar-minitar)
@@ -56,6 +82,10 @@ configurations.
 
 %install
 rm -rf %{buildroot}
+
+echo "JJV"
+echo %{ruby_abi}
+echo "JJV"
 
 ##
 # aeolus-configserver
@@ -91,11 +121,19 @@ install -m 0644 \
     src/lib/model/instance.rb %{buildroot}/%{app_root}/lib/model
 
 # copy over init scripts and configs
-install conf/%{name} %{buildroot}/%{_initrddir}
+%if 0%{?rhel}
+  # install the sysv service script
+  mkdir -p %{buildroot}/%{_initrddir}/%{name}
+  install -Dp -m755 conf/%{name}.sysv %{buildroot}/%{_initrddir}/%{name}
+%else
+  # install the systemd unit file
+  mkdir -p %{buildroot}/%{_unitdir}/
+  install -m644 conf/%{name}.service %{buildroot}/%{_unitdir}/
+  echo  %{buildroot}/%{_unitdir}/
+%endif
+  
 install -m 0644 conf/%{name}.sysconf \
     %{buildroot}%{_sysconfdir}/sysconfig/%{name}
-install -m 0644 conf/%{name}-proxy.sysconf \
-    %{buildroot}%{_sysconfdir}/sysconfig/%{name}-proxy
 install -m 0644 conf/%{name}.logrotate \
     %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
 
@@ -144,24 +182,38 @@ getent passwd aeolus >/dev/null || \
 
 %post
 # Register the service
-/sbin/chkconfig --add %{name}
-/sbin/chkconfig %{name} on
-/sbin/chkconfig httpd on
+%if 0%{?rhel}
+  chkconfig --add %{name}
+  chkconfig %{name} on
+  chkconfig httpd on
+%else
+  systemctl enable %{name}.service > /dev/null
+%endif
 
 %preun
 # stop and unregister the service before package deletion
 if [ $1 = 0 ]; then
-  /sbin/service %{name} stop > /dev/null 2>&1
-  /sbin/chkconfig --del %{name}
+%if 0%{?rhel}
+  service %{name} stop > /dev/null 2>&1
+  chkconfig --del %{name}
+%else
+  systemctl stop %{name}.service > /dev/null
+  systemctl disable %{name}.service > /dev/null
+%endif
 fi
 
 %files
 %defattr(-,root,root,-)
 %{_bindir}/aeolus-configserver-setup
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-proxy
 %{app_root}
 %dir %{_sysconfdir}/%{name}
-%{_initrddir}/%{name}
+
+%if 0%{?rhel}
+  %{_initrddir}/%{name}
+%else
+  %{_unitdir}/%{name}.service
+%endif
+
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
 %attr(-, aeolus, aeolus) %{_localstatedir}/lib/%{name}
@@ -171,6 +223,8 @@ fi
 %doc COPYING
 
 %changelog
+* Tue Mar 13 2012 Joe VLcek <jvlcek@redhat.com> 0.5.0-4
+- Convert init scripts to sysV and systemd
 * Mon Mar 05 2012 Dan Radez <dradez@redhat.com> 0.4.6-1
 - https://bugzilla.redhat.com/show_bug.cgi?id=798787
 - chkconfig on for http and configserver

@@ -142,7 +142,14 @@ CLEAN.include(CONFIG)
 desc 'Run tests'
 task :test => [:generate_files] do
   Dir::chdir("src") do |dir|
-    sh "rspec spec"
+    # set pipefail so if the command fails, it's status is reported back
+    # to the rake task
+    cmd = "set -o pipefail && uname -r | grep \.el[0-9] | tee rpmbuild.log 2>&1"
+    system(cmd)
+    cmd_status = $?
+    if cmd_status != 0
+      sh "rspec spec"
+    end
   end
 end
 

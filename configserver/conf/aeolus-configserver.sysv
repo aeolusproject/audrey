@@ -22,7 +22,6 @@
 #
 
 [ -r /etc/sysconfig/aeolus-configserver ] && . /etc/sysconfig/aeolus-configserver
-[ -r /etc/sysconfig/aeolus-configserver-proxy ] && . /etc/sysconfig/aeolus-configserver-proxy
 
 RACK_ENV="${RACK_ENV:-production}"
 CONFIG_SERVER_DIR="${CONFIG_SERVER_DIR:-/usr/share/aeolus-configserver}"
