@@ -21,31 +21,84 @@ import logging
 logger = logging.getLogger('Audrey')
 
 from audrey.errors import ASError
+from audrey.shell import get_system_info
 
 CLOUD_INFO_FILE = '/etc/sysconfig/cloud-info'
 
+def _get_cloud_type():
+    '''
+    Description:
+        Get the type of the cloud back end this instance is running on.
+
+        Currently utilizes Puppet's facter via a Python subprocess call.
+        Currently supported cloud back end types are:
+            EC2, RHEV, VSPHERE
+
+    Input:
+        None
+
+    Returns:
+        One of the following strings:
+        'EC2', 'RHEV', 'VSPHERE' or 'UNKNOWN'
+
+    '''
+    system_facts = get_system_info()
+
+    # Check for productname key as found on RHEVm and VMware/vSphere
+    if 'productname' in system_facts:
+        if 'RHEV' in system_facts['productname'].upper():
+            return 'RHEV'
+        if 'VMWARE' in system_facts['productname'].upper():
+            return 'VSPHERE'
+
+    # Check for ec2_ami_id key as found on EC2
+    if 'ec2_ami_id' in  system_facts:
+        return 'EC2'
+
+    return 'UNKNOWN'
+
 
 def discover():
+    '''
+    Description:
+        User Data is passed to the launching instance which
+        provides the Config Server contact information.
+
+        Cloud providers expose the user data differently.
+        It is necessary to determine which cloud provider
+        the current instance is running on to determine
+        how to access the user data. Images built with
+        image factory will contain a CLOUD_INFO_FILE which
+        contains a string identifying the cloud provider.
+
+        Images not built with Imagefactory will try to
+        determine what the cloud provider is based on system
+        information.
+    '''
+
+    logger.debug('Invoked discover')
+
     if os.path.exists(CLOUD_INFO_FILE):
         f = open(CLOUD_INFO_FILE)
         cloud_type = f.read().strip().upper()
         f.close()
 
-        if 'EC2' in cloud_type:
-            import audrey.user_data_ec2
-            return audrey.user_data_ec2.UserData()
-        elif 'RHEV' in cloud_type:
-            import audrey.user_data_rhev
-            return audrey.user_data_rhev.UserData()
-        elif 'VSPHERE' in cloud_type:
-            import audrey.user_data_vsphere
-            return audrey.user_data_vsphere.UserData()
-        else:
-            raise ASError('Cloud type "%s" is invalid.' % cloud_type)
     else:
-        #try imports
-        raise ASError('%s is missing.' % CLOUD_INFO_FILE)
+        cloud_type = _get_cloud_type()
 
+    logger.debug('cloud_type: ' + str(cloud_type))
+
+    if 'EC2' in cloud_type:
+        import audrey.user_data_ec2
+        return audrey.user_data_ec2.UserData()
+    elif 'RHEV' in cloud_type:
+        import audrey.user_data_rhev
+        return audrey.user_data_rhev.UserData()
+    elif 'VSPHERE' in cloud_type:
+        import audrey.user_data_vsphere
+        return audrey.user_data_vsphere.UserData()
+    else:
+        raise ASError('Cloud type "%s" is invalid.' % cloud_type)
 
 class UserDataBase(object):
     '''
