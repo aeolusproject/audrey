@@ -21,7 +21,7 @@
 
 Name:       aeolus-audrey-agent
 Version:    @VERSION@
-Release:    4%{?dist}
+Release:    1%{?dist}
 Summary:    The Aeolus Audrey Startup Agent
 
 Group:      Applications/System
@@ -111,7 +111,7 @@ fi
 %doc COPYING
 
 %changelog
-* Tue Mar 13 2012 Dan Radez <dradez@redhat.com> 0.4.4-4
+* Tue Mar 13 2012 Dan Radez <dradez@redhat.com> 0.4.5-1
 - update the sysv priorities to fix BZ800251
 * Mon Mar 05 2012 Dan Radez <dradez@redhat.com> 0.4.4-3
 - https://bugzilla.redhat.com/show_bug.cgi?id=798787
