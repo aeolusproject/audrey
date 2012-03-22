@@ -11,7 +11,11 @@ mysql server.
 Before you begin, make sure you have:
 
 *  an Aeolus Conductor server running and configured
+    *  Aeolus Conductor should be configured with an EC2 provider account
+    *  The EC2 account's default security group should allow external access over port 80
 *  an Audrey Config Server setup and configured
+    *  Add the Audrey Config Server to the Aeolus Conductor EC2 provider account
+    *  see [instructions](http://www.aeolusproject.org/audrey.html#update_conductor)
 
 ## Understanding the sample files
 
@@ -37,12 +41,12 @@ instances from the Audrey Config Server and used during configuration.
 
 ### Deployable
 
-* wordpress.xml
+* wordpress-inline.xml
 
-The Deployable XML file contains references to built images as well as
-references to the scripts and files.  All of these references are packaged
-together in <code>&lt;assembly&gt;</code> elements, which provide a way to tie
-the two instances together.
+The Deployable XML file contains references to built images as well as the
+scripts and files inline.  All of these references are packaged together in
+<code>&lt;assembly&gt;</code> elements, which provide a way to tie the two
+instances together.
 
 ## Getting started
 
@@ -103,7 +107,7 @@ fe030093-596a-4a90-b07a-57ac57a22640     ec2-us-east-1     ec2AccountName  Pushi
    > 6. Click "From URL"
    > 7. Enter a name
    > 8. Provide
-       "https://raw.github.com/aeolusproject/audrey/master/examples/wordpress/wordpress.xml"
+       "https://raw.github.com/aeolusproject/audrey/master/examples/wordpress/wordpress-inline.xml"
        as the url
    > 9. Click the "Edit XML after save" checkbox
    > 0. Click "Save"
