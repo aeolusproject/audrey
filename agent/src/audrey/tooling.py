@@ -20,14 +20,14 @@ import os
 import logging
 import tarfile
 
-from audrey.errors import ASError, ASErrorInvalidTar
+from audrey.errors import AAError, AAErrorInvalidTar
 from audrey.shell import run_cmd
 
 TOOLING_DIR = '/var/audrey/tooling/'
 logger = logging.getLogger('Audrey')
 
 
-class ConfigTooling(object):
+class Tooling(object):
     '''
     TBD - Consider making this class derived from dictionary or a mutable
     mapping.
@@ -44,7 +44,7 @@ class ConfigTooling(object):
           Hat supplied.
     '''
 
-    def __init__(self, tool_dir=TOOLING_DIR):
+    def __init__(self, tarball, tool_dir=TOOLING_DIR):
         '''
         Description:
             Set initial state so it can be tracked.
@@ -53,7 +53,7 @@ class ConfigTooling(object):
         self.user_dir = os.path.join(tool_dir, 'user')
         self.audrey_dir = os.path.join(tool_dir, 'AUDREY_TOOLING')
         self.redhat_dir = os.path.join(tool_dir, 'REDHAT')
-        self.tarball = ''
+        self.tarball = tarball
 
         # Create the extraction destination
         try:
@@ -62,8 +62,11 @@ class ConfigTooling(object):
             if errno is 17:  # File exists
                 pass
             else:
-                raise ASError(('Failed to create directory %s. ' + \
+                raise AAError(('Failed to create directory %s. ' + \
                     'Error: %s') % (self.user_dir, strerror))
+
+        if self.tarball:
+            self.unpack_tooling()
 
     def __str__(self):
         '''
@@ -100,7 +103,7 @@ class ConfigTooling(object):
 
             try:
                 top_level, tooling_path = self.find_tooling(service.name)
-            except ASError:
+            except AAError:
                 # No tooling found. Try the next service.
                 continue
 
@@ -131,7 +134,7 @@ class ConfigTooling(object):
             if top_level:
                 break
 
-    def unpack_tooling(self, tarball):
+    def unpack_tooling(self):
         '''
         Description:
             Methods used to untar the user provided tarball
@@ -141,16 +144,12 @@ class ConfigTooling(object):
             of the user provided tarball.
         '''
         logger.info('Invoked unpack_tooling()')
-        logger.debug('tarball: ' + str(tarball) + \
-            'Target Direcory: ' + str(self.user_dir))
-
-        self.tarball = tarball
 
         # Validate the specified tarfile.
         if not os.path.exists(self.tarball):
-            raise ASError('File does not exist: %s ' % self.tarball)
+            raise AAError('File does not exist: %s ' % self.tarball)
         if not tarfile.is_tarfile(self.tarball):
-            raise ASErrorInvalidTar('Not a valid tar file: %s' % self.tarball)
+            raise AAErrorInvalidTar('Not a valid tar file: %s' % self.tarball)
 
         # Attempt to extract the contents from the specified tarfile.
         # If tarfile access or content is bad report to the user to aid
@@ -163,7 +162,7 @@ class ConfigTooling(object):
         except (tarfile.TarError, tarfile.ReadError, \
                 tarfile.CompressionError, tarfile.StreamError, \
                 tarfile.ExtractError, IOError), (strerror):
-            raise ASError(('Failed to access tar file %s. Error: %s') %  \
+            raise AAError(('Failed to access tar file %s. Error: %s') %  \
                 (self.tarball, strerror))
 
     def is_user_supplied(self):
@@ -226,5 +225,5 @@ class ConfigTooling(object):
                 return p
 
         # No tooling found. Raise an error.
-        raise ASError(('No configuration tooling found for service: %s') % \
+        raise AAError(('No configuration tooling found for service: %s') % \
             (service_name))

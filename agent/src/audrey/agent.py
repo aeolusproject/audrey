@@ -1,0 +1,113 @@
+'''
+*
+*   Copyright [2011] [Red Hat, Inc.]
+*
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*  limitations under the License.
+*
+'''
+import sys
+import argparse
+import logging
+
+from time import sleep
+
+from audrey import user_data
+from audrey.errors import AAError
+from audrey.csclient import CSClient
+
+SLEEP_SECS = 10
+PWD_TOOLING = 'tooling'
+
+logger = logging.getLogger('Audrey')
+
+# The VERSION string is filled in during the make process.
+AUDREY_VER = '@VERSION@'
+
+
+class Agent(object):
+    def __init__(self, conf):
+        '''
+        conf: argparse dict
+        '''
+        tool_dir = {}
+        if 'pwd' in conf and conf['pwd']:
+            tool_dir = {'tool_dir': PWD_TOOLING}
+
+        # Create the Client Object
+        self.client = CSClient(**conf)
+        self.client.test_connection()
+
+        # Get any optional tooling from the Config Server
+        tooling_status, tarball = self.client.get_tooling()
+        self.tooling = Tooling(tarball, **tool_dir)
+
+    def run(self):
+        # 0 means don't run again
+        # -1 is non zero so initial runs will happen
+        config_status = -1
+        provides_status = -1
+
+        max_retry = 5
+        services = []
+
+        # Process the Requires and Provides parameters until the HTTP status
+        # from the get_configs and the get_params both return 200
+        while config_status or provides_status:
+
+            logger.debug('Config Parameter status: ' + str(config_status))
+            logger.debug('Return Parameter status: ' + str(provides_status))
+
+            # Get the Required Configs from the Config Server
+            if config_status:
+                config_status, configs = self.client.get_configs()
+
+                # Configure the system with the provided Required Configs
+                if config_status == 200:
+                    services = Service.parse_require_config(configs)
+                    self.tooling.invoke_tooling(services)
+                    # don't do any more config status work
+                    # now that the tooling has run
+                    config_status = 0
+                else:
+                    logger.info(
+                        'No configuration parameters provided. status: ' + \
+                        str(config_status))
+
+            # Get the requested provides from the Config Server
+            if provides_status:
+                get_status, params = self.client.get_provides()
+
+                # Gather the values from the system for the requested provides
+                if get_status == 200:
+                    params_values = Provides().generate_cs_str()
+                else:
+                    params_values = '||'
+
+                # Put the requested provides with values to the Config Server
+                provides_status, body = self.client.put_provides(params_values)
+                if provides_status == 200:
+                    # don't operate on params anymore, all have been provided.
+                    provides_status = 0
+
+            # Retry a number of times if 404 HTTP Not Found is returned.
+            if config_status == 404 or provides_status == 404:
+                logger.error('Requiest to Config Server failed or more to come.')
+                logger.error('Required Config Parameter status: ' + \
+                    str(config_status))
+                logger.info('Return Parameter status: ' + str(provides_status))
+
+                max_retry -= 1
+                if max_retry < 0:
+                    raise AAError('Too many erroneous Config Server responses.')
+
+            sleep(SLEEP_SECS)

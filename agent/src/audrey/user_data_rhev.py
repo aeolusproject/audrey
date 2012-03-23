@@ -18,7 +18,7 @@
 
 import base64
 
-from audrey.errors import ASError
+from audrey.errors import AAError
 from audrey.user_data import UserDataBase
 from audrey.shell import run_cmd
 
@@ -54,7 +54,7 @@ class UserData(UserDataBase):
         cmd = ['/sbin/modprobe', 'floppy']
         ret = run_cmd(cmd)
         if ret['subproc'].returncode != 0:
-            raise ASError(('Failed command: \n%s \nError: \n%s') % \
+            raise AAError(('Failed command: \n%s \nError: \n%s') % \
                 (' '.join(cmd), str(ret['err'])))
 
         cmd = ['/bin/mkdir', '/media']
@@ -62,7 +62,7 @@ class UserData(UserDataBase):
         # If /media is already there (1) or any other error (0)
         if (ret['subproc'].returncode != 1) and  \
            (ret['subproc'].returncode != 0):
-            raise ASError(('Failed command: \n%s \nError: \n%s') % \
+            raise AAError(('Failed command: \n%s \nError: \n%s') % \
                 (' '.join(cmd), str(ret['err'])))
 
         cmd = ['/bin/mount', '/dev/fd0', '/media']
@@ -70,7 +70,7 @@ class UserData(UserDataBase):
         # If /media is already mounted (32) or any other error (0)
         if (ret['subproc'].returncode != 32) and  \
            (ret['subproc'].returncode != 0):
-            raise ASError(('Failed command: \n%s \nError: \n%s') % \
+            raise AAError(('Failed command: \n%s \nError: \n%s') % \
                 (' '.join(cmd), str(ret['err'])))
 
         # Condfig Server (CS) address:port.
@@ -81,7 +81,7 @@ class UserData(UserDataBase):
             ud = fp.read().strip()
             fp.close()
         except:
-            raise ASError('Failed accessing RHEVm user data file.')
+            raise AAError('Failed accessing RHEVm user data file.')
 
         if '|' not in ud:
             ud = base64.b64decode(ud)

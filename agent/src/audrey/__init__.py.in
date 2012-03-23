@@ -1,0 +1,169 @@
+'''
+*
+*   Copyright [2011] [Red Hat, Inc.]
+*
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*  limitations under the License.
+*
+'''
+
+###
+# Don't edit the __init__.py file edit the __init__.py.in file!
+###
+
+import os
+import sys
+import logging
+import argparse
+
+from audrey.factory import AudreyFactory
+
+# The VERSION string is filled in during the make process.
+VERSION = '@VERSION@'
+# Log file
+LOG = '/var/log/audrey.log'
+PWD_TOOLING = 'tooling'
+
+
+class StreamToLogger(object):
+    """
+    Fake file-like stream object that redirects writes to a logger instance.
+    """
+    def __init__(self, logger, log_level=logging.INFO):
+        self.logger = logger
+        self.log_level = log_level
+        self.linebuf = ''
+
+    def write(self, buf):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.log_level, line.rstrip())
+
+
+def setup_logging(level=logging.INFO, logfile_name=LOG):
+    '''
+    Description:
+        Establish the output logging.
+    '''
+
+    # If not run as root create the log file in the current directory.
+    # This allows minimal functionality, e.g.: --help
+    if not os.geteuid() == 0:
+        logfile_name = './audrey.log'
+
+    # set up logging
+    LOG_FORMAT = ('%(asctime)s - %(levelname)-8s: '
+        '%(filename)s:%(lineno)d %(message)s')
+    LOG_LEVEL_INPUT = 5
+    LOG_NAME_INPUT = 'INPUT'
+
+    logging.basicConfig(filename=logfile_name,
+        level=level, filemode='a', format=LOG_FORMAT)
+
+    logging.addLevelName(LOG_LEVEL_INPUT, LOG_NAME_INPUT)
+
+    logger = logging.getLogger('Audrey')
+
+    if level != logging.DEBUG:
+        # redirect the stderr and out to the logger
+        sys.stdout = StreamToLogger(logger, logging.INFO)
+        sys.stderr = StreamToLogger(logger, logging.ERROR)
+
+    return logger
+
+def parse_args():
+    '''
+    Description:
+        Gather any Config Server access info optionally passed
+        on the command line. If being provided on the command
+        line all of it must be provided.
+
+        oAuth Secret is prompted for and not allowed as an argument.
+        This is to avoid a ps on the system from displaying the
+        oAuth Secret argument.
+
+    Return:
+        dict - of parser keys and values
+    '''
+    desc_txt = 'The Aeolus Audrey Startup Agent, a script which ' + \
+               'runs on a booting cloud instance to retrieve ' + \
+               'configuration data from the Aeolus Config Server.'
+
+    log_level_dict = {'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARNING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL}
+
+    parser = argparse.ArgumentParser(description=desc_txt)
+    parser.add_argument('-e', '--endpoint', dest='endpoint',
+        required=False, help='Config Server endpoint url')
+    parser.add_argument('-k', '--key', dest='oauth_key', required=False,
+        help='oAuth Key. If specified prompt for the oAuth Secret.')
+    parser.add_argument('-p', '--pwd', action='store_true', default=False,
+        required=False, help='Log and look for configs in pwd',)
+    parser.add_argument('-L', '--log-level', dest='log_level',
+        required=False, default='INFO', help='Audrey Agent Logging Level',
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']),
+    parser.add_argument('-V', '-v', '--version', dest='version',
+        action='store_true', default=False, required=False,
+        help='Displays the program\'s version number and exit.')
+
+    args = parser.parse_args()
+    args.log_level = log_level_dict[args.log_level]
+
+    if args.version:
+        print VERSION
+        sys.exit()
+
+    if args.oauth_key:
+        # Prompt for oAuth secret so ps won't display it.
+        args.oauth_secret = raw_input('oAuth Secret: ')
+
+    return args
+
+
+def main():
+    '''
+    Description:
+        This script will be used on EC2 for configuring the running
+        instance based on Cloud Engine configuration supplied at
+        launch time in the user data.
+
+        Config Server Status:
+        200 HTTP OK - Success and no more data of this type
+        202 HTTP Accepted - Success and more data of this type
+        404 HTTP Not Found - This may be temporary so try again
+    '''
+    # parse the args and setup logging
+    conf = parse_args()
+    log_file = {}
+    if 'pwd' in conf and conf.pwd:
+        log_file = {'logfile_name': 'audrey.log'}
+
+    logger = setup_logging(level=conf.log_level, **log_file)
+
+    if not conf.endpoint:
+        # discover the cloud I'm on
+        # update the conf with the user data
+        #conf = dict(vars(conf).items() + user_data.discover().read().items())
+        vars(conf).update(user_data.discover().read().items())
+
+    # ensure the conf is a dictionary, not a namespace
+    if hasattr(conf, '__dict__'):
+        conf = vars(conf)
+
+    logger.info('Invoked audrey main')
+
+    # Get the agent object
+    aa = AudreyFactory(1).agent
+    # run the agent
+    aa(conf).run()

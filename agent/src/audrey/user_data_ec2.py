@@ -19,7 +19,7 @@
 import httplib2
 import base64
 
-from audrey.errors import ASError
+from audrey.errors import AAError
 from audrey.user_data import UserDataBase
 
 EC2_USER_DATA_URL = 'http://169.254.169.254/latest/user-data'
@@ -40,7 +40,7 @@ class UserData(UserDataBase):
                 if response.status == 200:
                     break
             if response.status != 200:
-                raise ASError('Max attempts to get EC2 user data \
+                raise AAError('Max attempts to get EC2 user data \
                         exceeded.')
 
             if '|' not in body:
@@ -48,4 +48,4 @@ class UserData(UserDataBase):
             return self._parse_user_data(body)
 
         except Exception, e:
-            raise ASError('Failed accessing EC2 user data: %s' % e)
+            raise AAError('Failed accessing EC2 user data: %s' % e)

@@ -7,7 +7,7 @@ agent/pkg/*
 agent/.coverage
 agent/htmlcov/
 agent/dist/
-agent/src/audrey/agent.py
+src/audrey/__init__.py
 configserver/pkg/*
 configserver/src/coverage/
 configserver/src/common_config.rb

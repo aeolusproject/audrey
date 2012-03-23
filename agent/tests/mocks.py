@@ -30,15 +30,43 @@ try:
 except ImportError:  # python 3
     from io import BytesIO as BIO
 
+DUMMY_USER_DATA = '1|http://example.com/|oauthConsumer|oauthSecret'
+CLOUD_INFO_FILE = 'test_cloud_info'
+EXIT_ZERO = '#!/bin/sh\nexit 0'
+EXIT_ONE = '#!/bin/sh\nexit 1'
+
+DUMMY_CS_CONFIG = {'endpoint': 'http://example.com/',
+                   'oauth_key': 'oauthConsumer',
+                   'oauth_secret': 'oauthSecret', }
+
+DUMMY_NO_SERVICE_CONFIG_DATA = '|service|' + \
+    '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
+    '|jon_server_ip_2&' + base64.b64encode('192.168.1.2') + \
+    '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
+    '|service|jon2|'
+
+VALIDATE_NO_SERVICE_CONFIG_DATA = {
+    'AUDREY_VAR_jon_server_ip': '192.168.1.1',
+    'AUDREY_VAR_jon_server_ip_2': '192.168.1.2',
+    'AUDREY_VAR_jon_server_ip_3': '192.168.1.3'}
+
+DUMMY_SERVICE_CONFIG_DATA = '|service|jon1' + \
+    '|parameters|jon_server_ip&' + base64.b64encode('192.168.1.1') + \
+    '|jon_server_ip_2&' + base64.b64encode('192.168.1.2') + \
+    '|jon_server_ip_3&' + base64.b64encode('192.168.1.3') + \
+    '|service|jon2||'
+
+VALIDATE_SERVICE_CONFIG_DATA = {
+    'AUDREY_VAR_jon1_jon_server_ip': '192.168.1.1',
+    'AUDREY_VAR_jon1_jon_server_ip_2': '192.168.1.2',
+    'AUDREY_VAR_jon1_jon_server_ip_3': '192.168.1.3'}
+
+
 #####
 # Redefine oauth.Client(key, secret)
 # to inject this class into the agent
 # for testing
 #####
-
-DUMMY_USER_DATA = '1|http://example.com/|oauthConsumer|oauthSecret'
-CLOUD_INFO_FILE = 'test_cloud_info'
-
 
 class HttpUnitTest(object):
     '''

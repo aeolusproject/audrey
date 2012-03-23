@@ -17,7 +17,7 @@
 '''
 
 from subprocess import Popen, PIPE
-from audrey.errors import ASError
+from audrey.errors import AAError
 
 
 class run_cmd_return_subproc(object):
@@ -169,7 +169,7 @@ def run_pipe_cmd(cmd1, cmd2):
     return ret
 
 
-def get_system_info():
+def get_system_info(facts=[]):
     '''
     Description:
         Get the system info to be used for generating this instances
@@ -178,23 +178,22 @@ def get_system_info():
         Currently utilizes Puppet's facter via a Python subprocess call.
 
     Input:
-        None
+        optional list of fact names
 
     Returns:
         A dictionary of system info name/value pairs.
 
     '''
-
     cmd = ['/usr/bin/facter']
+    cmd.extend(facts)
     ret = run_cmd(cmd)
     if ret['subproc'].returncode != 0:
-        raise ASError(('Failed command: \n%s \nError: \n%s') % \
+        raise AAError(('Failed command: \n%s \nError: \n%s') % \
             (' '.join(cmd), str(ret['err'])))
 
-    facts = {}
-    for fact in ret['out'].split('\n'):
-        if fact:  # Handle the new line at the end of the facter output
-            name, val = fact.split(' => ')
-            facts[name] = val.rstrip()
-
-    return facts
+    f = {}
+    f = ret['out'].split('\n')[:-1]
+    if len(f) == 1:
+        return {facts[0]: f[0]}
+    f = map(lambda x: x.split(' => '), f)
+    return dict(f)

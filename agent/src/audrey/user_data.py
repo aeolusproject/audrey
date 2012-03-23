@@ -20,7 +20,7 @@ import os
 import logging
 logger = logging.getLogger('Audrey')
 
-from audrey.errors import ASError
+from audrey.errors import AAError
 from audrey.shell import get_system_info
 
 CLOUD_INFO_FILE = '/etc/sysconfig/cloud-info'
@@ -98,7 +98,7 @@ def discover():
         import audrey.user_data_vsphere
         return audrey.user_data_vsphere.UserData()
     else:
-        raise ASError('Cloud type "%s" is invalid.' % cloud_type)
+        raise AAError('Cloud type "%s" is invalid.' % cloud_type)
 
 class UserDataBase(object):
     '''
@@ -136,9 +136,9 @@ class UserDataBase(object):
                         'oauth_key': self.oauth_key,
                         'oauth_secret': self.oauth_secret, }
             else:
-                raise ASError('Invalid User Data Version: %s' % user_data[0])
+                raise AAError('Invalid User Data Version: %s' % user_data[0])
         else:
-            raise ASError('Could not get user data version, parse failed')
+            raise AAError('Could not get user data version, parse failed')
 
     def read(self):
         '''

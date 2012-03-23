@@ -23,11 +23,10 @@ import logging
 
 import audrey.user_data_ec2
 
-from audrey.errors import ASError
 from audrey import setup_logging
+from audrey import main
+from audrey.errors import AAError
 from audrey.shell import run_cmd
-from audrey.agent import main
-from audrey.csclient import gen_env
 
 from tests.mocks import CLOUD_INFO_FILE
 from tests import _write_file
@@ -41,9 +40,9 @@ class TestAudreyAgent(unittest.TestCase):
     def setUp(self):
         audrey.user_data_ec2.EC2_USER_DATA_URL = \
             'http://169.254.169.254/latest/user-data'
-        audrey.csclient.client.TOOLING_URL = 'files'
-        audrey.csclient.client.PARAMS_URL = 'params'
-        audrey.csclient.client.CONFIGS_URL = 'configs'
+        audrey.csclient.TOOLING_URL = 'files'
+        audrey.csclient.PARAMS_URL = 'params'
+        audrey.csclient.CONFIGS_URL = 'configs'
         # make a copy of argv
         self.argv = list(sys.argv)
         # clean out args before you run me
@@ -61,22 +60,19 @@ class TestAudreyAgent(unittest.TestCase):
         main()
 
     def test_fail_main(self):
-        self.assertRaises(ASError, main)
+        self.assertRaises(AAError, main)
 
     def test_fail_main_404(self):
         audrey.user_data_ec2.EC2_USER_DATA_URL = \
             'http://169.254.169.254/gimmie-404'
-        self.assertRaises(ASError, main)
+        self.assertRaises(AAError, main)
 
     def test_fail_main_invalid_cloudinfo(self):
         _write_file(CLOUD_INFO_FILE, 'INVALID')
-        self.assertRaises(ASError, main)
+        self.assertRaises(AAError, main)
 
     def test_fail_main_no_cloudinfo_no_userdata_module(self):
-        self.assertRaises(ASError, main)
-
-    def test_empty_gen_env(self):
-        self.assertRaises(ASError, gen_env, '', '')
+        self.assertRaises(AAError, main)
 
     def test_version_and_stream_logger(self):
         # remember std out & err
@@ -109,20 +105,20 @@ class TestAudreyAgent(unittest.TestCase):
 
     def test_no_connectivity(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
-        audrey.agent.VERSION_URL = 'raiseException'
-        self.assertRaises(SystemExit, main)
+        audrey.csclient.VERSION_URL = 'raiseException'
+        self.assertRaises(AAError, main)
 
     def test_404_from_tooling(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
-        audrey.csclient.client.TOOLING_URL = 'gimmie-404'
+        audrey.csclient.TOOLING_URL = 'gimmie-404'
         main()
 
     def test_404_from_params(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
-        audrey.csclient.client.PARAMS_URL = 'gimmie-404'
+        audrey.csclient.PARAMS_URL = 'gimmie-404'
         main()
 
     def test_404_from_configs(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
-        audrey.csclient.client.CONFIGS_URL = 'gimmie-404'
-        self.assertRaises(ASError, main)
+        audrey.csclient.CONFIGS_URL = 'gimmie-404'
+        self.assertRaises(AAError, main)

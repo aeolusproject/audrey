@@ -23,7 +23,7 @@ import audrey.shell
 from tests.mocks import mock_run_cmd
 from tests.mocks import mock_run_cmd_facter_fail
 
-from audrey.errors import ASError
+from audrey.errors import AAError
 from audrey.shell import run_cmd
 from audrey.shell import run_pipe_cmd
 from audrey.shell import get_system_info
@@ -51,5 +51,5 @@ class TestAudreyShell(unittest.TestCase):
 
     def test_get_system_info_fail(self):
         audrey.shell.run_cmd = mock_run_cmd_facter_fail
-        self.assertRaises(ASError, get_system_info)
+        self.assertRaises(AAError, get_system_info)
         audrey.shell.run_cmd = mock_run_cmd

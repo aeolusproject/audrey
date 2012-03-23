@@ -15,16 +15,22 @@
 *  limitations under the License.
 *
 '''
+import audrey.agent
 
-class AAError(Exception):
-    '''
-    Some sort of error occurred. The exact cause of the error should
-    have been logged. So, this just indicates that something is wrong.
-    when invoked without args we redirect stderr to the log so
-    logging here is not really nessesary
-    '''
-    pass
+from audrey.agent import Agent
+from audrey.service import Service
+from audrey.provides import Provides
+from audrey.tooling import Tooling
 
+class AudreyFactory(object):
 
-class AAErrorInvalidTar(AAError):
-    pass
+    def __init__(self, api_version):
+        self.api_version = api_version
+        self.agent = Agent
+        self.provides = Provides
+        self.service = Service
+        self.tooling = Tooling
+
+        audrey.agent.Tooling = self.tooling
+        audrey.agent.Service = self.service
+        audrey.agent.Provides = self.provides

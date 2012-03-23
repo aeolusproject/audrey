@@ -27,7 +27,7 @@ sys.path.append('src')
 
 #### Import Audrey
 import audrey.agent
-import audrey.csclient.tooling
+import audrey.tooling
 import audrey.user_data_rhev
 import audrey.user_data_vsphere
 
@@ -35,6 +35,9 @@ import audrey.user_data_vsphere
 import tests.mocks
 from tests.mocks import HttpUnitTest
 from tests.agent import *
+from tests.tooling import *
+from tests.provides import *
+from tests.service import *
 from tests.shell import *
 from tests.csclient import *
 from tests.user_data import *
@@ -42,9 +45,10 @@ from tests.mocks import CLOUD_INFO_FILE
 
 #### Override from config params
 audrey.agent.SLEEP_SECS = 0
+audrey.csclient.SLEEP_SECS = 0
 audrey.agent.PWD_TOOLING = 'test_tooling'
 
-audrey.csclient.tooling.TOOLING_DIR = os.path.join(
+audrey.tooling.TOOLING_DIR = os.path.join(
                                       os.path.abspath('.'), 'test_tooling')
 
 #### Cloud info test file

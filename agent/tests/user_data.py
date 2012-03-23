@@ -22,7 +22,7 @@ import base64
 
 import audrey.user_data
 
-from audrey.errors import ASError
+from audrey.errors import AAError
 
 from tests import _write_file
 from tests.mocks import mock_run_cmd
@@ -55,7 +55,7 @@ class TestAudreyUserData(unittest.TestCase):
     def test_ec2_404(self):
         audrey.user_data_ec2.EC2_USER_DATA_URL = \
             'http://169.254.169.254/gimmie-404'
-        self.assertRaises(ASError, audrey.user_data_ec2.UserData().read)
+        self.assertRaises(AAError, audrey.user_data_ec2.UserData().read)
 
     def test_rhev(self):
         _write_file(CLOUD_INFO_FILE, 'RHEV')
@@ -72,7 +72,7 @@ class TestAudreyUserData(unittest.TestCase):
     def test_rhev_invalid_user_data_file(self):
         _write_file(CLOUD_INFO_FILE, 'RHEV')
         audrey.user_data_rhev.DELTA_CLOUD_USER_DATA = '/invalid_file_path'
-        self.assertRaises(ASError, audrey.user_data.discover().read)
+        self.assertRaises(AAError, audrey.user_data.discover().read)
 
     def test_vsphere(self):
         _write_file(CLOUD_INFO_FILE, 'VSPHERE')
@@ -89,49 +89,49 @@ class TestAudreyUserData(unittest.TestCase):
     def test_vsphere_invalid_user_data_file(self):
         _write_file(CLOUD_INFO_FILE, 'VSPHERE')
         audrey.user_data_vsphere.DELTA_CLOUD_USER_DATA = '/invalid_file_path'
-        self.assertRaises(ASError, audrey.user_data.discover().read)
+        self.assertRaises(AAError, audrey.user_data.discover().read)
 
     def test_invalid_user_data_version(self):
         audrey.user_data_ec2.EC2_USER_DATA_URL = \
             'http://169.254.169.254/no-version-user-data'
-        self.assertRaises(ASError, audrey.user_data_ec2.UserData().read)
+        self.assertRaises(AAError, audrey.user_data_ec2.UserData().read)
 
     def test_invalid_user_data_no_delim(self):
         audrey.user_data_ec2.EC2_USER_DATA_URL = \
             'http://169.254.169.254/empty-user-data'
-        self.assertRaises(ASError, audrey.user_data_ec2.UserData().read)
+        self.assertRaises(AAError, audrey.user_data_ec2.UserData().read)
 
     def test_rhev_modprobe_floppy_fail(self):
         audrey.user_data_rhev.run_cmd = mock_run_cmd_modprobe_floppy_fail
         _write_file(CLOUD_INFO_FILE, 'RHEV')
         _write_file(self.user_data_file, DUMMY_USER_DATA)
         audrey.user_data_rhev.DELTA_CLOUD_USER_DATA = self.user_data_file
-        self.assertRaises(ASError, audrey.user_data.discover().read)
+        self.assertRaises(AAError, audrey.user_data.discover().read)
 
     def test_rhev_mkdir_media_fail(self):
         audrey.user_data_rhev.run_cmd = mock_run_cmd_mkdir_media_fail
         _write_file(CLOUD_INFO_FILE, 'RHEV')
         _write_file(self.user_data_file, DUMMY_USER_DATA)
         audrey.user_data_rhev.DELTA_CLOUD_USER_DATA = self.user_data_file
-        self.assertRaises(ASError, audrey.user_data.discover().read)
+        self.assertRaises(AAError, audrey.user_data.discover().read)
 
     def test_rhev_mount_floppy_fail(self):
         audrey.user_data_rhev.run_cmd = mock_run_cmd_mount_floppy_fail
         _write_file(CLOUD_INFO_FILE, 'RHEV')
         _write_file(self.user_data_file, DUMMY_USER_DATA)
         audrey.user_data_rhev.DELTA_CLOUD_USER_DATA = self.user_data_file
-        self.assertRaises(ASError, audrey.user_data.discover().read)
+        self.assertRaises(AAError, audrey.user_data.discover().read)
 
     def test_vsphere_mkdir_media_fail(self):
         audrey.user_data_vsphere.run_cmd = mock_run_cmd_mkdir_media_fail
         _write_file(CLOUD_INFO_FILE, 'vsphere')
         _write_file(self.user_data_file, DUMMY_USER_DATA)
         audrey.user_data_rhev.delta_cloud_user_data = self.user_data_file
-        self.assertRaises(ASError, audrey.user_data.discover().read)
+        self.assertRaises(AAError, audrey.user_data.discover().read)
 
     def test_vsphere_mount_cdrom_fail(self):
         audrey.user_data_vsphere.run_cmd = mock_run_cmd_mount_cdrom_fail
         _write_file(CLOUD_INFO_FILE, 'vsphere')
         _write_file(self.user_data_file, DUMMY_USER_DATA)
         audrey.user_data_rhev.delta_cloud_user_data = self.user_data_file
-        self.assertRaises(ASError, audrey.user_data.discover().read)
+        self.assertRaises(AAError, audrey.user_data.discover().read)

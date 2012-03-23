@@ -16,18 +16,23 @@
 *
 '''
 
+import os
 import shutil
 import logging
 import tempfile
 import oauth2 as oauth
 
-from audrey.errors import ASError
+from time import sleep
+
+from audrey.errors import AAError
+SLEEP_SECS = 10
 
 logger = logging.getLogger('Audrey')
 
+VERSION_URL = 'version'
 TOOLING_URL = 'files'
 CONFIGS_URL = 'configs'
-PARAMS_URL = 'params'
+PROVIDES_URL = 'params'
 
 
 class CSClient(object):
@@ -136,17 +141,31 @@ class CSClient(object):
             404 HTTP Not Found - This may be temporary so try again
         '''
         if (status != 200) and (status != 202) and (status != 404):
-            raise ASError(('Invalid HTTP status code: %s') % \
+            raise AAError(('Invalid HTTP status code: %s') % \
                 (str(status)))
 
     # Public interfaces
-    def get_cs_configs(self):
+    def test_connection(self, max_retry=5):
+        # try and wait for connectivity if it's not there
+        url = self._cs_url(VERSION_URL)
+        while isinstance(self._get(url)[0], Exception):
+            if max_retry:
+                max_retry -= 1
+                logger.info('Failed attempt to contact config server')
+                sleep(SLEEP_SECS)
+            else:
+                raise AAError("Cannot establish connection to %s" % url)
+
+
+    def get_configs(self, service=None):
         '''
         Description:
             get the required configuration from the Config Server.
         '''
-        logger.info('Invoked CSClient.get_cs_configs()')
+        logger.info('Invoked CSClient.get_configs()')
         url = self._cs_url(CONFIGS_URL)
+        if service:
+            url = '%s/%s/' % (url, service)
         headers = {'Accept': 'text/plain'}
 
         response, body = self._get(url, headers=headers)
@@ -155,13 +174,13 @@ class CSClient(object):
 
         return response.status, body
 
-    def get_cs_params(self):
+    def get_provides(self):
         '''
         Description:
             get the provides parameters from the Config Server.
         '''
-        logger.info('Invoked CSClient.get_cs_params()')
-        url = self._cs_url(PARAMS_URL)
+        logger.info('Invoked CSClient.get_params()')
+        url = self._cs_url(PROVIDES_URL)
         headers = {'Accept': 'text/plain'}
 
         response, body = self._get(url, headers=headers)
@@ -170,25 +189,25 @@ class CSClient(object):
 
         return response.status, body
 
-    def put_cs_params_values(self, params_values):
+    def put_provides(self, params_values):
         '''
         Description:
             put the provides parameters to the Config Server.
         '''
-        logger.info('Invoked CSClient.put_cs_params_values()')
-        url = self._cs_url(PARAMS_URL)
+        logger.info('Invoked CSClient.put_params_values()')
+        url = self._cs_url(PROVIDES_URL)
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
         response, body = self._put(url, body=params_values, headers=headers)
         return response.status, body
 
-    def get_cs_tooling(self):
+    def get_tooling(self):
         '''
         Description:
             get any optional user supplied tooling which is
             provided as a tarball
         '''
-        logger.info('Invoked CSClient.get_cs_tooling()')
+        logger.info('Invoked CSClient.get_tooling()')
         url = self._cs_url(TOOLING_URL)
         headers = {'Accept': 'content-disposition'}
 
@@ -211,7 +230,16 @@ class CSClient(object):
                 f.write(body)
                 f.close()
             except IOError, (errno, strerror):
-                raise ASError(('File not found or not a tar file: %s ' + \
+                raise AAError(('File not found or not a tar file: %s ' + \
                         'Error: %s %s') % (self.tarball, errno, strerror))
 
         return response.status, self.tarball
+
+
+    @staticmethod
+    def validate_message(src):
+        '''
+        Perform validation of the text message sent from the Config Server.
+        '''
+        if not src.startswith('|') or not src.endswith('|'):
+            raise AAError(('Invalid start and end characters: %s') % (src))

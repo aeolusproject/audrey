@@ -44,7 +44,7 @@ man_section = 8
 #        Set the version numbers in aeolus-audrey-agent.spec and audrey_agent.py
 #        Copy the desired bits to the dist directory.
 #        tar up the contents of the dist directory.
-dist: src/audrey/agent.py audrey.$(man_section)
+dist: src/audrey/__init__.py audrey.$(man_section)
 	rm -rf dist
 	mkdir -p dist/aeolus-audrey-agent-$(VERSION)
 	sed -e 's/@VERSION@/$(VERSION)/' -e 's/@RELEASE@/$(RELEASE_SED)/' \
@@ -55,7 +55,7 @@ dist: src/audrey/agent.py audrey.$(man_section)
 	tar -C dist -zcvf aeolus-audrey-agent-$(VERSION).tar.gz aeolus-audrey-agent-$(VERSION)
 
 # cp src/audrey/agent.py.in to src/audrey/agent.py
-src/audrey/agent.py: src/audrey/agent.py.in
+src/audrey/__init__.py: src/audrey/__init__.py.in
 	sed -e 's/@VERSION@/$(VERSION)/' $< > $@
 
 # Generate the man page using help2man from the --help text output
@@ -67,8 +67,7 @@ audrey.$(man_section): bin/audrey
         --section $(man_section) --no-info ./$< > $@
 
 # Run the automated tests
-#    Run the audrey_agent.py target before running the automated tests
-test: src/audrey/agent.py
+test: src/audrey/__init__.py
 	python test_audrey_agent.py
 
 # Build the rpms
@@ -84,16 +83,16 @@ srpm: test dist
 clean:
 	rm -rf dist aeolus-audrey-agent-$(VERSION).tar.gz \
 	aeolus-audrey-agent.spec audrey.$(man_section) \
-	audrey.log src/audrey/agent.py src/audrey/agent.pyc \
-	test_toolinglog test_toolinguser \
+	audrey.log test_toolinglog test_toolinguser \
+	src/audrey/__init__.py src/audrey/__init__.pyc \
 	toolinglog toolinguser
 
 # report coverage
-coverage: clean src/audrey/agent.py
+coverage: clean src/audrey/__init__.py
 	coverage erase
 	coverage run test_audrey_agent.py
 	coverage report -m test_audrey_agent.py `find src/audrey/ -name "*.py"` tests/*.py
 
-pep8: clean src/audrey/agent.py
+pep8: clean src/audrey/__init__.py
 	find . -name '*.py' -exec pep8 -r {} \;
 .PHONY: dist test rpms srpm
