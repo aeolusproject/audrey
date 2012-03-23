@@ -191,13 +191,13 @@ class TestAudreyAgentConfigTooling(unittest.TestCase):
 
     def test_missing_file_unpack_tooling(self):
         self.assertRaises(ASError,
-                          self.csclient.unpack_tooling, 'test_tarball')
+            self.csclient.unpack_tooling, 'test_tarball')
 
     def test_invalid_tar_unpack_tooling(self):
         tar_file = os.path.join(self.csclient.user_dir, 'invalid_tar')
-        _write_file(tar_file, '')
+        _write_file(tar_file, 'No Tar on my heals Mr.!')
         self.assertRaises(ASErrorInvalidTar,
-                          self.csclient.unpack_tooling, tar_file)
+            self.csclient.unpack_tooling, tar_file)
 
     def test_fail_execution_invoke_tooling(self):
         start_path = os.path.join(self.csclient.user_dir, 'start')

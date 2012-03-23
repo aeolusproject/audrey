@@ -1,7 +1,7 @@
 [Unit]
 Description=Audrey Agent
-After=network.target
-Requires=network.target
+After= syslog.target network.target NetworkManager-wait-online.service NetworkManager.service
+Requires= syslog.target network.target NetworkManager-wait-online.service NetworkManager.service
 
 [Service]
 Type=oneshot
