@@ -26,6 +26,7 @@ import logging
 import argparse
 
 from audrey.factory import AudreyFactory
+from audrey.csclient import CSClient
 
 # The VERSION string is filled in during the make process.
 VERSION = '@VERSION@'
@@ -163,7 +164,13 @@ def main():
 
     logger.info('Invoked audrey main')
 
+    
+    # Create the Client Object and test connectivity
+    # to CS by negotiating the api version
+    client = CSClient(**conf)
+    client.test_connection()
+
     # Get the agent object
-    aa = AudreyFactory(1).agent
+    aa = AudreyFactory(client.api_version).Agent
     # run the agent
     aa(conf).run()

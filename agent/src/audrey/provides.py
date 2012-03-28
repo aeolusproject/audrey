@@ -19,14 +19,13 @@ import logging
 import urllib
 import base64
 
-from audrey.service import Service
 from audrey.csclient import CSClient
 from audrey.shell import run_cmd
 from audrey.shell import get_system_info
 
 logger = logging.getLogger('Audrey')
 
-class Provides(dict):
+class ProvidesV1(dict):
 
     def __setitem__(self, key, value):
         '''
@@ -37,7 +36,7 @@ class Provides(dict):
         if value is not None:
             value = str(value)
         # Now pass the set to the parent object to be completed
-        super(Provides, self).__setitem__(key, value)
+        super(ProvidesV1, self).__setitem__(key, value)
 
     def parse_cs_str(self, src, tooling=None):
         '''
@@ -62,39 +61,21 @@ class Provides(dict):
             |ipaddress&virtual|
 
         Returns:
-            - a tuple of 2 dicts
-            - [0] service objects with service.name as their keys
-            - [1] Provides populated with param names
+            - Provides populated with param names
                   as the keys and None as the value
         '''
 
         CSClient.validate_message(src)
-        services = {}
 
         # split and prune the payload
         src = src[1:-1].split('|')
-        if len(src) >= 2:
-            # create the services
-            for s in src[1].split('&'):
-                services[s] = Service(s, tooling)
         if len(src) >= 1:
             for p in src[0].split('&'):
                 if p:
                     self[p] = None
 
-        return services, self
+        return self
 
-
-    def clean(self):
-        '''
-        remove non-None provides
-        should be called after sending the values
-        '''
-        logger.info('Invoked Provides.clean()')
-
-        for p in self.keys():
-            if self[p] is not None:
-               del self[p]
 
     def generate_cs_str(self):
         '''
@@ -143,3 +124,49 @@ class Provides(dict):
         kv_pairs = map('&'.join, non_none)
 
         return urllib.urlencode({'audrey_data': '|' + '|'.join(kv_pairs) + '|'})
+
+
+class ProvidesV2(ProvidesV1):
+
+    def clean(self):
+        '''
+        remove non-None provides
+        should be called after sending the values
+        '''
+        logger.info('Invoked Provides.clean()')
+
+        for p in self.keys():
+            if self[p] is not None:
+               del self[p]
+
+    def parse_cs_str(self, src, tooling=None):
+        '''
+        Description:
+            Parse the provides parameters text message sent from the
+            Config Server.
+
+        Input:
+            Format:
+            |name1&name2...&nameN|service1&service2|
+
+            e.g.:
+            |ipaddress&virtual|myservice&yourservice|
+
+        Returns Tuple:
+            - Services objects list
+            - Provides (dict) populated with param names
+                  as the keys and None as the value
+        '''
+
+        # use the V1 code to populate my dict
+        super(ProvidesV2, self).parse_cs_str(src)
+
+        services = {}
+        # split and prune the payload
+        src = src[1:-1].split('|')
+        if len(src) >= 2:
+            # create the services
+            for s in src[1].split('&'):
+                services[s] = Service(s, tooling)
+
+        return services, self

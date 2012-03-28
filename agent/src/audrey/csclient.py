@@ -22,9 +22,11 @@ import logging
 import tempfile
 import oauth2 as oauth
 
+from xml.etree import ElementTree
 from time import sleep
 
 from audrey.errors import AAError
+from audrey.errors import AAErrorApiNegotiation
 SLEEP_SECS = 10
 
 logger = logging.getLogger('Audrey')
@@ -33,6 +35,7 @@ VERSION_URL = 'version'
 TOOLING_URL = 'files'
 CONFIGS_URL = 'configs'
 PROVIDES_URL = 'params'
+API_COMPAT = '1-2'
 
 
 class CSClient(object):
@@ -48,7 +51,7 @@ class CSClient(object):
             testing and debugging.
         '''
 
-        self.version = 1
+        self.api_version = 2
         self.cs_endpoint = endpoint
         self.cs_oauth_key = oauth_key
         self.cs_oauth_secret = oauth_secret
@@ -81,7 +84,7 @@ class CSClient(object):
             produce the informal string representation of an object.
         '''
         return('\n<Instance of: %s\n' \
-               '\tVersion: %s\n' \
+               '\tAPI Version: %s\n' \
                '\tConfig Server Endpoint: %s\n' \
                '\tConfig Server oAuth Key: %s\n' \
                '\tConfig Server oAuth Secret: %s\n' \
@@ -91,7 +94,7 @@ class CSClient(object):
                '\tTarball Name: %s\n' \
                'eot>' %
             (self.__class__.__name__,
-            str(self.version),
+            str(self.api_version),
             str(self.cs_endpoint),
             str(self.cs_oauth_key),
             str(self.cs_oauth_secret),
@@ -107,8 +110,10 @@ class CSClient(object):
             Generate the Config Server (CS) URL.
         '''
         endpoint = '%s/%s' % (self.cs_endpoint.lower(), url_type)
-        if url_type != 'version':
-            endpoint = '%s/%s/%s' % (endpoint, self.version, self.cs_oauth_key)
+        if url_type == 'version':
+            endpoint += '?api_compat=%s' % API_COMPAT
+        else:
+            endpoint = '%s/%s/%s' % (endpoint, self.api_version, self.cs_oauth_key)
         return endpoint
 
     def _get(self, url, headers=None):
@@ -132,7 +137,7 @@ class CSClient(object):
         except Exception, e:
             return (e, None)
 
-    def _validate_http_status(self, status):
+    def _validate_http_status(self, response):
         '''
         Description:
             Confirm the http status is one of:
@@ -140,22 +145,31 @@ class CSClient(object):
             202 HTTP Accepted - Success and more data of this type
             404 HTTP Not Found - This may be temporary so try again
         '''
-        if (status != 200) and (status != 202) and (status != 404):
-            raise AAError(('Invalid HTTP status code: %s') % \
-                (str(status)))
+        if isinstance(response, Exception):
+            raise response
+        if response.status not in [200, 202, 404]:
+            raise AAError('Invalid HTTP status code: %s' % response.status)
 
     # Public interfaces
     def test_connection(self, max_retry=5):
         # try and wait for connectivity if it's not there
         url = self._cs_url(VERSION_URL)
-        while isinstance(self._get(url)[0], Exception):
+        response, body = self._get(url, {'Accept': 'text/xml'})
+        while isinstance(response, Exception):
             if max_retry:
                 max_retry -= 1
                 logger.info('Failed attempt to contact config server')
                 sleep(SLEEP_SECS)
             else:
                 raise AAError("Cannot establish connection to %s" % url)
-
+            response, body = self._get(url)
+        try:
+            et = ElementTree.fromstring(body)
+            api_v = et.find('api-version')
+            self.api_version = int(api_v.text)
+            logger.info('Negotiated API V%s' % self.api_version)
+        except Exception, e:
+            raise AAErrorApiNegotiation(e)
 
     def get_configs(self, service=None):
         '''
@@ -170,7 +184,7 @@ class CSClient(object):
 
         response, body = self._get(url, headers=headers)
         self.cs_configs = body
-        self._validate_http_status(response.status)
+        self._validate_http_status(response)
 
         return response.status, body
 
@@ -185,7 +199,7 @@ class CSClient(object):
 
         response, body = self._get(url, headers=headers)
         self.cs_params = body
-        self._validate_http_status(response.status)
+        self._validate_http_status(response)
 
         return response.status, body
 
@@ -213,7 +227,7 @@ class CSClient(object):
 
         tarball = ''
         response, body = self._get(url, headers=headers)
-        self._validate_http_status(response.status)
+        self._validate_http_status(response)
 
         # Parse the file name burried in the response header
         # at: response['content-disposition']

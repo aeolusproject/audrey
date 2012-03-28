@@ -28,20 +28,17 @@ from audrey import main
 from audrey.errors import AAError
 from audrey.shell import run_cmd
 
+import tests.mocks
 from tests.mocks import CLOUD_INFO_FILE
 from tests import _write_file
 
-
-class TestAudreyAgent(unittest.TestCase):
-    '''
-    Class for exercising the full audrey script functionality
-    '''
+class TestAudreyInit(unittest.TestCase):
 
     def setUp(self):
         audrey.user_data_ec2.EC2_USER_DATA_URL = \
             'http://169.254.169.254/latest/user-data'
         audrey.csclient.TOOLING_URL = 'files'
-        audrey.csclient.PARAMS_URL = 'params'
+        audrey.csclient.PROVIDES_URL = 'params'
         audrey.csclient.CONFIGS_URL = 'configs'
         # make a copy of argv
         self.argv = list(sys.argv)
@@ -60,18 +57,6 @@ class TestAudreyAgent(unittest.TestCase):
         main()
 
     def test_fail_main(self):
-        self.assertRaises(AAError, main)
-
-    def test_fail_main_404(self):
-        audrey.user_data_ec2.EC2_USER_DATA_URL = \
-            'http://169.254.169.254/gimmie-404'
-        self.assertRaises(AAError, main)
-
-    def test_fail_main_invalid_cloudinfo(self):
-        _write_file(CLOUD_INFO_FILE, 'INVALID')
-        self.assertRaises(AAError, main)
-
-    def test_fail_main_no_cloudinfo_no_userdata_module(self):
         self.assertRaises(AAError, main)
 
     def test_version_and_stream_logger(self):
@@ -96,6 +81,44 @@ class TestAudreyAgent(unittest.TestCase):
         # reset logging
         setup_logging(logging.DEBUG)
 
+
+
+class TestAudreyAgentV1(unittest.TestCase):
+    '''
+    Class for exercising the full audrey script functionality
+    '''
+
+    def setUp(self):
+        audrey.user_data_ec2.EC2_USER_DATA_URL = \
+            'http://169.254.169.254/latest/user-data'
+        audrey.csclient.TOOLING_URL = 'files'
+        audrey.csclient.PROVIDES_URL = 'params'
+        audrey.csclient.CONFIGS_URL = 'configs'
+        tests.mocks.API_VERSION = '1'
+        # make a copy of argv
+        self.argv = list(sys.argv)
+        # clean out args before you run me
+        sys.argv = sys.argv[:1]
+        sys.argv.extend(['-p', '-L', 'DEBUG'])
+
+    def tearDown(self):
+        # replace argv
+        sys.argv = list(self.argv)
+        if os.path.exists(CLOUD_INFO_FILE):
+            os.remove(CLOUD_INFO_FILE)
+
+    def test_fail_userdata_404(self):
+        audrey.user_data_ec2.EC2_USER_DATA_URL = \
+            'http://169.254.169.254/gimmie-404'
+        self.assertRaises(AAError, main)
+
+    def test_fail_invalid_cloudinfo(self):
+        _write_file(CLOUD_INFO_FILE, 'INVALID')
+        self.assertRaises(AAError, main)
+
+    def test_fail_main_no_cloudinfo_no_userdata_module(self):
+        self.assertRaises(AAError, main)
+
     # not sure how to do this
     # without creating a function to mock
     # then we still don't have something covered
@@ -107,18 +130,37 @@ class TestAudreyAgent(unittest.TestCase):
         _write_file(CLOUD_INFO_FILE, 'EC2')
         audrey.csclient.VERSION_URL = 'raiseException'
         self.assertRaises(AAError, main)
+        audrey.csclient.VERSION_URL = 'version'
 
     def test_404_from_tooling(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
         audrey.csclient.TOOLING_URL = 'gimmie-404'
         main()
 
-    def test_404_from_params(self):
+    def test_404_from_provides(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
-        audrey.csclient.PARAMS_URL = 'gimmie-404'
+        audrey.csclient.PROVIDES_URL = 'gimmie-404'
         main()
 
     def test_404_from_configs(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
         audrey.csclient.CONFIGS_URL = 'gimmie-404'
         self.assertRaises(AAError, main)
+
+class TestAudreyAgentV2(TestAudreyAgentV1):
+    def setUp(self):
+        super(TestAudreyAgentV2, self).setUp()
+        tests.mocks.API_VERSION = '2'
+
+    def test_404_from_provides(self):
+        _write_file(CLOUD_INFO_FILE, 'EC2')
+        audrey.csclient.PROVIDES_URL = 'gimmie-404'
+        self.assertRaises(AAError, main)
+
+    def test_404_from_configs(self):
+        _write_file(CLOUD_INFO_FILE, 'EC2')
+        audrey.csclient.CONFIGS_URL = 'gimmie-404'
+        # should succeed, we don't bail on 404
+        # in api version 2
+        main()
+

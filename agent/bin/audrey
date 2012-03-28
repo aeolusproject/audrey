@@ -17,8 +17,8 @@
 *
 '''
 
-import audrey.agent
+import audrey
 
 if __name__ == '__main__':
 
-    audrey.agent.main()
+    audrey.main()

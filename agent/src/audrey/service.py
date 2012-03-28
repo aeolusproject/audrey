@@ -27,7 +27,7 @@ from audrey.shell import run_cmd
 
 logger = logging.getLogger('Audrey')
 
-class Service(object):
+class ServiceV1(object):
     '''
     Description:
         Used for storing a service and all of it's associated parameters
@@ -52,14 +52,6 @@ class Service(object):
     def __repr__(self):
         return repr((self.name, self.params))
 
-    def generate_cs_str(self, status):
-        '''
-        cs put provides expects |provides&value|service&status|
-        we're just pushing the service here
-        '''
-        return '||%s&%s|' % (self.name, status)
-
-    
     @staticmethod
     def parse_require_config(src):
         '''
@@ -149,13 +141,6 @@ class Service(object):
 
         return services
 
-    def invoke_tooling(self):
-        if self.tooling:
-            self.gen_env()
-            return self.tooling.invoke_tooling(self.name)
-        else:
-            return "No Tooling"
-
     def gen_env(self):
         '''
         Description:
@@ -191,3 +176,11 @@ class Service(object):
             cmd = ['/usr/bin/printenv', var_name]
             ret = run_cmd(cmd)
             logger.debug(var_name + '=' + str(ret['out'].strip()))
+
+class ServiceV2(ServiceV1):
+    def generate_cs_str(self, status):
+        '''
+        cs put provides expects |provides&value|service&status|
+        we're just pushing the service here
+        '''
+        return '||%s&%s|' % (self.name, status)

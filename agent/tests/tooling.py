@@ -25,8 +25,7 @@ from audrey.errors import AAError, AAErrorInvalidTar
 from audrey.shell import run_cmd
 from audrey.csclient import CSClient
 from audrey.tooling import Tooling
-from audrey.service import Service
-from audrey.provides import Provides
+from audrey.factory import AudreyFactory
 
 from tests.mocks import HttpUnitTest
 from tests.mocks import EXIT_ZERO
@@ -36,13 +35,14 @@ from tests.mocks import DUMMY_NO_SERVICE_CONFIG_DATA
 from tests import _write_file
 
 
-class TestAudreyAgentTooling(unittest.TestCase):
+class TestAudreyAgentToolingV1(unittest.TestCase):
     '''
     Make sure all the Config tooling is tested
     '''
     def setUp(self):
         self.tool_dir = os.path.join(os.path.abspath('.'), 'test_tooling')
         self.tooling = Tooling(None, self.tool_dir)
+        self.factory = AudreyFactory(1)
 
     def tearDown(self):
         if os.path.exists(self.tool_dir):
@@ -89,6 +89,10 @@ class TestAudreyAgentTooling(unittest.TestCase):
         _write_file(os.path.join(service_dir, 'start'), EXIT_ZERO, 0744)
         self.tooling.find_tooling('test_service')
 
+    def test_invalid_tar_path(self):
+        tar_file = os.path.join(self.tooling.user_dir, 'not_really_there_tar')
+        self.assertRaises(AAError, Tooling, tar_file, self.tool_dir)
+
     def test_invalid_tar_unpack_tooling(self):
         tar_file = os.path.join(self.tooling.user_dir, 'invalid_tar')
         _write_file(tar_file, 'NotRealTarFileContents')
@@ -97,18 +101,26 @@ class TestAudreyAgentTooling(unittest.TestCase):
     def test_fail_execution_invoke_tooling(self):
         start_path = os.path.join(self.tooling.user_dir, 'start')
         _write_file(start_path, EXIT_ONE, 0744)
-        services = Service('').parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
+        services = self.factory.Service('').parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
         self.tooling.invoke_tooling(services)
 
     def test_user_invoke_tooling(self):
         start_path = os.path.join(self.tooling.user_dir, 'start')
         _write_file(start_path, EXIT_ZERO, 0744)
-        services = Service('').parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
+        services = self.factory.Service('').parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
         self.tooling.invoke_tooling(services)
 
     def test_user_service_invoke_tooling(self):
         service_dir = os.path.join(self.tooling.user_dir, 'jon1')
         os.mkdir(service_dir)
         _write_file(os.path.join(service_dir, 'start'), EXIT_ZERO, 0744)
-        services = Service('jon1').parse_require_config(DUMMY_SERVICE_CONFIG_DATA)
+        services = self.factory.Service('jon1').parse_require_config(DUMMY_SERVICE_CONFIG_DATA)
         self.tooling.invoke_tooling(services)
+
+class TestAudreyAgentToolingV2(TestAudreyAgentToolingV1):
+    '''
+    Make sure all the Config tooling is tested
+    '''
+    def setUp(self):
+        super(TestAudreyAgentToolingV2, self).setUp()
+        self.factory = AudreyFactory(2)

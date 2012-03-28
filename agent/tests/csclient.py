@@ -81,7 +81,8 @@ class TestAudreyCSClient(unittest.TestCase):
         Success case:
         - Get a 401
         '''
-        self.assertRaises(AAError, self.cs_client._validate_http_status, 401)
+        self.assertRaises(AAError, self.cs_client._validate_http_status,
+                          HttpUnitTest.HttpUnitTestResponse(401))
 
     def test_catch_get_exception(self):
         '''

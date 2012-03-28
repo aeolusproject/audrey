@@ -30,6 +30,8 @@ try:
 except ImportError:  # python 3
     from io import BytesIO as BIO
 
+API_VERSION = '2'
+
 DUMMY_USER_DATA = '1|http://example.com/|oauthConsumer|oauthSecret'
 CLOUD_INFO_FILE = 'test_cloud_info'
 EXIT_ZERO = '#!/bin/sh\nexit 0'
@@ -83,10 +85,11 @@ class HttpUnitTest(object):
         '''
         def __init__(self, status):
             self.status = status
+            self.url = None
 
-        def add_content_disposition(self):
+        def add_attachment(self, filename):
             self.__dict__['content-disposition'] = \
-                                   'attachment; filename=test.tar.gz'
+                                   'attachment; filename=%s' % filename
 
         def __getitem__(self, key):
             return self.__dict__[key]
@@ -119,20 +122,30 @@ class HttpUnitTest(object):
                 tar.add('/etc/passwd')
                 tar.close()
                 body = file_out.getvalue()
-                response.add_content_disposition()
+                response.add_attachment('test.tar.gz')
             elif url.endswith('/user-data'):
                 body = base64.b64encode(DUMMY_USER_DATA)
             elif url.endswith('/no-version-user-data'):
                 body = base64.b64encode('0|endpoint')
             elif url.endswith('/empty-user-data'):
                 body = base64.b64encode('')
+            elif '/version' in url:
+                body = '''<config-server>
+  <application-version>VALUE_IGNORED</application-version>
+  <api-version>%s</api-version>
+</config-server>''' % API_VERSION
             elif '/gimmie-404' in url:
-                body = base64.b64encode(DUMMY_USER_DATA)
                 response = HttpUnitTest.not_found_response
             else:
                 response = HttpUnitTest.not_found_response
+        elif method == 'PUT':
+            if url.find('/params/') > -1:
+                response = HttpUnitTest.ok_response
         #elif method == 'POST' and url.find('/params/') > -1:
         #    body = ''
+        else:
+            response = HttpUnitTest.not_found_response
+        response.url = url
         return response, body
 
 

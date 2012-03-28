@@ -23,6 +23,7 @@ from time import sleep
 
 from audrey import user_data
 from audrey.errors import AAError
+from audrey.errors import ASErrorPutProvides
 from audrey.csclient import CSClient
 
 SLEEP_SECS = 10
@@ -34,7 +35,7 @@ logger = logging.getLogger('Audrey')
 AUDREY_VER = '@VERSION@'
 
 
-class Agent(object):
+class AgentV1(object):
     def __init__(self, conf):
         '''
         conf: argparse dict
@@ -109,5 +110,53 @@ class Agent(object):
                 max_retry -= 1
                 if max_retry < 0:
                     raise AAError('Too many erroneous Config Server responses.')
+
+            sleep(SLEEP_SECS)
+
+class AgentV2(AgentV1):
+    def run(self):
+        status, provides_str = self.client.get_provides()
+        if status == 200:
+            services, provides = Provides().parse_cs_str(provides_str)
+        else:
+            raise AAError('HTTP %s from provides & services list' % status)
+
+        # process services and provides, removing them from the ques
+        # as they have been processed.
+        while services or provides:
+
+            # Put the requested provides with values to the Config Server
+            provides_str = provides.generate_cs_str()
+            logger.debug('Put Provides: %s' % provides_str)
+            status, body = self.client.put_provides(provides_str)
+            # report non 200 status
+            if status != 200:
+                raise ASErrorPutProvides('Put provides returned %s' % status)
+            # clean regardless of status, otherwise we'll get in
+            # an infinite loop.
+            provides.clean()
+
+            # check for required configs per service
+            for service in services.keys():
+                s = services[service]
+                # Get the Required Configs from the Config Server for the service
+                status, configs = self.client.get_configs(s.name)
+
+                # Configure the system with the provided Required Configs
+                if status == 202:
+                    # couldn't be given all the configs yet.
+                    continue
+                else:
+                    if status == 200:
+                        # got all the configs, so invoke and report status
+                        status = s.tooling.invoke()
+                    logger.info('Service %s returns %s' % (service, status))
+                    # report service status
+                    status, body = self.client.put_provides(s.generate_cs_str(status))
+                    # report non 200 status on service status put
+                    if status != 200:
+                        raise ASErrorPutProvides('Put service status %s' % status)
+                    # remove the service from the list now that it's been procesed 
+                    del services[service]
 
             sleep(SLEEP_SECS)

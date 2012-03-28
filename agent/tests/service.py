@@ -21,20 +21,21 @@ import base64
 
 from audrey.errors import AAError
 from audrey.shell import run_cmd
-from audrey.service import Service
+from audrey.factory import AudreyFactory
 
 from tests.mocks import DUMMY_CS_CONFIG
 from tests.mocks import DUMMY_SERVICE_CONFIG_DATA
 from tests.mocks import DUMMY_NO_SERVICE_CONFIG_DATA
 from tests import _write_file
 
-class TestAudreyAgentService(unittest.TestCase):
+class TestAudreyAgentServiceV1(unittest.TestCase):
     '''
     Class for exercising the parsing of the Required Configs from the CS.
     '''
 
     def setUp(self):
-        self.service = Service('test_service')
+        self.factory = AudreyFactory(1)
+        self.service = self.factory.Service('test_service')
 
     def test_success_service_n_provides(self):
         '''
@@ -42,7 +43,7 @@ class TestAudreyAgentService(unittest.TestCase):
         - Exercise Service().parse_require_config() with valid input
         '''
         # Exersise code segment
-        services = Service('jon1').parse_require_config(DUMMY_SERVICE_CONFIG_DATA)
+        services = self.factory.Service('jon1').parse_require_config(DUMMY_SERVICE_CONFIG_DATA)
 
         # Validate results
         self.assertEqual(services[0].name, 'jon1')
@@ -74,7 +75,7 @@ class TestAudreyAgentService(unittest.TestCase):
         - Exercise Service().parse_require_config() with valid input
         '''
 
-        services = Service('').parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
+        services = self.factory.Service('').parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
         self.assertEqual(services[0].name, '')
         self.assertEqual(services[1].name, 'jon2')
 
@@ -114,7 +115,7 @@ class TestAudreyAgentService(unittest.TestCase):
             'AUDREY_VAR_jon_server_ip_2': '192.168.1.2',
             'AUDREY_VAR_jon_server_ip_3': '192.168.1.3'}
 
-        self.assertRaises(AAError, Service('').parse_require_config, src)
+        self.assertRaises(AAError, self.factory.Service('').parse_require_config, src)
 
     def test_failure_bad_service_name(self):
         '''
@@ -123,7 +124,7 @@ class TestAudreyAgentService(unittest.TestCase):
         '''
 
         src = '|service|parameters|'
-        self.assertRaises(AAError, Service('').parse_require_config, src)
+        self.assertRaises(AAError, self.factory.Service('').parse_require_config, src)
 
     def test_failure_service_tag_not_found(self):
         '''
@@ -131,7 +132,7 @@ class TestAudreyAgentService(unittest.TestCase):
         - |service| not in src to Service().parse_require_config()
         '''
         src = '|notservice|blah|'
-        self.assertRaises(AAError, Service('').parse_require_config, src)
+        self.assertRaises(AAError, self.factory.Service('').parse_require_config, src)
 
     def test_failure_no_amp_delim(self):
         '''
@@ -139,4 +140,13 @@ class TestAudreyAgentService(unittest.TestCase):
         - no delim in param token
         '''
         src = '|service|blah|parameters|blah|'
-        self.assertRaises(AAError, Service('').parse_require_config, src)
+        self.assertRaises(AAError, self.factory.Service('').parse_require_config, src)
+
+class TestAudreyAgentServiceV2(TestAudreyAgentServiceV1):
+    '''
+    Class for exercising the parsing of the Required Configs from the CS.
+    '''
+
+    def setUp(self):
+        self.factory = AudreyFactory(2)
+        self.service = self.factory.Service('test_service')

@@ -28,3 +28,9 @@ class AAError(Exception):
 
 class AAErrorInvalidTar(AAError):
     pass
+
+class AAErrorApiNegotiation(AAError):
+    pass
+
+class ASErrorPutProvides(AAError):
+    pass

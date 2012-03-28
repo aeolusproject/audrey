@@ -86,6 +86,14 @@ class Tooling(object):
             ))
 
     def invoke_tooling(self, services):
+        # For now invoke them all. Later versions will invoke the service
+        # based on the required params from the Config Server.
+        logger.debug('Invoked ConfigTooling.invoke_tooling()')
+        logger.debug(str(services))
+        for service in services:
+            self.invoke(service)
+
+    def invoke(self, service):
         '''
         Description:
             Invoke the configuration tooling for the specified services.
@@ -94,45 +102,41 @@ class Tooling(object):
             services - A list of ServiceParams objects.
 
         '''
+        service.gen_env()
+        try:
+            top_level, tooling_path = self.find_tooling(service.name)
+        except AAError:
+            # No tooling found. Try the next service.
+            return -1
 
-        # For now invoke them all. Later versions will invoke the service
-        # based on the required params from the Config Server.
-        logger.debug('Invoked ConfigTooling.invoke_tooling()')
-        logger.debug(str(services))
-        for service in services:
+        cmd = [tooling_path]
+        cmd_dir = os.path.dirname(tooling_path)
+        ret = run_cmd(cmd, cmd_dir)
+        logger.info('Execute Tooling command: ' + ' '.join(cmd))
 
-            try:
-                top_level, tooling_path = self.find_tooling(service.name)
-            except AAError:
-                # No tooling found. Try the next service.
-                continue
+        retcode = ret['subproc'].returncode
+        if retcode == 0:
+            # Command successed, log the output.
+            logger.info('return code: ' + str(retcode))
+            logger.info('\n\tStart Output of: ' + ' '.join(cmd) + \
+                ' >>>\n' +  \
+                str(ret['out']) + \
+                '\n\t<<< End Output')
+        else:
+            # Command failed, log the errors.
+            logger.info('\n\tStart Output of: ' + ' '.join(cmd) + \
+                ' >>>\n' +  \
+                str(ret['out']) + \
+                '\n\t<<< End Output')
+            logger.error('error code: ' + str(retcode))
+            logger.error('error msg:  ' + str(ret['err']))
 
-            cmd = [tooling_path]
-            cmd_dir = os.path.dirname(tooling_path)
-            ret = run_cmd(cmd, cmd_dir)
-            logger.info('Execute Tooling command: ' + ' '.join(cmd))
+        return retcode
 
-            retcode = ret['subproc'].returncode
-            if retcode == 0:
-                # Command successed, log the output.
-                logger.info('return code: ' + str(retcode))
-                logger.info('\n\tStart Output of: ' + ' '.join(cmd) + \
-                    ' >>>\n' +  \
-                    str(ret['out']) + \
-                    '\n\t<<< End Output')
-            else:
-                # Command failed, log the errors.
-                logger.info('\n\tStart Output of: ' + ' '.join(cmd) + \
-                    ' >>>\n' +  \
-                    str(ret['out']) + \
-                    '\n\t<<< End Output')
-                logger.error('error code: ' + str(retcode))
-                logger.error('error msg:  ' + str(ret['err']))
-
-            # If tooling was provided at the top level only run it once
-            # for all services listed in the required config params.
-            if top_level:
-                break
+        # If tooling was provided at the top level only run it once
+        # for all services listed in the required config params.
+        #if top_level:
+        #    break
 
     def unpack_tooling(self):
         '''
