@@ -17,7 +17,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    1%{?dist}
+Release:    2%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -71,6 +71,7 @@ rm -rf %{buildroot}
 # aeolus-configserver
 ##
 mkdir -p %{buildroot}%{app_root}/configure
+mkdir -p %{buildroot}%{app_root}/examples
 mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_initrddir}
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
@@ -138,6 +139,9 @@ install -m 0644 \
 install configure/bin/config_httpd.sh \
     %{buildroot}%{_bindir}/aeolus-configserver-setup
 
+install examples/katello-register.xml \
+    %{buildroot}%{app_root}/examples
+
 # copy the generated man page from the buildroot
 install -m 0644 aeolus-configserver-setup.8 %{buildroot}%{_mandir}/man8
 
@@ -181,6 +185,10 @@ fi
 %doc COPYING
 
 %changelog
+* Wed Mar 28 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.6-2
+- Added facility to host example deployable XML files
+- Added first example deployable XML file for Katello registration
+- https://bugzilla.redhat.com/show_bug.cgi?id=807473
 * Mon Mar 05 2012 Dan Radez <dradez@redhat.com> 0.4.6-1
 - https://bugzilla.redhat.com/show_bug.cgi?id=798787
 - chkconfig on for http and configserver

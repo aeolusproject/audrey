@@ -1,0 +1,143 @@
+<?xml version="1.0"?>
+<!--
+Author: James Laska
+
+Notes:
+This deployable handles registering and subscribing a guest to content hosted by
+Katello.  The launched guest must be able to access the katello server over the
+available network.  This script does not attempt to establish any VPN
+connections or SSH tunneling.
+
+Prerequisites:
+  * a running katello server
+  * a running conductor server
+  * a running audrey config server, configured in conductor for a provider
+    account
+  * an image built from a template containing the aeolus-audrey-agent and
+    katello-agent RPMs
+
+Instructions:
+  * replace the "FIXME" image id with the ID of the image containing
+    aeolus-audrey-agent and katello-agent RPMs
+  * import this application blueprint into conductor and launch
+  * provide the correct launch time values for:
+    - Katello Host
+      - the hostname where katello is running
+    - Katello Port
+      - the port where katello is listening
+    - Katello Org
+      - the configured katello org
+    - Katello Env
+      - the configured katello environment
+    - Katello User
+      - the katello username
+    - Katello Pass
+      - the katello password
+    - Auto Subscribe
+      - whether or not the guest should auto subscribe to katello
+        - "True" or "False"
+    - Activation Key
+      - the activation key to use for subscribing to katello, or None
+    * NOTE: "Auto Subscribe" and "Activation Key" are mutually exclusive;
+      - if "Auto Subscribe" is True, then "Activation Key" should be None
+      - if "Auto Subscribe" is False, then "Activation Key" should contain the
+        activation key
+  * finish launching the guest in conductor
+-->
+<deployable name="Katello-Register">
+  <description>This is a sample deployment that registers and subscribes to
+  content hosted by katello.</description>
+  <assemblies>
+    <assembly name="client" hwp="hwp1">
+      <image id="FIXME" />
+      <services>
+        <service name="CONFIG">
+          <executable>
+            <contents><![CDATA[#!/usr/bin/python
+
+import os
+import sys
+import re
+import subprocess
+import shutil
+from ConfigParser import ConfigParser
+from string import Template
+
+def s_format(s, dct):
+    if hasattr(s, 'format'):
+        return s.format(**dct)
+    else:
+        # convert python-2.6 format to something 2.4 can handle
+        return Template(re.sub(r'{([^}]+)}', '$\\1', s)).substitute(dct)
+
+def run(cmd):
+    if isinstance(cmd, str):
+        cmd = cmd.split()
+    p_open = subprocess.Popen(cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT)
+    (stdout, stderr) = p_open.communicate()
+    if p_open.returncode != 0:
+        print "Error: command failed (%s) - %s" % (p_open.returncode, stdout)
+        sys.exit(p_open.returncode)
+    return stdout
+
+# HACK - Import RPM gpg-keys to work around bug#791257
+for gpg_key in [ 'RPM-GPG-KEY-redhat-release', 'RPM-GPG-KEY-redhat-beta',]:
+    run("rpm --import /etc/pki/rpm-gpg/%s" % gpg_key)
+
+# HACK - Installing using yum on a system with no enabled repos will remove
+# product cert. Until bug#806457 is fixed, install using the 'rpm' command.
+# cmd = "yum -y install %s" % cert_rpm
+cert_rpm = s_format("http://{AUDREY_VAR_CONFIG_KATELLO_HOST}/pub/candlepin-cert-consumer-{AUDREY_VAR_CONFIG_KATELLO_HOST}-1.0-1.noarch.rpm", os.environ)
+cmd = "rpm -ivh %s" % cert_rpm
+run(cmd)
+
+# Register to katello
+cmd = 'subscription-manager register ' \
+      '--username {AUDREY_VAR_CONFIG_KATELLO_USER} ' \
+      '--password {AUDREY_VAR_CONFIG_KATELLO_PASS} ' \
+      '--org {AUDREY_VAR_CONFIG_KATELLO_ORG} ' \
+      '--environment {AUDREY_VAR_CONFIG_KATELLO_ENV} '
+
+# Was --autosubscribe requested?
+if os.environ.get("AUDREY_VAR_CONFIG_AUTO_SUBSCRIBE", "false").lower() == "true":
+    cmd += '--autosubscribe '
+# Or, should we use an activation key?
+elif os.environ.get("AUDREY_VAR_CONFIG_ACTIVATION_KEY", "").strip() != "":
+    cmd += '--activationkey {AUDREY_VAR_CONFIG_ACTIVATION_KEY} '
+
+print run(s_format(cmd, os.environ))]]>
+            </contents>
+          </executable>
+          <parameters>
+            <parameter name="KATELLO_HOST" type="scalar">
+              <value></value>
+            </parameter>
+            <parameter name="KATELLO_PORT" type="scalar">
+              <value></value>
+            </parameter>
+            <parameter name="KATELLO_ORG" type="scalar">
+              <value></value>
+            </parameter>
+            <parameter name="KATELLO_ENV" type="scalar">
+              <value></value>
+            </parameter>
+            <parameter name="KATELLO_USER" type="scalar">
+              <value></value>
+            </parameter>
+            <parameter name="KATELLO_PASS" type="password">
+              <value></value>
+            </parameter>
+            <parameter name="AUTO_SUBSCRIBE" type="scalar">
+              <value>True</value>
+            </parameter>
+            <parameter name="ACTIVATION_KEY" type="scalar">
+              <value>None</value>
+            </parameter>
+          </parameters>
+        </service>
+      </services>
+    </assembly>
+  </assemblies>
+</deployable>

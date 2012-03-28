@@ -12,8 +12,20 @@ NameVirtualHost *:443
 
   ProxyRequests off
 
+  Alias /examples "/usr/share/aeolus-configserver/examples"
+  <Directory "/usr/share/aeolus-configserver/examples">
+    Options +Indexes
+  </Directory>
+
+  # for directory listing in examples dir
+  Alias /icons/ "/var/www/icons/"
+
+  ProxyPass /examples !
+  ProxyPass /icons/ !
   ProxyPass /<%= scope.lookupvar("apache::variables::config_server_context") %> <%= scope.lookupvar("apache::variables::config_server_url") %>
   ProxyPassReverse /<%= scope.lookupvar("apache::variables::config_server_context") %> <%= scope.lookupvar("apache::variables::config_server_url") %>
+  ProxyPassReverse /icons/ !
+  ProxyPassReverse /examples !
 
   Include conf.d/cs443/*.conf
 

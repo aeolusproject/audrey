@@ -59,6 +59,7 @@ configserver_files = FileList[
   "conf/*",
   "client/*",
   "configure/**/*",
+  "examples/**/*",
 ].exclude(LOGS)
 
 spec = Gem::Specification.new do |s|
