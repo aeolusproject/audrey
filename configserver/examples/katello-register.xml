@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <!--
 Author: James Laska
+Author: Greg Blomquist
 
 Notes:
 This deployable handles registering and subscribing a guest to content hosted by
 Katello.  The launched guest must be able to access the katello server over the
-available network.  This script does not attempt to establish any VPN
-connections or SSH tunneling.
+available network.
 
 Prerequisites:
   * a running katello server
@@ -21,6 +21,8 @@ Instructions:
     aeolus-audrey-agent and katello-agent RPMs
   * import this application blueprint into conductor and launch
   * provide the correct launch time values for:
+    - Import Beta Key
+      - whether or not the rhel beta gpg key should be imported
     - Katello Host
       - the hostname where katello is running
     - Katello Port
@@ -51,7 +53,90 @@ Instructions:
     <assembly name="client" hwp="hwp1">
       <image id="FIXME" />
       <services>
-        <service name="CONFIG">
+        <service name="GPG_KEY_IMPORT">
+          <executable>
+            <contents><![CDATA[#!/bin/bash
+
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+echo ${AUDREY_VAR_GPG_KEY_IMPORT_IMPORT_BETA_KEY:=False}
+if [[ $AUDREY_VAR_GPG_KEY_IMPORT_IMPORT_BETA_KEY == [Tt][Rr][Uu][Ee] ]]; then
+  rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-beta
+fi
+            ]]></contents>
+          </executable>
+          <parameters>
+            <parameter name="IMPORT_BETA_KEY" type="scalar">
+              <value>True</value>
+            </parameter>
+          </parameters>
+        </service>
+        <service name="RHEL_PRODUCT_CERT">
+          <executable>
+            <contents><![CDATA[#!/usr/bin/python
+import os
+import sys
+import subprocess
+import shutil
+
+def is_ec2_deployment():
+    '''Returns boolean True of False to indicate whether the current system is
+       an ec2 image'''
+
+    # FIXME - make sure 'wget' is installed, or use 'curl'
+    cmd = 'curl --silent http://169.254.169.254/latest/dynamic/instance-identity/document'
+    return subprocess.call(cmd.split()) == 0
+
+os.chdir('/var/audrey/tooling/user/RHEL_PRODUCT_CERT')
+
+# If running as an ec2 deployment, and no product cert is defined ... create one
+if is_ec2_deployment() and not os.path.isfile('/etc/pki/product/69.pem') and os.path.isfile('69.pem'):
+    if not os.path.isdir('/etc/pki/product'):
+        os.mkdir('/etc/pki/product')
+    shutil.copy('69.pem', '/etc/pki/product/69.pem')]]></contents>
+          </executable>
+          <files>
+            <file>
+              <contents filename="69.pem"><![CDATA[
+-----BEGIN CERTIFICATE-----
+MIIGDTCCA/WgAwIBAgIJALDxRLt/tUszMA0GCSqGSIb3DQEBBQUAMIGuMQswCQYD
+VQQGEwJVUzEXMBUGA1UECAwOTm9ydGggQ2Fyb2xpbmExFjAUBgNVBAoMDVJlZCBI
+YXQsIEluYy4xGDAWBgNVBAsMD1JlZCBIYXQgTmV0d29yazEuMCwGA1UEAwwlUmVk
+IEhhdCBFbnRpdGxlbWVudCBQcm9kdWN0IEF1dGhvcml0eTEkMCIGCSqGSIb3DQEJ
+ARYVY2Etc3VwcG9ydEByZWRoYXQuY29tMB4XDTExMTEwODE1NDYyNFoXDTMxMTEw
+MzE1NDYyNFowRDFCMEAGA1UEAww5UmVkIEhhdCBQcm9kdWN0IElEIFsyMGM3MWU4
+Ni1iZjA4LTRlZjYtYTAxYS1lYzQ0MDRkNzIyODZdMIICIjANBgkqhkiG9w0BAQEF
+AAOCAg8AMIICCgKCAgEAxj9J04z+Ezdyx1U33kFftLv0ntNS1BSeuhoZLDhs18yk
+sepG7hXXtHh2CMFfLZmTjAyL9i1XsxykQpVQdXTGpUF33C2qBQHB5glYs9+d781x
+8p8m8zFxbPcW82TIJXbgW3ErVh8vk5qCbG1cCAAHb+DWMq0EAyy1bl/JgAghYNGB
+RvKJObTdCrdpYh02KUqBLkSPZHvo6DUJFN37MXDpVeQq9VtqRjpKLLwuEfXb0Y7I
+5xEOrR3kYbOaBAWVt3mYZ1t0L/KfY2jVOdU5WFyyB9PhbMdLi1xE801j+GJrwcLa
+xmqvj4UaICRzcPATP86zVM1BBQa+lilkRQes5HyjZzZDiGYudnXhbqmLo/n0cuXo
+QBVVjhzRTMx71Eiiahmiw+U1vGqkHhQNxb13HtN1lcAhUCDrxxeMvrAjYdWpYlpI
+yW3NssPWt1YUHidMBSAJ4KctIf91dyE93aStlxwC/QnyFsZOmcEsBzVCnz9GmWMl
+1/6XzBS1yDUqByklx0TLH+z/sK9A+O2rZAy1mByCYwVxvbOZhnqGxAuToIS+A81v
+5hCjsCiOScVB+cil30YBu0cH85RZ0ILNkHdKdrLLWW4wjphK2nBn2g2i3+ztf+nQ
+ED2pQqZ/rhuW79jcyCZl9kXqe1wOdF0Cwah4N6/3LzIXEEKyEJxNqQwtNc2IVE8C
+AwEAAaOBljCBkzAJBgNVHRMEAjAAMDAGCysGAQQBkggJAUUBBCEMH1JlZCBIYXQg
+RW50ZXJwcmlzZSBMaW51eCBTZXJ2ZXIwFAYLKwYBBAGSCAkBRQIEBQwDNi4yMBcG
+CysGAQQBkggJAUUDBAgMBng4Nl82NDAlBgsrBgEEAZIICQFFBAQWDBRyaGVsLTYs
+cmhlbC02LXNlcnZlcjANBgkqhkiG9w0BAQUFAAOCAgEAsS+51Nhm3vTPqU75GJwN
+WFTOh/S7Imf2h569t2C6MsOE2z2a5Q9bs20PmcfjSH5pTjRxbniegZKMAydlM8Oi
+p3VOEulgBqbERMb2NmYLWFugN2emMPZ8Y+c4ZkxzxNrHG68858PLw/Hw3x7ceyVn
+SzVhG24CESgeIhyLzHmqnsM2TVx3gnIaKgpfNio6+g8TQ3Zdn0Y3aWVF4046e8sB
+niCqWaGWXq/cG6+KSQkADvxQXqBLIf/BG7zXnjeg7CwfDItWdca1fJBLh3WZTAdc
+d90Jhn5IUqwPWf6nupuyAFcxLcMHvn+7/x6sbUz7sdNJfUx/WnU52OqsuM/03wqn
+b449m8INeGCoa7yZdSQlcnH6UWLeKnrnhk/81Rrv265Q044dxzUA+aMJPn0ZFXIj
+76ot5agNeCEtZyKWptOR7to6gQutD4It8siqR2L2TK8eNcFxJVFSuenMjScoppJo
+WsK6OXGdxJA2PLpSSm0vJtFrLdjt3NnoMXHTi7HmldC1HLMLGEg/QNDdesdZcLBE
+AI2X5TrH/24IpBKtT+y/lImchb9INSsFJa29SSCrTFKLOc8aGvlb4nidHhRgFOzO
+fT34E8euLKc0d3pznxL/W8M/JsLF7abe3pijcvY0wGp9LHit2qeCJMWWdv6OKZMK
+8DbQo0gvmAQZGuMI459xDTA=
+-----END CERTIFICATE-----
+            ]]></contents>
+            </file>
+         </files>
+        </service>
+        <service name="KATELLO_REGISTER">
           <executable>
             <contents><![CDATA[#!/usr/bin/python
 
@@ -70,6 +155,7 @@ def s_format(s, dct):
         # convert python-2.6 format to something 2.4 can handle
         return Template(re.sub(r'{([^}]+)}', '$\\1', s)).substitute(dct)
 
+
 def run(cmd):
     if isinstance(cmd, str):
         cmd = cmd.split()
@@ -82,32 +168,68 @@ def run(cmd):
         sys.exit(p_open.returncode)
     return stdout
 
-# HACK - Import RPM gpg-keys to work around bug#791257
-for gpg_key in [ 'RPM-GPG-KEY-redhat-release', 'RPM-GPG-KEY-redhat-beta',]:
-    run("rpm --import /etc/pki/rpm-gpg/%s" % gpg_key)
 
-# HACK - Installing using yum on a system with no enabled repos will remove
+def subscription_manager_version():
+    sm_rpm_ver = run('rpm -q --queryformat %{VERSION} subscription-manager')
+    sm_ver_maj, sm_ver_min, sm_ver_rest = sm_rpm_ver.split(".", 2)
+    return int(sm_ver_maj), int(sm_ver_min)
+
+
+def audrey_var(name, default=None):
+    return os.environ.get("AUDREY_VAR_KATELLO_REGISTER_%s" % name, default)
+
+
+def setup_releasever():
+    fp = open("/etc/yum/vars/releasever", "r+")
+    fp.write(audrey_var("RELEASEVER"))
+    fp.close()
+
+
+def register_katello_command():
+    org = audrey_var("KATELLO_ORG")
+    activation_key = audrey_var("ACTIVATION_KEY", "").strip()
+    auto_subscribe = audrey_var("AUTO_SUBSCRIBE", "false").lower() == "true"
+    username = audrey_var("KATELLO_USER")
+    password = audrey_var("KATELLO_PASS")
+    kat_env = audrey_var("KATELLO_ENV")
+    sm_ver_maj, sm_ver_min = subscription_manager_version()
+
+    cmd = "subscription-manager register --force"
+    cmd += " --org=%s" % org
+
+    if sm_ver_maj <= 0:
+        if sm_ver_min < 96:
+            if auto_subscribe:
+                cmd += " --username=%s --password=%s" % (username, password)
+                cmd += " --autosubscribe"
+            elif activation_key != "" and sm_ver_min >= 95:
+                cmd += " --activationkey=%s" % activation_key
+            else:
+                pass # determine and print error condition to stdout
+        else:
+            if auto_subscribe:
+                cmd += " --username=%s --password=%s" % (username, password)
+                cmd += " --env=%s" % kat_env
+                cmd += " --autosubscribe"
+            elif activation_key != "":
+                cmd += " --activationkey=%s" % activation_key
+            else:
+                pass # determine and print error condition to stdout
+    return cmd
+
+# If requested, customize the yum $releasever
+if not audrey_var("RELEASEVER", "Default").lower() in ["", "default"]:
+    setup_releasever()
+
+# FIXME - Installing using yum on a system with no enabled repos will remove
 # product cert. Until bug#806457 is fixed, install using the 'rpm' command.
 # cmd = "yum -y install %s" % cert_rpm
-cert_rpm = s_format("http://{AUDREY_VAR_CONFIG_KATELLO_HOST}/pub/candlepin-cert-consumer-{AUDREY_VAR_CONFIG_KATELLO_HOST}-1.0-1.noarch.rpm", os.environ)
+cert_rpm = s_format("http://{AUDREY_VAR_KATELLO_REGISTER_KATELLO_HOST}/pub/candlepin-cert-consumer-{AUDREY_VAR_KATELLO_REGISTER_KATELLO_HOST}-1.0-1.noarch.rpm", os.environ)
 cmd = "rpm -ivh %s" % cert_rpm
 run(cmd)
 
-# Register to katello
-cmd = 'subscription-manager register ' \
-      '--username {AUDREY_VAR_CONFIG_KATELLO_USER} ' \
-      '--password {AUDREY_VAR_CONFIG_KATELLO_PASS} ' \
-      '--org {AUDREY_VAR_CONFIG_KATELLO_ORG} ' \
-      '--environment {AUDREY_VAR_CONFIG_KATELLO_ENV} '
-
-# Was --autosubscribe requested?
-if os.environ.get("AUDREY_VAR_CONFIG_AUTO_SUBSCRIBE", "false").lower() == "true":
-    cmd += '--autosubscribe '
-# Or, should we use an activation key?
-elif os.environ.get("AUDREY_VAR_CONFIG_ACTIVATION_KEY", "").strip() != "":
-    cmd += '--activationkey {AUDREY_VAR_CONFIG_ACTIVATION_KEY} '
-
-print run(s_format(cmd, os.environ))]]>
+cmd = register_katello_command()
+print run(cmd)]]>
             </contents>
           </executable>
           <parameters>
@@ -128,6 +250,9 @@ print run(s_format(cmd, os.environ))]]>
             </parameter>
             <parameter name="KATELLO_PASS" type="password">
               <value></value>
+            </parameter>
+            <parameter name="RELEASEVER" type="scalar">
+              <value>Default</value>
             </parameter>
             <parameter name="AUTO_SUBSCRIBE" type="scalar">
               <value>True</value>
