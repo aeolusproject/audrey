@@ -36,7 +36,7 @@ module ConfigServer
         File.exists?(storage_path uuid)
       end
 
-      @uuid = nil
+      attr_reader :uuid
       @deployable_dir = nil
 
       def initialize(uuid)
@@ -76,6 +76,12 @@ module ConfigServer
         @deployable_dir.entries - EXCLUDED_DIRS
       end
 
+      def instances
+        @instances ||= instance_uuids.map do |uuid|
+          Instance.find(uuid)
+        end
+      end
+
       def instances_with_assembly_dependencies(assembly_names)
         if not assembly_names.kind_of? Array
           assembly_names = [assembly_names]
@@ -90,7 +96,57 @@ module ConfigServer
         end
       end
 
+      def registered_timestamp
+        File.new(@deployable_dir.path).ctime
+      end
+
+      def completed_timestamp
+        times = instances.map {|i| i.completed_timestamp }
+
+        # if there are no nils in the instances' completed timestamps
+        # find the last (highest) completion timestamp
+        # otherwise, nil
+        if times.compact == times
+          times.max do |t1, t2|
+            nilable_max_comparison(t1, t2)
+          end
+        end
+      end
+
+      def status
+        states = instances.map {|i| i.status }
+
+        # if all the instances reported a status
+        # find the "worst" status (error > incomplete > success)
+        # otherwise, at least one instance couldn't report status = "incomplete"
+        if states.compact == states
+          states.max do |s1, s2|
+            # error > incomplete > success
+            # which nicely maps to alphabetical order
+            nilable_max_comparison(s1, s2)
+          end
+        else
+          "incomplete"
+        end
+      end
+
       private
+      def nilable_max_comparison(x, y, &block)
+        if x and y
+          if block_given?
+            yield x, y
+          else
+            x <=> y
+          end
+        elsif x
+          1
+        elsif y
+          -1
+        else
+          0
+        end
+      end
+
       def ensure_deployable_dir
         path = Deployable.storage_path @uuid
         FileUtils.mkdir_p(path, :mode => 0700) if not File.directory?(path)

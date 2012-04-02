@@ -95,7 +95,7 @@ end
 # In this case, we allow for files that replace the "@VERSION@" text with the
 # actual package version.  Some generated files are packaged, while others are
 # simply used during packaging.
-desc = "Hello"
+desc "Generate files for test and packaging"
 task :generate_files do
   GENERATED_FILES.each do |(source_file,dest_file,action)|
     # create the file task to generate the file

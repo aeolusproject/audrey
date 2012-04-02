@@ -91,6 +91,7 @@ module ConfigServer
       @@REQUIRED_PARAMS_FILE = "required-parameters.xml"
       @@IP_FILE = "ip"
       @@EMPTY_DOCUMENT = Nokogiri::XML("")
+      @@TIMESTAMP_FILE = "timestamps"
 
       # Nokogiri XML validator
       @@validator = nil
@@ -285,6 +286,33 @@ module ConfigServer
           end
           return path
         end
+      end
+
+      def completed_timestamp
+      end
+
+      def registered_timestamp
+        File.new(@instance_dir).ctime
+      end
+
+      def first_contacted
+        get_timestamp(:first_contacted)
+      end
+
+      def last_contacted
+        get_timestamp(:last_contacted)
+      end
+
+      def contacted= timestamp
+        first = first_contacted
+        if not first
+          write_timestamp(:first_contacted, timestamp.to_s)
+        end
+        write_timestamp(:last_contacted, timestamp.to_s)
+      end
+
+      def status
+        "incomplete"
       end
 
       private
@@ -512,6 +540,22 @@ module ConfigServer
         result
       end
 
+      def get_timestamp(timestamp_name)
+        fname = get_path(@@TIMESTAMP_FILE)
+        timestamps = Hash[*File.read(fname).split(/[= \n]+/)] if File.exists?(fname)
+        if timestamps and timestamps.key? timestamp_name.to_s
+          timestamps[timestamp_name]
+        end
+      end
+
+      def write_timestamp(timestamp_name, value)
+        fname = get_path(@@TIMESTAMP_FILE)
+        timestamps = Hash[*File.read(fname).split(/[= \n]+/)] if File.exists?(fname)
+        if timestamps and timestamps.key? timestamp_name.to_s
+          timestamps[timestamp_name] = value
+          File.open(fname, "a") {|f| timestamps.each_pair {|k,v| f.write "#{k}=#{v}"}}
+        end
+      end
     end
   end
 end

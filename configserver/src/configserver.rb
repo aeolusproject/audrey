@@ -18,6 +18,7 @@ require 'rubygems'
 require 'sinatra'
 
 require 'lib/config_handler' # I don't like this name
+require 'lib/report_server'
 require 'lib/application_helper'
 
 helpers ApplicationHelper
@@ -73,7 +74,7 @@ before '/*/:version/*' do
   # Validate the api version
   if not api_version_valid?(params[:version])
     not_found
-  end 
+  end
 end
 
 # Test OAuth
@@ -173,5 +174,25 @@ put '/params/:version/:uuid' do
     provides = configs.update(params[:uuid], params[:audrey_data], request.ip)
     status = ("||" == provides) ? 200 : 202
     [status, provides]
+  end
+end
+
+########################
+# Reporting API
+#
+
+get '/reports/:version/deployment/:uuid' do
+  if not configs.deployment_exists?(params[:uuid])
+    not_found
+  else
+    reports.deployment_report(params[:uuid])
+  end
+end
+
+get '/reports/:version/instance/:uuid' do
+  if not configs.exists?(params[:uuid])
+    not_found
+  else
+    reports.instance_report(params[:uuid])
   end
 end

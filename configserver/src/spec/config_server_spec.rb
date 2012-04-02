@@ -26,5 +26,4 @@ describe 'Config Server Version & Auth' do
     get '/auth'
     last_response.should.be.ok
   end
-
 end

@@ -47,11 +47,13 @@ describe 'Config Server API V1' do
 
   it "should return 200 from get /configs/:version/:uuid when asked for text" do
     get '/configs/1/' + INSTANCE_UUID, {}, {'HTTP_ACCEPT' => "application/xml"}
+    puts last_response.body
     last_response.should.be.ok
   end
 
   it "should return 200 from get /configs/:version/:uuid when asked for xml" do
     get '/configs/1/' + INSTANCE_UUID, {}, {'HTTP_ACCEPT' => "text/plain"}
+    puts last_response.body
     last_response.should.be.ok
   end
 

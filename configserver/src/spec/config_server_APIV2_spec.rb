@@ -18,4 +18,19 @@ describe 'Config Server API V2' do
     last_response.status.should == 200
   end
 
+  it "should return 200 from get /configs/:version/:uuid when asked for text" do
+    get '/configs/2/' + INSTANCE_UUID, {}, {'HTTP_ACCEPT' => "application/xml"}
+    last_response.body.should.include 'srvdep_ref_test'
+  end
+
+  it "should return 200 from get /configs/:version/:uuid when asked for xml" do
+    get '/configs/2/' + INSTANCE_UUID, {}, {'HTTP_ACCEPT' => "text/plain"}
+    last_response.body.should.include 'srvdep_ref_test'
+  end
+
+  it "should return 200 from get /params/:version/:uuid" do
+    get '/params/2/' + INSTANCE_UUID, {}, {'HTTP_ACCEPT' => "text/plain"}
+    last_response.body.should == '||test_service|'
+  end
+
 end

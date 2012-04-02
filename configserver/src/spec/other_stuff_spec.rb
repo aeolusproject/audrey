@@ -8,12 +8,18 @@ describe 'Things the functional tests missed' do
   end
 
   it "should assign content to instance_config" do
+    # need to stub out the instance_config_schema_location b/c
+    # this test bypasses the ApplicationHelper.configs method
+    ConfigServer::Model.stub!(:instance_config_schema_location).and_return(ENV['INSTANCE_CONFIG_RNG'])
     Net::HTTP.stub!(:new).and_return(FakeHttp.new)
     x = ConfigServer::Model::Instance.new(INSTANCE_UUID)
     x.instance_config = INSTANCE_DATA_W_URL
   end
 
   it "should fail to get contents of instance_config that has a url" do
+    # need to stub out the instance_config_schema_location b/c
+    # this test bypasses the ApplicationHelper.configs method
+    ConfigServer::Model.stub!(:instance_config_schema_location).and_return(ENV['INSTANCE_CONFIG_RNG'])
     x = ConfigServer::Model::Instance.new(INSTANCE_UUID)
     x.stub!(:download_file).and_return({:code => "404"})
     x.instance_config = INSTANCE_DATA_W_URL
