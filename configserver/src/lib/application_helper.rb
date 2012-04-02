@@ -29,6 +29,10 @@ module ApplicationHelper
     @configs ||= ConfigServer::InstanceConfigs.new(settings)
   end
 
+  def reports
+    @reports ||= ConfigServer::ReportServer.new(settings)
+  end
+
   def app_version
     settings.version
   end

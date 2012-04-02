@@ -196,3 +196,23 @@ put '/params/:version/:uuid' do
     [status, provides]
   end
 end
+
+########################
+# Reporting API
+#
+
+get '/reports/deployment/:uuid' do
+  if not configs.deployment_exists?(params[:uuid])
+    not_found
+  else
+    reports.deployment_report(params[:uuid])
+  end
+end
+
+get '/reports/instance/:uuid' do
+  if not configs.exists?(params[:uuid])
+    not_found
+  else
+    reports.instance_report(params[:uuid])
+  end
+end
