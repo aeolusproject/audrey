@@ -33,6 +33,7 @@ SPEC_FILE_IN="aeolus-configserver.spec.in"
 SPEC_FILE="aeolus-configserver.spec"
 CONFIG_IN="src/common_config.in.rb"
 CONFIG="src/common_config.rb"
+DEBUG="src/DEBUG"
 SETUP="configure/bin/config_httpd.sh"
 MAN="aeolus-configserver-setup.8"
 LOGS="*/log/*"
@@ -138,13 +139,16 @@ CLEAN.include('pkg')
 CLEAN.include('aeolus-configserver-setup.8')
 CLEAN.include(SPEC_FILE)
 CLEAN.include(CONFIG)
+CLEAN.include(DEBUG)
 
 desc 'Run tests'
 task :test => [:generate_files] do
   Dir::chdir("src") do |dir|
     # set pipefail so if the command fails, it's status is reported back
     # to the rake task
-    cmd = "set -o pipefail && uname -r | grep \.el[0-9] | tee rpmbuild.log 2>&1"
+    #
+    # Don't run the test on f15 or any version or el.
+    cmd = "set -o pipefail && uname -r | egrep '\.fc15|\.el[0-9]' | tee rpmbuild.log 2>&1"
     system(cmd)
     cmd_status = $?
     if cmd_status != 0

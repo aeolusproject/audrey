@@ -30,6 +30,8 @@ Source0:    http://joev.fedorapeople.org/configserver/aeolus-configserver-%{vers
   %global ruby_abi 1.8
 %endif
 
+%{!?_unitdir: %define _unitdir /lib/systemd/system}
+
 BuildRequires:   rubygems
 BuildRequires:   ruby(abi) = %{ruby_abi}
 
@@ -38,10 +40,11 @@ BuildRequires:   ruby-devel
 BuildRequires:   rubygems
 BuildRequires:   help2man
 
-%if 0%{?fedora}
-  # test target BuildRequires
-  # Only run the automated test on Fedora because not all the
-  # required packages are available on RHEL.
+
+%if 0%{?fedora} >= 16
+# test target BuildRequires
+# Only run the automated test on Fedora 16 or greater because
+# not all the required packages are available otherwise.
 BuildRequires:   rubygem-test-spec rubygem-archive-tar-minitar
 BuildRequires:   rubygem-activesupport rubygem-nokogiri
 BuildRequires:   rubygem-oauth rubygem-rack
