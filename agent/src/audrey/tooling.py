@@ -115,21 +115,15 @@ class Tooling(object):
         logger.info('Execute Tooling command: ' + ' '.join(cmd))
 
         retcode = ret['subproc'].returncode
+        logger.info('\n\tStart Output of: %s >>>\n%s\n\t<<< End Output' % \
+                (' '.join(cmd), ret['out']))
         if retcode == 0:
             # Command successed, log the output.
-            logger.info('return code: ' + str(retcode))
-            logger.info('\n\tStart Output of: ' + ' '.join(cmd) + \
-                ' >>>\n' +  \
-                str(ret['out']) + \
-                '\n\t<<< End Output')
+            logger.info('return code: %s' % retcode)
         else:
             # Command failed, log the errors.
-            logger.info('\n\tStart Output of: ' + ' '.join(cmd) + \
-                ' >>>\n' +  \
-                str(ret['out']) + \
-                '\n\t<<< End Output')
-            logger.error('error code: ' + str(retcode))
-            logger.error('error msg:  ' + str(ret['err']))
+            logger.error('error code: %s' % retcode)
+            logger.error('error msg: %s' % ret['err'])
 
         return retcode
 

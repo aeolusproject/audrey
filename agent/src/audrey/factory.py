@@ -21,10 +21,11 @@ import audrey.service
 
 from audrey.tooling import Tooling
 
+
 class AudreyFactory(object):
 
     def __init__(self, api_version):
-        
+
         self.api_version = api_version
         self.Tooling = Tooling
 
@@ -37,7 +38,7 @@ class AudreyFactory(object):
             self.Agent = audrey.agent.AgentV2
             self.Provides = audrey.provides.ProvidesV2
             self.Service = audrey.service.ServiceV2
-    
+
         audrey.agent.Tooling = self.Tooling
         audrey.agent.Service = self.Service
         audrey.agent.Provides = self.Provides

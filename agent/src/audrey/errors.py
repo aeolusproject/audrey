@@ -16,6 +16,7 @@
 *
 '''
 
+
 class AAError(Exception):
     '''
     Some sort of error occurred. The exact cause of the error should
@@ -29,8 +30,10 @@ class AAError(Exception):
 class AAErrorInvalidTar(AAError):
     pass
 
+
 class AAErrorApiNegotiation(AAError):
     pass
+
 
 class ASErrorPutProvides(AAError):
     pass

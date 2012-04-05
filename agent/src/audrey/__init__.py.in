@@ -80,6 +80,7 @@ def setup_logging(level=logging.INFO, logfile_name=LOG):
 
     return logger
 
+
 def parse_args():
     '''
     Description:
@@ -164,7 +165,6 @@ def main():
 
     logger.info('Invoked audrey main')
 
-    
     # Create the Client Object and test connectivity
     # to CS by negotiating the api version
     client = CSClient(**conf)

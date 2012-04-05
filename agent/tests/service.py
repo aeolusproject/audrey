@@ -28,6 +28,7 @@ from tests.mocks import DUMMY_SERVICE_CONFIG_DATA
 from tests.mocks import DUMMY_NO_SERVICE_CONFIG_DATA
 from tests import _write_file
 
+
 class TestAudreyAgentServiceV1(unittest.TestCase):
     '''
     Class for exercising the parsing of the Required Configs from the CS.
@@ -43,7 +44,8 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         - Exercise Service().parse_require_config() with valid input
         '''
         # Exersise code segment
-        services = self.factory.Service('jon1').parse_require_config(DUMMY_SERVICE_CONFIG_DATA)
+        services = self.factory.Service('jon1').parse_require_config(
+                                                     DUMMY_SERVICE_CONFIG_DATA)
 
         # Validate results
         self.assertEqual(services[0].name, 'jon1')
@@ -75,10 +77,10 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         - Exercise Service().parse_require_config() with valid input
         '''
 
-        services = self.factory.Service('').parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
+        services = self.factory.Service('').parse_require_config(
+                                                  DUMMY_NO_SERVICE_CONFIG_DATA)
         self.assertEqual(services[0].name, '')
         self.assertEqual(services[1].name, 'jon2')
-
 
         ## ## TODO: verify the env variable else where
         #for service in services:
@@ -115,7 +117,8 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
             'AUDREY_VAR_jon_server_ip_2': '192.168.1.2',
             'AUDREY_VAR_jon_server_ip_3': '192.168.1.3'}
 
-        self.assertRaises(AAError, self.factory.Service('').parse_require_config, src)
+        self.assertRaises(AAError,
+                          self.factory.Service('').parse_require_config, src)
 
     def test_failure_bad_service_name(self):
         '''
@@ -124,7 +127,8 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         '''
 
         src = '|service|parameters|'
-        self.assertRaises(AAError, self.factory.Service('').parse_require_config, src)
+        self.assertRaises(AAError,
+                          self.factory.Service('').parse_require_config, src)
 
     def test_failure_service_tag_not_found(self):
         '''
@@ -132,7 +136,8 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         - |service| not in src to Service().parse_require_config()
         '''
         src = '|notservice|blah|'
-        self.assertRaises(AAError, self.factory.Service('').parse_require_config, src)
+        self.assertRaises(AAError,
+                          self.factory.Service('').parse_require_config, src)
 
     def test_failure_no_amp_delim(self):
         '''
@@ -140,7 +145,9 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         - no delim in param token
         '''
         src = '|service|blah|parameters|blah|'
-        self.assertRaises(AAError, self.factory.Service('').parse_require_config, src)
+        self.assertRaises(AAError,
+                          self.factory.Service('').parse_require_config, src)
+
 
 class TestAudreyAgentServiceV2(TestAudreyAgentServiceV1):
     '''

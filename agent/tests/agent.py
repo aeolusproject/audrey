@@ -32,6 +32,7 @@ import tests.mocks
 from tests.mocks import CLOUD_INFO_FILE
 from tests import _write_file
 
+
 class TestAudreyInit(unittest.TestCase):
 
     def setUp(self):
@@ -80,7 +81,6 @@ class TestAudreyInit(unittest.TestCase):
 
         # reset logging
         setup_logging(logging.DEBUG)
-
 
 
 class TestAudreyAgentV1(unittest.TestCase):
@@ -147,6 +147,7 @@ class TestAudreyAgentV1(unittest.TestCase):
         audrey.csclient.CONFIGS_URL = 'gimmie-404'
         self.assertRaises(AAError, main)
 
+
 class TestAudreyAgentV2(TestAudreyAgentV1):
     def setUp(self):
         super(TestAudreyAgentV2, self).setUp()
@@ -163,4 +164,3 @@ class TestAudreyAgentV2(TestAudreyAgentV1):
         # should succeed, we don't bail on 404
         # in api version 2
         main()
-

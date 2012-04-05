@@ -25,6 +25,7 @@ from audrey.shell import get_system_info
 
 CLOUD_INFO_FILE = '/etc/sysconfig/cloud-info'
 
+
 def _get_cloud_type():
     '''
     Description:
@@ -99,6 +100,7 @@ def discover():
         return audrey.user_data_vsphere.UserData()
     else:
         raise AAError('Cloud type "%s" is invalid.' % cloud_type)
+
 
 class UserDataBase(object):
     '''

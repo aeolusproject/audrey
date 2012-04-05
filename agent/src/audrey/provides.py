@@ -25,6 +25,7 @@ from audrey.shell import get_system_info
 
 logger = logging.getLogger('Audrey')
 
+
 class ProvidesV1(dict):
 
     def __setitem__(self, key, value):
@@ -76,7 +77,6 @@ class ProvidesV1(dict):
 
         return self
 
-
     def generate_cs_str(self):
         '''
         Description:
@@ -123,7 +123,7 @@ class ProvidesV1(dict):
         non_none = reduce(is_not_None, self.items(), [])
         kv_pairs = map('&'.join, non_none)
 
-        return urllib.urlencode({'audrey_data': '|' + '|'.join(kv_pairs) + '|'})
+        return urllib.urlencode({'audrey_data': '|%s|' % '|'.join(kv_pairs)})
 
 
 class ProvidesV2(ProvidesV1):
@@ -137,7 +137,7 @@ class ProvidesV2(ProvidesV1):
 
         for p in self.keys():
             if self[p] is not None:
-               del self[p]
+                del self[p]
 
     def parse_cs_str(self, src, tooling=None):
         '''

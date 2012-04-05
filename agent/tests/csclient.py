@@ -25,6 +25,7 @@ from audrey.csclient import CSClient
 from tests.mocks import HttpUnitTest
 from tests.mocks import DUMMY_CS_CONFIG
 
+
 class TestAudreyCSClient(unittest.TestCase):
     '''
     Class for exercising the gets and put to and from the CS

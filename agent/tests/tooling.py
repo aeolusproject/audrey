@@ -101,21 +101,25 @@ class TestAudreyAgentToolingV1(unittest.TestCase):
     def test_fail_execution_invoke_tooling(self):
         start_path = os.path.join(self.tooling.user_dir, 'start')
         _write_file(start_path, EXIT_ONE, 0744)
-        services = self.factory.Service('').parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
+        services = self.factory.Service('').parse_require_config(
+                                                  DUMMY_NO_SERVICE_CONFIG_DATA)
         self.tooling.invoke_tooling(services)
 
     def test_user_invoke_tooling(self):
         start_path = os.path.join(self.tooling.user_dir, 'start')
         _write_file(start_path, EXIT_ZERO, 0744)
-        services = self.factory.Service('').parse_require_config(DUMMY_NO_SERVICE_CONFIG_DATA)
+        services = self.factory.Service('').parse_require_config(
+                                                  DUMMY_NO_SERVICE_CONFIG_DATA)
         self.tooling.invoke_tooling(services)
 
     def test_user_service_invoke_tooling(self):
         service_dir = os.path.join(self.tooling.user_dir, 'jon1')
         os.mkdir(service_dir)
         _write_file(os.path.join(service_dir, 'start'), EXIT_ZERO, 0744)
-        services = self.factory.Service('jon1').parse_require_config(DUMMY_SERVICE_CONFIG_DATA)
+        services = self.factory.Service('jon1').parse_require_config(
+                                                     DUMMY_SERVICE_CONFIG_DATA)
         self.tooling.invoke_tooling(services)
+
 
 class TestAudreyAgentToolingV2(TestAudreyAgentToolingV1):
     '''

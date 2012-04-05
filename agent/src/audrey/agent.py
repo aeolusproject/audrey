@@ -102,16 +102,16 @@ class AgentV1(object):
 
             # Retry a number of times if 404 HTTP Not Found is returned.
             if config_status == 404 or provides_status == 404:
-                logger.error('Requiest to Config Server failed or more to come.')
-                logger.error('Required Config Parameter status: ' + \
-                    str(config_status))
-                logger.info('Return Parameter status: ' + str(provides_status))
+                logger.error('404 from Config Server.')
+                logger.error('Required Config status: %s' % config_status)
+                logger.info('Return Parameter status: %s' % provides_status)
 
                 max_retry -= 1
                 if max_retry < 0:
-                    raise AAError('Too many erroneous Config Server responses.')
+                    raise AAError('Too many 404 Config Server responses.')
 
             sleep(SLEEP_SECS)
+
 
 class AgentV2(AgentV1):
     def run(self):
@@ -139,7 +139,7 @@ class AgentV2(AgentV1):
             # check for required configs per service
             for service in services.keys():
                 s = services[service]
-                # Get the Required Configs from the Config Server for the service
+                # Get the Required Configs from Config Server for the service
                 status, configs = self.client.get_configs(s.name)
 
                 # Configure the system with the provided Required Configs
@@ -152,11 +152,13 @@ class AgentV2(AgentV1):
                         status = s.tooling.invoke()
                     logger.info('Service %s returns %s' % (service, status))
                     # report service status
-                    status, body = self.client.put_provides(s.generate_cs_str(status))
+                    status, body = self.client.put_provides(
+                                               s.generate_cs_str(status))
                     # report non 200 status on service status put
                     if status != 200:
-                        raise ASErrorPutProvides('Put service status %s' % status)
-                    # remove the service from the list now that it's been procesed 
+                        raise ASErrorPutProvides('Put service status %s'
+                                                                     % status)
+                    # the service has been processed
                     del services[service]
 
             sleep(SLEEP_SECS)

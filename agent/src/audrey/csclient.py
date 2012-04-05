@@ -113,7 +113,9 @@ class CSClient(object):
         if url_type == 'version':
             endpoint += '?api_compat=%s' % API_COMPAT
         else:
-            endpoint = '%s/%s/%s' % (endpoint, self.api_version, self.cs_oauth_key)
+            endpoint = '%s/%s/%s' % (endpoint,
+                                     self.api_version,
+                                     self.cs_oauth_key)
         return endpoint
 
     def _get(self, url, headers=None):
@@ -248,7 +250,6 @@ class CSClient(object):
                         'Error: %s %s') % (self.tarball, errno, strerror))
 
         return response.status, self.tarball
-
 
     @staticmethod
     def validate_message(src):

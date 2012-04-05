@@ -28,6 +28,7 @@ from audrey.factory import AudreyFactory
 from tests.mocks import HttpUnitTest
 from tests import _write_file
 
+
 class TestAudreyAgentProvidesV1(unittest.TestCase):
     '''
     Class for exercising the parsing of the Provides ParametersConfigs
@@ -165,6 +166,7 @@ class TestAudreyAgentProvidesV1(unittest.TestCase):
 
         provides = self.factory.Provides()
         self.assertRaises(AAError, self.factory.Provides().parse_cs_str, src)
+
 
 class TestAudreyAgentProvidesV2(unittest.TestCase):
     '''

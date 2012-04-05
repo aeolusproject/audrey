@@ -27,6 +27,7 @@ from audrey.shell import run_cmd
 
 logger = logging.getLogger('Audrey')
 
+
 class ServiceV1(object):
     '''
     Description:
@@ -56,33 +57,33 @@ class ServiceV1(object):
     def parse_require_config(src):
         '''
         Description:
-            Parse the required config text message sent from the Config Server.
+          Parse the required config text message sent from the Config Server.
 
         Input:
-            The required config string obtained from the Config Server,
-            delimited by an | and an &
+          The required config string obtained from the Config Server,
+          delimited by an | and an &
 
-            Two tags will mark the sections of the data,
-            '|service|' and  '|parameters|'
+          Two tags will mark the sections of the data,
+          '|service|' and  '|parameters|'
 
-            To ensure all the data was received the entire string will be
-            terminated with an "|".
+          To ensure all the data was received the entire string will be
+          terminated with an "|".
 
-            The string "|service|" will precede a service names.
+          The string "|service|" will precede a service names.
 
-            The string "|parameters|" will precede the parameters for
-            the preceeding service, in the form: names&<b64 encoded values>.
+          The string "|parameters|" will precede the parameters for
+          the preceeding service, in the form: names&<b64 encoded values>.
 
         This will be a continuous text string (no CR or New Line).
 
-            Format (repeating for each service):
+          Format (repeating for each service):
 
-            |service|<s1>|parameters|name1&<b64val>|name2&<b64val>...|nameN&<b64v>|
+          |service|<s1>|parameters|name1&<b64val>|name2&<b64val>|nameN&<b64v>|
 
 
-            e.g.:
-            |service|ssh::server|parameters|ssh_port&<b64('22')>
-            |service|apache2::common|apache_port&<b64('8081')>|
+          e.g.:
+          |service|ssh::server|parameters|ssh_port&<b64('22')>
+          |service|apache2::common|apache_port&<b64('8081')>|
 
         Returns:
             - A list of ServiceParams objects.
@@ -119,7 +120,7 @@ class ServiceV1(object):
                     if token.find('&') != -1 or \
                         token == 'service' or \
                         token == 'parameters':
-                        raise AAError(('ERROR invalid service name: %s') % \
+                        raise AAError(('invalid service name: %s') % \
                            (str(token)))
 
                     new = Service(token)
@@ -128,13 +129,13 @@ class ServiceV1(object):
                     pass
                 else:  # token is a name&value pair.
                     if token.find('&') == -1:
-                        raise AAError(('ERROR name&val: %s missing delimiter') % \
+                        raise AAError(('name&val: %s missing delimiter') % \
                            (str(token)))
                     if new:
                         key, value = token.split('&')
                         new.params[key] = value
                     else:
-                        raise AAError(('ERROR missing service tag %s') % \
+                        raise AAError(('missing service tag %s') % \
                              (str(src)))
             except IndexError:
                 break
@@ -144,23 +145,23 @@ class ServiceV1(object):
     def gen_env(self):
         '''
         Description:
-            Generate the os environment variables from the required config string.
+          Generate the os environment variables from the config params.
 
         Input:
-            serv_name - A service name
-                e.g.:
-                jon_agent_config
+          serv_name - A service name
+              e.g.:
+              jon_agent_config
 
-            param_val - A parameter name&val pair. The value is base64 encoded.
-                e.g.:
-                jon_server_ip&MTkyLjE2OC4wLjE=
+          param_val - A parameter name&val pair. The value is base64 encoded.
+              e.g.:
+              jon_server_ip&MTkyLjE2OC4wLjE=
 
         Output:
-            Set environment variables of the form:
-            <name>=<value>
-                e.g.:
-                jon_server_ip=base64.b64decode('MTkyLjE2OC4wLjE=')
-                jon_server_ip='192.168.0.1
+          Set environment variables of the form:
+          <name>=<value>
+              e.g.:
+              jon_server_ip=base64.b64decode('MTkyLjE2OC4wLjE=')
+              jon_server_ip='192.168.0.1
 
         Raises AAError when encountering an error.
 
@@ -171,11 +172,12 @@ class ServiceV1(object):
             var_name = '_'.join(('AUDREY_VAR', self.name, param))
             os.environ[var_name] = \
                 base64.b64decode(self.params[param])
-    
+
             # Get what was set and log it.
             cmd = ['/usr/bin/printenv', var_name]
             ret = run_cmd(cmd)
             logger.debug(var_name + '=' + str(ret['out'].strip()))
+
 
 class ServiceV2(ServiceV1):
     def generate_cs_str(self, status):
