@@ -273,6 +273,9 @@ module ConfigServer
         end
       end
 
+      def status
+      end
+
       private
       alias config instance_config
 
