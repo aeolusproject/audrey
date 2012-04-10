@@ -53,3 +53,17 @@ class TestAudreyShell(unittest.TestCase):
         audrey.shell.run_cmd = mock_run_cmd_facter_fail
         self.assertRaises(AAError, get_system_info)
         audrey.shell.run_cmd = mock_run_cmd
+        # reset run_cmd to the real thing
+        audrey.shell.run_cmd = run_cmd
+
+    def test_single_fact(self):
+        self.assertIn('uptime', get_system_info(['uptime']))
+
+    def test_single_undefined_facts(self):
+        self.assertEqual(get_system_info(['not_real']), {})
+
+    def test_mutliple_facs(self):
+        self.assertIn('ipaddress', get_system_info(['ipaddress']))
+
+    def test_multiple_with_undefined_facts(self):
+        self.assertIn('ipaddress', get_system_info(['not_real', 'ipaddress']))

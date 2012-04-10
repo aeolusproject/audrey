@@ -193,7 +193,13 @@ def get_system_info(facts=[]):
 
     f = {}
     f = ret['out'].split('\n')[:-1]
+    if not f:
+        return {}
     if len(f) == 1:
         return {facts[0]: f[0]}
     f = map(lambda x: x.split(' => '), f)
-    return dict(f)
+    f = dict(f)
+    for k in f.keys():
+        if not f[k]:
+            del f[k]
+    return f

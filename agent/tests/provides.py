@@ -100,7 +100,7 @@ class TestAudreyAgentProvidesV1(unittest.TestCase):
             self.assertIn(param, provides)
 
         # Confirm unavailable parameters return None
-        self.assertEqual(provides['unavailable_dogs'], '')
+        self.assertEqual(provides['unavailable_dogs'], None)
 
     def test_success_one_parameters(self):
         '''
@@ -239,7 +239,7 @@ class TestAudreyAgentProvidesV2(unittest.TestCase):
             self.assertIn(param, provides)
 
         # Confirm unavailable parameters return None
-        self.assertEqual(provides['unavailable_dogs'], '')
+        self.assertEqual(provides['unavailable_dogs'], None)
 
     def test_success_one_parameters(self):
         '''

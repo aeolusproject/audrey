@@ -115,7 +115,7 @@ class HttpUnitTest(object):
                 body = '|service|s1|parameters|param1&%s|param2&%s|' % \
                     (base64.b64encode('value1'), base64.b64encode('value2'))
             elif url.find('/params/') > -1:
-                body = '|param1&param2|'
+                body = '|ipaddress&uptime|'
             elif url.find('/files/') > -1:
                 file_out = BIO()
                 tar = tarfile.open(mode="w:gz", fileobj=file_out)

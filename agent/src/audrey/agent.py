@@ -28,6 +28,7 @@ from audrey.csclient import CSClient
 
 SLEEP_SECS = 10
 PWD_TOOLING = 'tooling'
+MAX_RETRY = 5
 
 logger = logging.getLogger('Audrey')
 
@@ -58,7 +59,7 @@ class AgentV1(object):
         config_status = -1
         provides_status = -1
 
-        max_retry = 5
+        max_retry = MAX_RETRY
         services = []
 
         # Process the Requires and Provides parameters until the HTTP status
@@ -115,6 +116,10 @@ class AgentV1(object):
 
 class AgentV2(AgentV1):
     def run(self):
+        provides_len = 0
+        services_len = 0
+        retry_ct = 0
+
         status, provides_str = self.client.get_provides()
         if status == 200:
             services, provides = Provides().parse_cs_str(provides_str)
@@ -160,5 +165,15 @@ class AgentV2(AgentV1):
                                                                      % status)
                     # the service has been processed
                     del services[service]
+
+            if services_len == len(services) and provides_len == len(provides):
+                if retry_ct == MAX_RETRY:
+                    logger.error("Max retry count exceeded. Exiting main loop.")
+                    exit(1)
+                retry_ct += 1
+            else:
+                services_len = len(services)
+                provides_len = len(provides)
+                retry_ct = 0
 
             sleep(SLEEP_SECS)

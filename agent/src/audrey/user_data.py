@@ -43,7 +43,7 @@ def _get_cloud_type():
         'EC2', 'RHEV', 'VSPHERE' or 'UNKNOWN'
 
     '''
-    system_facts = get_system_info()
+    system_facts = get_system_info(['productname', 'ec2_ami_id'])
 
     # Check for productname key as found on RHEVm and VMware/vSphere
     if 'productname' in system_facts:
