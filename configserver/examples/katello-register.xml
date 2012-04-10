@@ -74,15 +74,40 @@ fi
           <executable>
             <contents><![CDATA[#!/usr/bin/python
 import os
+import re
 import sys
 import subprocess
 import shutil
+from ConfigParser import ConfigParser
+from string import Template
+
+def s_format(s, dct):
+    if hasattr(s, 'format'):
+        return s.format(**dct)
+    else:
+        # convert python-2.6 format to something 2.4 can handle
+        return Template(re.sub(r'{([^}]+)}', '$\\1', s)).substitute(dct)
+
+def run(cmd):
+    if isinstance(cmd, str):
+        cmd = cmd.split()
+    p_open = subprocess.Popen(cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT)
+    (stdout, stderr) = p_open.communicate()
+    if p_open.returncode != 0:
+        print "Error: command failed (%s) - %s" % (p_open.returncode, stdout)
+        sys.exit(p_open.returncode)
+    return stdout
 
 def is_ec2_deployment():
     '''Returns boolean True of False to indicate whether the current system is
        an ec2 image'''
+    # Disable any rhui repos on ec2 hosts
+    if os.path.isfile('/etc/yum.repos.d/redhat-rhui.repo'):
+        cmd = s_format('yum-config-manager --disable rhui-*', os.environ)
+        run(cmd)
 
-    # FIXME - make sure 'wget' is installed, or use 'curl'
     cmd = 'curl --silent http://169.254.169.254/latest/dynamic/instance-identity/document'
     return subprocess.call(cmd.split()) == 0
 
