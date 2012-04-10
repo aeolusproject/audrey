@@ -19,7 +19,10 @@
 import unittest
 import base64
 
+import audrey.csclient
+
 from audrey.errors import AAError
+from audrey.errors import AAErrorApiNegotiation
 from audrey.csclient import CSClient
 
 from tests.mocks import HttpUnitTest
@@ -98,3 +101,7 @@ class TestAudreyCSClient(unittest.TestCase):
         - put fails but audrey recovers
         '''
         self.cs_client._put('http://hostname/raiseException')
+
+    def test_failed_version(self):
+        audrey.csclient.VERSION_URL = '/badversion'
+        self.assertRaises(AAErrorApiNegotiation, self.cs_client.test_connection)

@@ -186,3 +186,7 @@ class ServiceV2(ServiceV1):
         we're just pushing the service here
         '''
         return '||%s&%s|' % (self.name, status)
+
+    def invoke_tooling(self):
+        if self.tooling:
+            return self.tooling.invoke(self.name)

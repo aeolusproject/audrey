@@ -116,6 +116,10 @@ class HttpUnitTest(object):
                     (base64.b64encode('value1'), base64.b64encode('value2'))
             elif url.find('/params/') > -1:
                 body = '|ipaddress&uptime|'
+            elif url.find('/paramsV2/') > -1:
+                body = '|ipaddress&uptime|service_test|'
+            elif url.find('/invalidparams/') > -1:
+                body = '|not_real&uptime|'
             elif url.find('/files/') > -1:
                 file_out = BIO()
                 tar = tarfile.open(mode="w:gz", fileobj=file_out)
@@ -134,6 +138,8 @@ class HttpUnitTest(object):
   <application-version>VALUE_IGNORED</application-version>
   <api-version>%s</api-version>
 </config-server>''' % API_VERSION
+            elif '/badversion' in url:
+                body = ''
             elif '/gimmie-404' in url:
                 response = HttpUnitTest.not_found_response
             else:

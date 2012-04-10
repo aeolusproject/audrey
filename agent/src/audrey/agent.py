@@ -23,7 +23,7 @@ from time import sleep
 
 from audrey import user_data
 from audrey.errors import AAError
-from audrey.errors import ASErrorPutProvides
+from audrey.errors import AAErrorPutProvides
 from audrey.csclient import CSClient
 
 SLEEP_SECS = 10
@@ -136,7 +136,7 @@ class AgentV2(AgentV1):
             status, body = self.client.put_provides(provides_str)
             # report non 200 status
             if status != 200:
-                raise ASErrorPutProvides('Put provides returned %s' % status)
+                raise AAErrorPutProvides('Put provides returned %s' % status)
             # clean regardless of status, otherwise we'll get in
             # an infinite loop.
             provides.clean()
@@ -154,14 +154,14 @@ class AgentV2(AgentV1):
                 else:
                     if status == 200:
                         # got all the configs, so invoke and report status
-                        status = s.tooling.invoke()
+                        status = s.invoke_tooling()
                     logger.info('Service %s returns %s' % (service, status))
                     # report service status
                     status, body = self.client.put_provides(
                                                s.generate_cs_str(status))
                     # report non 200 status on service status put
                     if status != 200:
-                        raise ASErrorPutProvides('Put service status %s'
+                        raise AAErrorPutProvides('Put service status %s'
                                                                      % status)
                     # the service has been processed
                     del services[service]

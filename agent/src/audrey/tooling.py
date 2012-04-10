@@ -68,23 +68,6 @@ class Tooling(object):
         if self.tarball:
             self.unpack_tooling()
 
-    def __str__(self):
-        '''
-        Description:
-            Called by the str() function and by the print statement to
-            produce the informal string representation of an object.
-        '''
-        return('\n<Instance of: %s\n' \
-               '\tTooling Dir: %s\n' \
-               '\tUnpack User Tooling Tarball Dir: %s\n' \
-               '\ttarball Name: %s\n' \
-               'eot>' %
-            (self.__class__.__name__,
-            str(self.tool_dir),
-            str(self.user_dir),
-            str(self.tarball),
-            ))
-
     def invoke_tooling(self, services):
         # For now invoke them all. Later versions will invoke the service
         # based on the required params from the Config Server.

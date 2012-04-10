@@ -77,33 +77,6 @@ class CSClient(object):
         except OSError:
             pass  # ignore any errors when attempting to remove the temp dir.
 
-    def __str__(self):
-        '''
-        Description:
-            Called by the str() function and by the print statement to
-            produce the informal string representation of an object.
-        '''
-        return('\n<Instance of: %s\n' \
-               '\tAPI Version: %s\n' \
-               '\tConfig Server Endpoint: %s\n' \
-               '\tConfig Server oAuth Key: %s\n' \
-               '\tConfig Server oAuth Secret: %s\n' \
-               '\tConfig Server Params: %s\n' \
-               '\tConfig Server Configs: %s\n' \
-               '\tTemporary Directory: %s\n' \
-               '\tTarball Name: %s\n' \
-               'eot>' %
-            (self.__class__.__name__,
-            str(self.api_version),
-            str(self.cs_endpoint),
-            str(self.cs_oauth_key),
-            str(self.cs_oauth_secret),
-            str(self.cs_params),
-            str(self.cs_configs),
-            str(self.tmpdir),
-            str(self.tarball),
-            ))
-
     def _cs_url(self, url_type):
         '''
         Description:

@@ -38,6 +38,7 @@ class TestAudreyInit(unittest.TestCase):
     def setUp(self):
         audrey.user_data_ec2.EC2_USER_DATA_URL = \
             'http://169.254.169.254/latest/user-data'
+        audrey.csclient.VERSION_URL = 'version'
         audrey.csclient.TOOLING_URL = 'files'
         audrey.csclient.PROVIDES_URL = 'params'
         audrey.csclient.CONFIGS_URL = 'configs'
@@ -152,6 +153,7 @@ class TestAudreyAgentV2(TestAudreyAgentV1):
     def setUp(self):
         super(TestAudreyAgentV2, self).setUp()
         tests.mocks.API_VERSION = '2'
+        audrey.csclient.PROVIDES_URL = 'paramsV2'
 
     def test_404_from_provides(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
@@ -164,3 +166,8 @@ class TestAudreyAgentV2(TestAudreyAgentV1):
         # should succeed, we don't bail on 404
         # in api version 2
         main()
+
+    def test_invalid_provides_name(self):
+        _write_file(CLOUD_INFO_FILE, 'EC2')
+        audrey.csclient.PROVIDES_URL = '/invalidparams'
+        self.assertRaises(SystemExit, main)

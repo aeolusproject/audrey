@@ -152,6 +152,8 @@ class ProvidesV2(ProvidesV1):
             e.g.:
             |ipaddress&virtual|myservice&yourservice|
 
+            and an optional Tooling Object
+
         Returns Tuple:
             - Services objects list
             - Provides (dict) populated with param names

@@ -23,6 +23,7 @@ import base64
 import audrey.user_data
 
 from audrey.errors import AAError
+from audrey.shell import get_system_info
 
 from tests import _write_file
 from tests.mocks import mock_run_cmd
@@ -45,6 +46,21 @@ class TestAudreyUserData(unittest.TestCase):
             os.remove(self.user_data_file)
         if os.path.exists(CLOUD_INFO_FILE):
             os.remove(CLOUD_INFO_FILE)
+
+    def test_get_cloud_type_RHEV(self):
+        audrey.user_data.get_system_info = lambda f: {'productname': 'RHEV'}
+        self.assertEquals('RHEV', audrey.user_data._get_cloud_type())
+        audrey.user_data.get_system_info = get_system_info
+        
+    def test_get_cloud_type_VSPHERE(self):
+        audrey.user_data.get_system_info = lambda f: {'productname': 'VMWARE'}
+        self.assertEquals('VSPHERE', audrey.user_data._get_cloud_type())
+        audrey.user_data.get_system_info = get_system_info
+
+    def test_get_cloud_type_EC2(self):
+        audrey.user_data.get_system_info = lambda f: {'ec2_ami_id': 'fake_ami_id'}
+        self.assertEquals('EC2', audrey.user_data._get_cloud_type())
+        audrey.user_data.get_system_info = get_system_info
 
     def test_base_error_on_read(self):
         self.assertRaises(Exception, audrey.user_data.UserDataBase().read)

@@ -35,5 +35,5 @@ class AAErrorApiNegotiation(AAError):
     pass
 
 
-class ASErrorPutProvides(AAError):
+class AAErrorPutProvides(AAError):
     pass
