@@ -63,11 +63,10 @@ make %{?_smp_mflags}
 rm -rf %{buildroot}
 
 # copy over the audrey agent bits
-mkdir -p %{buildroot}%{python_sitelib}/audrey/csclient
+mkdir -p %{buildroot}%{python_sitelib}/audrey
 mkdir -p %{buildroot}%{_bindir}
 install -m644 src/audrey/*py* %{buildroot}%{python_sitelib}/audrey
-install -m644 src/audrey/csclient/* %{buildroot}%{python_sitelib}/audrey/csclient
-install -m755 bin/audrey %{buildroot}%{_bindir}/audrey
+install -m755 scripts/audrey %{buildroot}%{_bindir}/audrey
 
 #install man files
 mkdir -p %{buildroot}%{_mandir}/man8

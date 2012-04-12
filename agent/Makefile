@@ -50,7 +50,7 @@ dist: src/audrey/__init__.py audrey.$(man_section)
 	sed -e 's/@VERSION@/$(VERSION)/' -e 's/@RELEASE@/$(RELEASE_SED)/' \
 		aeolus-audrey-agent.spec.in > aeolus-audrey-agent.spec
 	cp -ar aeolus-audrey-agent.spec.in aeolus-audrey-agent.spec \
-		COPYING Makefile src bin audrey.$(man_section) \
+		COPYING Makefile src audrey.$(man_section) \
 		test_audrey_agent.py scripts dist/aeolus-audrey-agent-$(VERSION)
 	tar -C dist -zcvf aeolus-audrey-agent-$(VERSION).tar.gz aeolus-audrey-agent-$(VERSION)
 
@@ -61,7 +61,7 @@ src/audrey/__init__.py: src/audrey/__init__.py.in
 # Generate the man page using help2man from the --help text output
 # from the Audrey agent.
 #    Run the audrey target before generating the man page.
-audrey.$(man_section): bin/audrey
+audrey.$(man_section): scripts/audrey
 	PYTHONPATH=$(PYTHONPATH):src ./$< --help > /dev/null
 	PYTHONPATH=$(PYTHONPATH):src help2man --name='Aeolus agent' \
         --section $(man_section) --no-info ./$< > $@
