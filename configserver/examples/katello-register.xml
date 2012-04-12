@@ -205,6 +205,8 @@ def audrey_var(name, default=None):
 
 
 def setup_releasever():
+    if not os.path.isdir('/etc/yum/vars'):
+        os.mkdir('/etc/yum/vars')
     fp = open("/etc/yum/vars/releasever", "r+")
     fp.write(audrey_var("RELEASEVER"))
     fp.close()
