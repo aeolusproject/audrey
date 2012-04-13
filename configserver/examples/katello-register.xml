@@ -222,7 +222,6 @@ def register_katello_command():
     sm_ver_maj, sm_ver_min = subscription_manager_version()
 
     cmd = "subscription-manager register --force"
-    cmd += " --org=%s" % org
 
     if sm_ver_maj <= 0:
         if sm_ver_min < 96:
@@ -234,6 +233,7 @@ def register_katello_command():
             else:
                 pass # determine and print error condition to stdout
         else:
+            cmd += " --org=%s" % org
             if auto_subscribe:
                 cmd += " --username=%s --password=%s" % (username, password)
                 cmd += " --env=%s" % kat_env
