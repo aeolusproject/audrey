@@ -17,7 +17,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    1%{?dist}
+Release:    2%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -163,7 +163,7 @@ getent passwd aeolus >/dev/null || \
 /sbin/chkconfig httpd on
 
 %preun
-# stop and unregister the service before package deletion
+# cleanup the service before package deletion
 if [ $1 = 0 ]; then
   /sbin/service %{name} stop > /dev/null 2>&1
   /sbin/chkconfig --del %{name}
@@ -185,10 +185,12 @@ fi
 %doc COPYING
 
 %changelog
-* Thu Apr 12 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.9-1
+* Thu Apr 12 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.9-2
 - Fixes provided by jlaska@redhat.com for BZs 809181 & 812107
 - https://bugzilla.redhat.com/show_bug.cgi?id=809181
 - https://bugzilla.redhat.com/show_bug.cgi?id=812107
+- Update the comment in preun to avoid BZ 803864
+- https://bugzilla.redhat.com/show_bug.cgi?id=803864
 * Tue Apr 10 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.7-1
 - Updated deployable XML file for Katello registration
 - https://bugzilla.redhat.com/show_bug.cgi?id=807473
