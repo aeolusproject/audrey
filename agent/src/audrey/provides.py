@@ -20,14 +20,15 @@ import urllib
 import base64
 
 from audrey.csclient import CSClient
-from audrey.shell import run_cmd
 from audrey.shell import get_system_info
 
-logger = logging.getLogger('Audrey')
+LOGGER = logging.getLogger('Audrey')
 
 
 class ProvidesV1(dict):
-
+    '''
+    a dictionary of provides and their values
+    '''
     def __setitem__(self, key, value):
         '''
         casts all data values to strings so we can map a join
@@ -71,9 +72,9 @@ class ProvidesV1(dict):
         # split and prune the payload
         src = src[1:-1].split('|')
         if len(src) >= 1:
-            for p in src[0].split('&'):
-                if p:
-                    self[p] = None
+            for provides in src[0].split('&'):
+                if provides:
+                    self[provides] = None
 
         return self
 
@@ -107,7 +108,7 @@ class ProvidesV1(dict):
 
 
         '''
-        logger.info('Invoked Provides.generate_cs_str()')
+        LOGGER.info('Invoked Provides.generate_cs_str()')
 
         system_info = get_system_info(self.keys())
 
@@ -115,29 +116,35 @@ class ProvidesV1(dict):
             if param in system_info:
                 self[param] = base64.b64encode(system_info[param])
 
-        def is_not_None(x, y):
-            if y[1] is not None:
-                x.append(y)
-            return x
+        def is_not_none(abc, xyz):
+            '''
+            used to reduce a list of key value paired tuples
+            to only ones that have None as their value
+            '''
+            if xyz[1] is not None:
+                abc.append(xyz)
+            return abc
 
-        non_none = reduce(is_not_None, self.items(), [])
-        kv_pairs = map('&'.join, non_none)
+        non_none = reduce(is_not_none, self.items(), [])
+        kv_pairs = ['&'.join(x) for x in non_none]
 
         return urllib.urlencode({'audrey_data': '|%s|' % '|'.join(kv_pairs)})
 
 
 class ProvidesV2(ProvidesV1):
-
+    '''
+    API version 2 compatible Provides object
+    '''
     def clean(self):
         '''
         remove non-None provides
         should be called after sending the values
         '''
-        logger.info('Invoked Provides.clean()')
+        LOGGER.info('Invoked Provides.clean()')
 
-        for p in self.keys():
-            if self[p] is not None:
-                del self[p]
+        for provide in self.keys():
+            if self[provide] is not None:
+                del self[provide]
 
     def parse_cs_str(self, src, tooling=None):
         '''
@@ -168,7 +175,7 @@ class ProvidesV2(ProvidesV1):
         src = src[1:-1].split('|')
         if len(src) >= 2:
             # create the services
-            for s in src[1].split('&'):
-                services[s] = Service(s, tooling)
+            for svc in src[1].split('&'):
+                services[svc] = Service(svc, tooling)
 
         return services, self

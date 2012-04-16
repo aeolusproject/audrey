@@ -28,12 +28,21 @@ class AAError(Exception):
 
 
 class AAErrorInvalidTar(AAError):
+    '''
+    Tar file could not be processed, it is invalid
+    '''
     pass
 
 
 class AAErrorApiNegotiation(AAError):
+    '''
+    not able to negotiate a valid api version with CS
+    '''
     pass
 
 
 class AAErrorPutProvides(AAError):
+    '''
+    Put on provides failed
+    '''
     pass

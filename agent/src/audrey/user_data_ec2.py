@@ -34,11 +34,13 @@ class UserData(UserDataBase):
         try:
             max_attempts = 5
             headers = {'Accept': 'text/plain'}
-            for attempt in range(1, max_attempts):
+            while max_attempts:
                 response, body = httplib2.Http().request(EC2_USER_DATA_URL,
                                               headers=headers)
                 if response.status == 200:
                     break
+                max_attempts -= 1
+
             if response.status != 200:
                 raise AAError('Max attempts to get EC2 user data \
                         exceeded.')
@@ -47,5 +49,5 @@ class UserData(UserDataBase):
                 body = base64.b64decode(body)
             return self._parse_user_data(body)
 
-        except Exception, e:
-            raise AAError('Failed accessing EC2 user data: %s' % e)
+        except Exception, err:
+            raise AAError('Failed accessing EC2 user data: %s' % err)

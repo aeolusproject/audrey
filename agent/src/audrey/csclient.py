@@ -16,7 +16,6 @@
 *
 '''
 
-import os
 import shutil
 import logging
 import tempfile
@@ -29,7 +28,7 @@ from audrey.errors import AAError
 from audrey.errors import AAErrorApiNegotiation
 SLEEP_SECS = 10
 
-logger = logging.getLogger('Audrey')
+LOGGER = logging.getLogger('Audrey')
 
 VERSION_URL = 'version'
 TOOLING_URL = 'files'
@@ -97,9 +96,10 @@ class CSClient(object):
             Issue the http get to the the Config Server.
         '''
         try:
-            return self.http.request(url, method='GET', headers=headers)
-        except Exception, e:
-            return (e, None)
+            response = self.http.request(url, method='GET', headers=headers)
+            return response
+        except Exception, err:
+            return (err, None)
 
     def _put(self, url, body=None, headers=None):
         '''
@@ -109,10 +109,11 @@ class CSClient(object):
         try:
             return self.http.request(url, method='PUT',
                                 body=body, headers=headers)
-        except Exception, e:
-            return (e, None)
+        except Exception, err:
+            return (err, None)
 
-    def _validate_http_status(self, response):
+    @staticmethod
+    def _validate_http_status(response):
         '''
         Description:
             Confirm the http status is one of:
@@ -127,31 +128,36 @@ class CSClient(object):
 
     # Public interfaces
     def test_connection(self, max_retry=5):
+        '''
+        call configserver's version endpoint and pass my compat api versions
+        then parse the response to retireve the api version
+        we should operate on
+        '''
         # try and wait for connectivity if it's not there
         url = self._cs_url(VERSION_URL)
         response, body = self._get(url, {'Accept': 'text/xml'})
         while isinstance(response, Exception):
             if max_retry:
                 max_retry -= 1
-                logger.info('Failed attempt to contact config server')
+                LOGGER.info('Failed attempt to contact config server')
                 sleep(SLEEP_SECS)
             else:
                 raise AAError("Cannot establish connection to %s" % url)
             response, body = self._get(url)
         try:
-            et = ElementTree.fromstring(body)
-            api_v = et.find('api-version')
+            api_v = ElementTree.fromstring(body)
+            api_v = api_v.find('api-version')
             self.api_version = int(api_v.text)
-            logger.info('Negotiated API V%s' % self.api_version)
-        except Exception, e:
-            raise AAErrorApiNegotiation(e)
+            LOGGER.info('Negotiated API V%s' % self.api_version)
+        except Exception, err:
+            raise AAErrorApiNegotiation(err)
 
     def get_configs(self, service=None):
         '''
         Description:
             get the required configuration from the Config Server.
         '''
-        logger.info('Invoked CSClient.get_configs()')
+        LOGGER.info('Invoked CSClient.get_configs()')
         url = self._cs_url(CONFIGS_URL)
         if service:
             url = '%s/%s/' % (url, service)
@@ -168,7 +174,7 @@ class CSClient(object):
         Description:
             get the provides parameters from the Config Server.
         '''
-        logger.info('Invoked CSClient.get_params()')
+        LOGGER.info('Invoked CSClient.get_params()')
         url = self._cs_url(PROVIDES_URL)
         headers = {'Accept': 'text/plain'}
 
@@ -183,7 +189,7 @@ class CSClient(object):
         Description:
             put the provides parameters to the Config Server.
         '''
-        logger.info('Invoked CSClient.put_params_values()')
+        LOGGER.info('Invoked CSClient.put_params_values()')
         url = self._cs_url(PROVIDES_URL)
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
@@ -196,7 +202,7 @@ class CSClient(object):
             get any optional user supplied tooling which is
             provided as a tarball
         '''
-        logger.info('Invoked CSClient.get_tooling()')
+        LOGGER.info('Invoked CSClient.get_tooling()')
         url = self._cs_url(TOOLING_URL)
         headers = {'Accept': 'content-disposition'}
 
@@ -215,12 +221,12 @@ class CSClient(object):
             try:
                 self.tmpdir = tempfile.mkdtemp()
                 self.tarball = self.tmpdir + '/' + tarball
-                f = open(self.tarball, 'w')
-                f.write(body)
-                f.close()
-            except IOError, (errno, strerror):
+                temptar = open(self.tarball, 'w')
+                temptar.write(body)
+                temptar.close()
+            except IOError, err:
                 raise AAError(('File not found or not a tar file: %s ' + \
-                        'Error: %s %s') % (self.tarball, errno, strerror))
+                        'Error: %s') % (self.tarball, err))
 
         return response.status, self.tarball
 

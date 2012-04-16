@@ -51,14 +51,14 @@ class TestAudreyUserData(unittest.TestCase):
         audrey.user_data.get_system_info = lambda f: {'productname': 'RHEV'}
         self.assertEquals('RHEV', audrey.user_data._get_cloud_type())
         audrey.user_data.get_system_info = get_system_info
-        
+
     def test_get_cloud_type_VSPHERE(self):
         audrey.user_data.get_system_info = lambda f: {'productname': 'VMWARE'}
         self.assertEquals('VSPHERE', audrey.user_data._get_cloud_type())
         audrey.user_data.get_system_info = get_system_info
 
     def test_get_cloud_type_EC2(self):
-        audrey.user_data.get_system_info = lambda f: {'ec2_ami_id': 'fake_ami_id'}
+        audrey.user_data.get_system_info = lambda f: {'ec2_ami_id': 'fake_id'}
         self.assertEquals('EC2', audrey.user_data._get_cloud_type())
         audrey.user_data.get_system_info = get_system_info
 

@@ -15,13 +15,10 @@
 *  limitations under the License.
 *
 '''
-import sys
-import argparse
 import logging
 
 from time import sleep
 
-from audrey import user_data
 from audrey.errors import AAError
 from audrey.errors import AAErrorPutProvides
 from audrey.csclient import CSClient
@@ -30,30 +27,36 @@ SLEEP_SECS = 10
 PWD_TOOLING = 'tooling'
 MAX_RETRY = 5
 
-logger = logging.getLogger('Audrey')
+LOGGER = logging.getLogger('Audrey')
 
 # The VERSION string is filled in during the make process.
 AUDREY_VER = '@VERSION@'
 
 
 class AgentV1(object):
+    '''
+    contains the main logic for processing
+    This object is compatible with API Version 1
+    '''
     def __init__(self, conf):
         '''
         conf: argparse dict
         '''
-        tool_dir = {}
-        if 'pwd' in conf and conf['pwd']:
-            tool_dir = {'tool_dir': PWD_TOOLING}
-
         # Create the Client Object
         self.client = CSClient(**conf)
         self.client.test_connection()
 
         # Get any optional tooling from the Config Server
-        tooling_status, tarball = self.client.get_tooling()
-        self.tooling = Tooling(tarball, **tool_dir)
+        tarball = self.client.get_tooling()[1]
+        if 'pwd' in conf and conf['pwd']:
+            self.tooling = Tooling(tarball, PWD_TOOLING)
+        else:
+            self.tooling = Tooling(tarball)
 
     def run(self):
+        '''
+        Main agent loop, called by main() in /usr/bin/audrey
+        '''
         # 0 means don't run again
         # -1 is non zero so initial runs will happen
         config_status = -1
@@ -66,8 +69,8 @@ class AgentV1(object):
         # from the get_configs and the get_params both return 200
         while config_status or provides_status:
 
-            logger.debug('Config Parameter status: ' + str(config_status))
-            logger.debug('Return Parameter status: ' + str(provides_status))
+            LOGGER.debug('Config Parameter status: ' + str(config_status))
+            LOGGER.debug('Return Parameter status: ' + str(provides_status))
 
             # Get the Required Configs from the Config Server
             if config_status:
@@ -81,13 +84,13 @@ class AgentV1(object):
                     # now that the tooling has run
                     config_status = 0
                 else:
-                    logger.info(
+                    LOGGER.info(
                         'No configuration parameters provided. status: ' + \
                         str(config_status))
 
             # Get the requested provides from the Config Server
             if provides_status:
-                get_status, params = self.client.get_provides()
+                get_status = self.client.get_provides()[0]
 
                 # Gather the values from the system for the requested provides
                 if get_status == 200:
@@ -96,16 +99,16 @@ class AgentV1(object):
                     params_values = '||'
 
                 # Put the requested provides with values to the Config Server
-                provides_status, body = self.client.put_provides(params_values)
+                provides_status = self.client.put_provides(params_values)[0]
                 if provides_status == 200:
                     # don't operate on params anymore, all have been provided.
                     provides_status = 0
 
             # Retry a number of times if 404 HTTP Not Found is returned.
             if config_status == 404 or provides_status == 404:
-                logger.error('404 from Config Server.')
-                logger.error('Required Config status: %s' % config_status)
-                logger.info('Return Parameter status: %s' % provides_status)
+                LOGGER.error('404 from Config Server.')
+                LOGGER.error('Required Config status: %s' % config_status)
+                LOGGER.info('Return Parameter status: %s' % provides_status)
 
                 max_retry -= 1
                 if max_retry < 0:
@@ -115,7 +118,13 @@ class AgentV1(object):
 
 
 class AgentV2(AgentV1):
+    '''
+    Overrides V1 with updates for API V2
+    '''
     def run(self):
+        '''
+        Main loop called by main() in /usr/bin/audrey
+        '''
         provides_len = 0
         services_len = 0
         retry_ct = 0
@@ -132,8 +141,8 @@ class AgentV2(AgentV1):
 
             # Put the requested provides with values to the Config Server
             provides_str = provides.generate_cs_str()
-            logger.debug('Put Provides: %s' % provides_str)
-            status, body = self.client.put_provides(provides_str)
+            LOGGER.debug('Put Provides: %s' % provides_str)
+            status = self.client.put_provides(provides_str)[0]
             # report non 200 status
             if status != 200:
                 raise AAErrorPutProvides('Put provides returned %s' % status)
@@ -143,9 +152,9 @@ class AgentV2(AgentV1):
 
             # check for required configs per service
             for service in services.keys():
-                s = services[service]
+                svc = services[service]
                 # Get the Required Configs from Config Server for the service
-                status, configs = self.client.get_configs(s.name)
+                status = self.client.get_configs(svc.name)[0]
 
                 # Configure the system with the provided Required Configs
                 if status == 202:
@@ -154,11 +163,11 @@ class AgentV2(AgentV1):
                 else:
                     if status == 200:
                         # got all the configs, so invoke and report status
-                        status = s.invoke_tooling()
-                    logger.info('Service %s returns %s' % (service, status))
+                        status = svc.invoke_tooling()
+                    LOGGER.info('Service %s returns %s' % (service, status))
                     # report service status
-                    status, body = self.client.put_provides(
-                                               s.generate_cs_str(status))
+                    status = self.client.put_provides(
+                                               svc.generate_cs_str(status))[0]
                     # report non 200 status on service status put
                     if status != 200:
                         raise AAErrorPutProvides('Put service status %s'
@@ -168,7 +177,7 @@ class AgentV2(AgentV1):
 
             if services_len == len(services) and provides_len == len(provides):
                 if retry_ct == MAX_RETRY:
-                    logger.error("Max retry count exceeded. Exiting main loop.")
+                    LOGGER.error("Max retry count exceeded. Exiting.")
                     exit(1)
                 retry_ct += 1
             else:

@@ -95,4 +95,7 @@ coverage: clean src/audrey/__init__.py
 
 pep8: clean src/audrey/__init__.py
 	find . -name '*.py' -exec pep8 -r {} \;
+pylint: clean src/audrey/__init__.py
+	PYTHONPATH=src pylint src/audrey
+
 .PHONY: dist test rpms srpm

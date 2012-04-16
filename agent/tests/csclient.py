@@ -104,4 +104,5 @@ class TestAudreyCSClient(unittest.TestCase):
 
     def test_failed_version(self):
         audrey.csclient.VERSION_URL = '/badversion'
-        self.assertRaises(AAErrorApiNegotiation, self.cs_client.test_connection)
+        self.assertRaises(AAErrorApiNegotiation,
+                          self.cs_client.test_connection)

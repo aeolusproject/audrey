@@ -36,15 +36,15 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
 
     def setUp(self):
         self.factory = AudreyFactory(1)
-        self.service = self.factory.Service('test_service')
+        self.service = self.factory.service('test_service')
 
     def test_success_service_n_provides(self):
         '''
         Success case:
-        - Exercise Service().parse_require_config() with valid input
+        - Exercise service().parse_require_config() with valid input
         '''
         # Exersise code segment
-        services = self.factory.Service('jon1').parse_require_config(
+        services = self.factory.service('jon1').parse_require_config(
                                                      DUMMY_SERVICE_CONFIG_DATA)
 
         # Validate results
@@ -64,7 +64,7 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
     def test_success_empty_source(self):
         '''
         Success case:
-        - Exercise Service().parse_require_config() with valid empty input
+        - Exercise service().parse_require_config() with valid empty input
         '''
 
         src = '||'
@@ -74,10 +74,10 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
     def test_success_empty_service(self):
         '''
         Failure case:
-        - Exercise Service().parse_require_config() with valid input
+        - Exercise service().parse_require_config() with valid input
         '''
 
-        services = self.factory.Service('').parse_require_config(
+        services = self.factory.service('').parse_require_config(
                                                   DUMMY_NO_SERVICE_CONFIG_DATA)
         self.assertEqual(services[0].name, '')
         self.assertEqual(services[1].name, 'jon2')
@@ -95,7 +95,7 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
     def test_failure_no_services_name(self):
         '''
         Failure case:
-        - Exercise Service().parse_require_config() with valid input
+        - Exercise service().parse_require_config() with valid input
 
         The slight difference between this test and test_success_empty_services
         is the success case has an empty service name indicated by "||":
@@ -118,26 +118,26 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
             'AUDREY_VAR_jon_server_ip_3': '192.168.1.3'}
 
         self.assertRaises(AAError,
-                          self.factory.Service('').parse_require_config, src)
+                          self.factory.service('').parse_require_config, src)
 
     def test_failure_bad_service_name(self):
         '''
         Failure case:
-        - Exercise Service().parse_require_config() with valid input
+        - Exercise service().parse_require_config() with valid input
         '''
 
         src = '|service|parameters|'
         self.assertRaises(AAError,
-                          self.factory.Service('').parse_require_config, src)
+                          self.factory.service('').parse_require_config, src)
 
     def test_failure_service_tag_not_found(self):
         '''
         Failure Case:
-        - |service| not in src to Service().parse_require_config()
+        - |service| not in src to service().parse_require_config()
         '''
         src = '|notservice|blah|'
         self.assertRaises(AAError,
-                          self.factory.Service('').parse_require_config, src)
+                          self.factory.service('').parse_require_config, src)
 
     def test_failure_no_amp_delim(self):
         '''
@@ -146,7 +146,7 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         '''
         src = '|service|blah|parameters|blah|'
         self.assertRaises(AAError,
-                          self.factory.Service('').parse_require_config, src)
+                          self.factory.service('').parse_require_config, src)
 
 
 class TestAudreyAgentServiceV2(TestAudreyAgentServiceV1):
@@ -156,4 +156,4 @@ class TestAudreyAgentServiceV2(TestAudreyAgentServiceV1):
 
     def setUp(self):
         self.factory = AudreyFactory(2)
-        self.service = self.factory.Service('test_service')
+        self.service = self.factory.service('test_service')

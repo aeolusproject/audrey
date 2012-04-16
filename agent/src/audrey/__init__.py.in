@@ -25,6 +25,7 @@ import sys
 import logging
 import argparse
 
+from audrey import user_data
 from audrey.factory import AudreyFactory
 from audrey.csclient import CSClient
 
@@ -34,17 +35,29 @@ VERSION = '@VERSION@'
 LOG = '/var/log/audrey.log'
 PWD_TOOLING = 'tooling'
 
+# logging defaults
+LOG_FORMAT = ('%(asctime)s - %(levelname)-8s: '
+    '%(filename)s:%(lineno)d %(message)s')
+LOG_LEVEL_INPUT = 5
+LOG_NAME_INPUT = 'INPUT'
+
 
 class StreamToLogger(object):
     """
     Fake file-like stream object that redirects writes to a logger instance.
     """
     def __init__(self, logger, log_level=logging.INFO):
+        '''
+        initializing StreamToLogger
+        '''
         self.logger = logger
         self.log_level = log_level
         self.linebuf = ''
 
     def write(self, buf):
+        '''
+        send writes to the logger
+        '''
         for line in buf.rstrip().splitlines():
             self.logger.log(self.log_level, line.rstrip())
 
@@ -59,12 +72,6 @@ def setup_logging(level=logging.INFO, logfile_name=LOG):
     # This allows minimal functionality, e.g.: --help
     if not os.geteuid() == 0:
         logfile_name = './audrey.log'
-
-    # set up logging
-    LOG_FORMAT = ('%(asctime)s - %(levelname)-8s: '
-        '%(filename)s:%(lineno)d %(message)s')
-    LOG_LEVEL_INPUT = 5
-    LOG_NAME_INPUT = 'INPUT'
 
     logging.basicConfig(filename=logfile_name,
         level=level, filemode='a', format=LOG_FORMAT)
@@ -171,6 +178,6 @@ def main():
     client.test_connection()
 
     # Get the agent object
-    aa = AudreyFactory(client.api_version).Agent
+    agent = AudreyFactory(client.api_version).agent
     # run the agent
-    aa(conf).run()
+    agent(conf).run()

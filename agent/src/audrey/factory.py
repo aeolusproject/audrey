@@ -23,26 +23,35 @@ from audrey.tooling import Tooling
 
 
 class AudreyFactory(object):
-
+    '''
+    handles object instanciation for all objects
+    we have to ask the factory for the objects
+    to ensure that we're operating on the appropriate
+    logic associated with the api_version
+    negotiatied with the configserver
+    '''
     def __init__(self, api_version):
-
+        '''
+        establish the objects based on the the
+        api_version negotiated
+        '''
         self.api_version = api_version
-        self.Tooling = Tooling
+        self.tooling = Tooling
 
         if api_version == 1:
-            self.Agent = audrey.agent.AgentV1
-            self.Provides = audrey.provides.ProvidesV1
-            self.Service = audrey.service.ServiceV1
+            self.agent = audrey.agent.AgentV1
+            self.provides = audrey.provides.ProvidesV1
+            self.service = audrey.service.ServiceV1
         else:
             # Version 2 is the default
-            self.Agent = audrey.agent.AgentV2
-            self.Provides = audrey.provides.ProvidesV2
-            self.Service = audrey.service.ServiceV2
+            self.agent = audrey.agent.AgentV2
+            self.provides = audrey.provides.ProvidesV2
+            self.service = audrey.service.ServiceV2
 
-        audrey.agent.Tooling = self.Tooling
-        audrey.agent.Service = self.Service
-        audrey.agent.Provides = self.Provides
-        audrey.tooling.Provides = self.Provides
-        audrey.tooling.Service = self.Service
-        audrey.provides.Service = self.Service
-        audrey.service.Service = self.Service
+        audrey.agent.Tooling = self.tooling
+        audrey.agent.Service = self.service
+        audrey.agent.Provides = self.provides
+        audrey.tooling.Provides = self.provides
+        audrey.tooling.Service = self.service
+        audrey.provides.Service = self.service
+        audrey.service.Service = self.service

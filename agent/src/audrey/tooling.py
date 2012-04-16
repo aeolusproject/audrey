@@ -24,7 +24,7 @@ from audrey.errors import AAError, AAErrorInvalidTar
 from audrey.shell import run_cmd
 
 TOOLING_DIR = '/var/audrey/tooling/'
-logger = logging.getLogger('Audrey')
+LOGGER = logging.getLogger('Audrey')
 
 
 class Tooling(object):
@@ -56,23 +56,24 @@ class Tooling(object):
         self.tarball = tarball
 
         # Create the extraction destination
-        try:
-            os.makedirs(self.user_dir)
-        except OSError, (errno, strerror):
-            if errno is 17:  # File exists
-                pass
-            else:
+        if not os.path.exists(self.user_dir):
+            try:
+                os.makedirs(self.user_dir)
+            except OSError, err:
                 raise AAError(('Failed to create directory %s. ' + \
-                    'Error: %s') % (self.user_dir, strerror))
+                               'Error: %s') % (self.user_dir, err))
 
         if self.tarball:
             self.unpack_tooling()
 
     def invoke_tooling(self, services):
+        '''
+        invoke the tooling on all services passed in the list
+        '''
         # For now invoke them all. Later versions will invoke the service
         # based on the required params from the Config Server.
-        logger.debug('Invoked ConfigTooling.invoke_tooling()')
-        logger.debug(str(services))
+        LOGGER.debug('Invoked ConfigTooling.invoke_tooling()')
+        LOGGER.debug(str(services))
         for service in services:
             self.invoke(service)
 
@@ -92,21 +93,26 @@ class Tooling(object):
             # No tooling found. Try the next service.
             return -1
 
+        if top_level:
+            pass
+            # this case has been eliminated from the design spec
+            # and probably will never be used.
+
         cmd = [tooling_path]
         cmd_dir = os.path.dirname(tooling_path)
         ret = run_cmd(cmd, cmd_dir)
-        logger.info('Execute Tooling command: ' + ' '.join(cmd))
+        LOGGER.info('Execute Tooling command: ' + ' '.join(cmd))
 
         retcode = ret['subproc'].returncode
-        logger.info('\n\tStart Output of: %s >>>\n%s\n\t<<< End Output' % \
+        LOGGER.info('\n\tStart Output of: %s >>>\n%s\n\t<<< End Output' % \
                 (' '.join(cmd), ret['out']))
         if retcode == 0:
             # Command successed, log the output.
-            logger.info('return code: %s' % retcode)
+            LOGGER.info('return code: %s' % retcode)
         else:
             # Command failed, log the errors.
-            logger.error('error code: %s' % retcode)
-            logger.error('error msg: %s' % ret['err'])
+            LOGGER.error('error code: %s' % retcode)
+            LOGGER.error('error msg: %s' % ret['err'])
 
         return retcode
 
@@ -124,7 +130,7 @@ class Tooling(object):
             Config Server. Validate, open and write out the contents
             of the user provided tarball.
         '''
-        logger.info('Invoked unpack_tooling()')
+        LOGGER.info('Invoked unpack_tooling()')
 
         # Validate the specified tarfile.
         if not os.path.exists(self.tarball):
@@ -145,28 +151,6 @@ class Tooling(object):
                 tarfile.ExtractError, IOError), (strerror):
             raise AAError(('Failed to access tar file %s. Error: %s') %  \
                 (self.tarball, strerror))
-
-    def is_user_supplied(self):
-        '''
-        Description:
-            Is the the configuration tooling for the specified service
-            supplied by the user?
-
-            TBD: Take in a service_name and evaluate.
-            def is_user_supplied(self, service_name):
-        '''
-        return True
-
-    def is_rh_supplied(self):
-        '''
-        Description:
-            Is the the configuration tooling for the specified service
-            supplied by Red Hat?
-
-            TBD: Take in a service_name and evaluate.
-            def is_rh_supplied(self, service_name):
-        '''
-        return False
 
     def find_tooling(self, service_name):
         '''
@@ -201,9 +185,9 @@ class Tooling(object):
                          (False, os.path.join(self.redhat_dir, service_start)),
                         ]
 
-        for p in tooling_paths:
-            if os.access(p[1], os.X_OK):
-                return p
+        for path in tooling_paths:
+            if os.access(path[1], os.X_OK):
+                return path
 
         # No tooling found. Raise an error.
         raise AAError(('No configuration tooling found for service: %s') % \

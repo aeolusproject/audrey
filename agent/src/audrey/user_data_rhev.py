@@ -77,12 +77,12 @@ class UserData(UserDataBase):
         # This could be done using "with open()" but that's not available
         # in Python 2.4 as used on RHEL5
         try:
-            fp = open(DELTA_CLOUD_USER_DATA, 'r')
-            ud = fp.read().strip()
-            fp.close()
+            user_data_file = open(DELTA_CLOUD_USER_DATA, 'r')
+            user_data = user_data_file.read().strip()
+            user_data_file.close()
         except:
             raise AAError('Failed accessing RHEVm user data file.')
 
-        if '|' not in ud:
-            ud = base64.b64decode(ud)
-        return self._parse_user_data(ud)
+        if '|' not in user_data:
+            user_data = base64.b64decode(user_data)
+        return self._parse_user_data(user_data)

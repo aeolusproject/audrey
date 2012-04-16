@@ -18,7 +18,7 @@
 
 import os
 import logging
-logger = logging.getLogger('Audrey')
+LOGGER = logging.getLogger('Audrey')
 
 from audrey.errors import AAError
 from audrey.shell import get_system_info
@@ -77,17 +77,17 @@ def discover():
         information.
     '''
 
-    logger.debug('Invoked discover')
+    LOGGER.debug('Invoked discover')
 
     if os.path.exists(CLOUD_INFO_FILE):
-        f = open(CLOUD_INFO_FILE)
-        cloud_type = f.read().strip().upper()
-        f.close()
+        cloud_info = open(CLOUD_INFO_FILE)
+        cloud_type = cloud_info.read().strip().upper()
+        cloud_info.close()
 
     else:
         cloud_type = _get_cloud_type()
 
-    logger.debug('cloud_type: ' + str(cloud_type))
+    LOGGER.debug('cloud_type: ' + str(cloud_type))
 
     if 'EC2' in cloud_type:
         import audrey.user_data_ec2
@@ -122,7 +122,7 @@ class UserDataBase(object):
         At minimum this function expects to find a | in the string
         this is in effort not to log oauth secrets.
         '''
-        logger.debug('Parsing User Data')
+        LOGGER.debug('Parsing User Data')
         user_data = data.split('|')
         if len(user_data) > 1:
             if user_data[0] == '1':
@@ -147,4 +147,4 @@ class UserDataBase(object):
         Dummy function, indended to be overridden
         should return (endpoint, oauth_jey, oauth_secret)
         '''
-        raise "UserDataBase.read() was not overridden. Execution Aborted"
+        raise AAError("%s read() not overridden. Execution Aborted" % self)

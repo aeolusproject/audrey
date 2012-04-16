@@ -25,7 +25,7 @@ from audrey.errors import AAError
 from audrey.csclient import CSClient
 from audrey.shell import run_cmd
 
-logger = logging.getLogger('Audrey')
+LOGGER = logging.getLogger('Audrey')
 
 
 class ServiceV1(object):
@@ -166,7 +166,7 @@ class ServiceV1(object):
         Raises AAError when encountering an error.
 
         '''
-        logger.debug('Invoked gen_env()')
+        LOGGER.debug('Invoked gen_env()')
 
         for param in self.params:
             var_name = '_'.join(('AUDREY_VAR', self.name, param))
@@ -176,10 +176,13 @@ class ServiceV1(object):
             # Get what was set and log it.
             cmd = ['/usr/bin/printenv', var_name]
             ret = run_cmd(cmd)
-            logger.debug(var_name + '=' + str(ret['out'].strip()))
+            LOGGER.debug(var_name + '=' + str(ret['out'].strip()))
 
 
 class ServiceV2(ServiceV1):
+    '''
+    Overrides the V1 service with updates for API V2:w
+    '''
     def generate_cs_str(self, status):
         '''
         cs put provides expects |provides&value|service&status|
@@ -188,5 +191,8 @@ class ServiceV2(ServiceV1):
         return '||%s&%s|' % (self.name, status)
 
     def invoke_tooling(self):
+        '''
+        ensure there is tooling and invoke it
+        '''
         if self.tooling:
             return self.tooling.invoke(self.name)
