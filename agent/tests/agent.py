@@ -24,7 +24,7 @@ import logging
 import audrey.user_data_ec2
 
 from audrey import setup_logging
-from audrey import main
+from audrey.main import main
 from audrey.errors import AAError
 from audrey.shell import run_cmd
 
