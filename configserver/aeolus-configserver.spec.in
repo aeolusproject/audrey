@@ -17,7 +17,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    2%{?dist}
+Release:    1%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -185,9 +185,8 @@ fi
 %doc COPYING
 
 %changelog
-* Thu Apr 12 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.9-2
-- Fixes provided by jlaska@redhat.com for BZs 809181 & 812107
-- https://bugzilla.redhat.com/show_bug.cgi?id=809181
+* Thu Apr 12 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.8-1
+- Fixes provided by jlaska@redhat.com for BZ 812107
 - https://bugzilla.redhat.com/show_bug.cgi?id=812107
 - Update the comment in preun to avoid BZ 803864
 - https://bugzilla.redhat.com/show_bug.cgi?id=803864
