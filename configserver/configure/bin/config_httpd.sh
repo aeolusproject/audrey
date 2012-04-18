@@ -28,17 +28,6 @@ secure pages on port 443, then this tool should not be used.
 
 """
 
-# Determine whether running on an interactive tty (or a pipe)
-isatty(){
-    stdin="$(ls -l /proc/self/fd/0)"
-    stdin="${stdin/*-> /}"
-
-    if [[ "$stdin" =~ ^/dev/pts/[0-9] ]]; then
-        return 0 # terminal
-    else
-        return 1 # pipe
-    fi
-}
 
 usage()
 {
@@ -79,22 +68,14 @@ fi
 
 echo "$PREAMBLE"
 echo -n "Do you wish to continue [y/N]: "
-if isatty ; then
-    keep_going="n"
-    while read keep_going ; do
-        if [[ $keep_going == [Yy] ]]; then
-            break
-        elif [[ $keep_going == [Nn] ]]; then
-            exit 1
-        else
-            echo -n "Do you wish to continue [y/N]: "
-            continue
-        fi
-    done
-else
-    echo y
+read keep_going
+if [ "x$keep_going" == "x" ]; then
+    keep_going="Y"
 fi
-
+keep_going=$(echo "$keep_going" | tr a-z A-Z)
+if [ "Y" != "$keep_going" ]; then
+    exit 1
+fi
 
 PREAMBLE2="""
 There are a few pieces of information to collect.  Some of the information
