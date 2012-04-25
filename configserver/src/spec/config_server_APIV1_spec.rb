@@ -26,12 +26,12 @@ describe 'Config Server API V1' do
   end
 
   it "should return 202 from put /params/:version/:uuid with param 1/2" do
-    put '/params/1/' + INSTANCE_UUID, {:audrey_data=>"|ipaddress&0.0.0.0|"}
+    put '/params/1/' + INSTANCE_UUID, {:audrey_data=>"|ipaddress&#{"0.0.0.0".to_b64}|"}
     last_response.status.should == 202
   end
 
   it "should return 200 from put /params/:version/:uuid with param 2/2" do
-    put '/params/1/' + INSTANCE_UUID, {:audrey_data=>"|hostname&example.com|"}
+    put '/params/1/' + INSTANCE_UUID, {:audrey_data=>"|hostname&#{"example.com".to_b64}|"}
     last_response.status.should == 200
   end
 
@@ -47,13 +47,11 @@ describe 'Config Server API V1' do
 
   it "should return 200 from get /configs/:version/:uuid when asked for text" do
     get '/configs/1/' + INSTANCE_UUID, {}, {'HTTP_ACCEPT' => "application/xml"}
-    puts last_response.body
     last_response.should.be.ok
   end
 
   it "should return 200 from get /configs/:version/:uuid when asked for xml" do
     get '/configs/1/' + INSTANCE_UUID, {}, {'HTTP_ACCEPT' => "text/plain"}
-    puts last_response.body
     last_response.should.be.ok
   end
 

@@ -88,22 +88,16 @@ module ConfigServer
     class Instance < Base
       @@INSTANCE_CONFIG_FILE = "instance-config.xml"
       @@PROVIDED_PARAMS_FILE = "provided-parameters.xml"
-      @@REQUIRED_PARAMS_FILE = "required-parameters.xml"
       @@IP_FILE = "ip"
       @@EMPTY_DOCUMENT = Nokogiri::XML("")
-      @@TIMESTAMP_FILE = "timestamps"
+      @@METADATA_FILE = "meta.yaml"
 
       # Nokogiri XML validator
       @@validator = nil
 
-      attr_reader :instance_config, :ip, :secret, :uuid
 
       def self.exists?(uuid, service=nil)
-        if service
-          File.exist?(storage_path uuid) and self.services service
-        else
-          File.exist?(storage_path uuid)
-        end
+        File.exist?(storage_path uuid)
       end
 
       def self.storage_path(uuid=nil)
@@ -152,7 +146,11 @@ module ConfigServer
       @uuid = ""
       @secret = nil
       @ip = ""
-      @instance_dir = ""
+
+      attr_reader :instance_config, :ip, :secret, :uuid
+      attr_reader :services, :instance_dir
+      attr_reader :first_contacted, :last_contacted
+      attr_reader :status, :registered_timestamp
 
       def initialize(uuid, configs=nil)
         super()
@@ -160,6 +158,8 @@ module ConfigServer
 
         @uuid = uuid
         @instance_dir = Instance.storage_path uuid
+        @first_contacted = @last_contacted = nil
+        @status = @registered_timestamp = nil
         ensure_instance_dir
 
         if configs.nil?
@@ -179,8 +179,11 @@ module ConfigServer
           (config % 'instance-config')['name'] if not config.nil?
       end
 
-      def instance_config=(xml)
-        replace_instance_config(xml)
+      def service_names
+        @service_names ||=
+          (@instance_config / '//service').map do |svc|
+            svc["name"]
+          end
       end
 
       def ip=(ip)
@@ -189,9 +192,9 @@ module ConfigServer
 
       def service_return_code_values=(params={})
         params.each do |name,val|
-          s = Service.find_or_create name
-          s.return_code = val
-          s.store
+          services[name].return_code = val
+          services[name].config_ended = DateTime.now
+          services[name].store
         end
       end
 
@@ -209,66 +212,29 @@ module ConfigServer
       end
 
       def provided_parameters(opts={})
-        opts[:only_empty] ||= (not (opts[:only_with_values] || opts[:all]))
-        if opts[:raw]
-          return provided_parametrs_raw
-        end
+        opts[:only_empty] ||= (not opts.has_key? :name)
 
-        xpath = case
+        params_xml = case
           when opts[:only_empty]
-            '//provided-parameter[not(value)]'
-          when opts[:only_with_values]
-            '//provided-parameter/value/..'
-          else # opts[:all]
-            '//provided-parameter'
+            pp / "//provided-parameter[not(value)]"
+          when opts[:name]
+            pp / "//provided-parameter[@name='#{opts[:name]}']"
         end
 
         if opts[:include_values]
           #FIXME: only handles scalar values
-          (pp / xpath).map do |p|
+          params_xml.map do |p|
             {p['name'] => ((p%'value').nil? ? nil : (p%'value').content)}
           end.inject(:merge) || {}
         else
-          (pp / xpath).map do |p|
+          params_xml.map do |p|
             p['name']
           end
         end
       end
 
-      def required_parameters_values=(params={})
-        logger.debug("required params: #{params.inspect}")
-        params.each do |k,v|
-          param = rp % "//required-parameter[@name='#{k}']"
-          logger.debug("param: #{param.to_xml}")
-          logger.debug("value: #{v}")
-          param.inner_html = "<value><![CDATA[#{v}]]></value>" if not param.nil?
-        end if not (params.nil? or params.empty?)
-        File.open(get_path(@@REQUIRED_PARAMS_FILE), 'w') do |f|
-          rp.write_xml_to(f)
-        end
-      end
-
-      def required_parameters()
-        return required_parameters_raw
-      end
-
-      def services(service=nil)
-        service_xpath = service ? "//service[@name='#{service}']" : '//service'
-        services = ActiveSupport::OrderedHash.new
-        (config / service_xpath).each do |s|
-          name = s["name"]
-          params_with_values = (s / './parameters/parameter/value/..') +
-            (rp / "//required-parameter[@service='#{name}']/value/..")
-          parameters = (params_with_values.map do |p|
-            {p["name"] => (p % 'value').content}
-          end || []).inject(:merge) || {}
-          services[name] = parameters
-        end
-        services
-      end
-
-      def required_parameters_remaining?
-        (rp / "//required-parameter[not(value)]").size > 0
+      def has_unresolved_parameters?
+        services.any? {|name, svc| svc.has_unresolved_parameters?}
       end
 
       def file
@@ -289,39 +255,31 @@ module ConfigServer
       end
 
       def completed_timestamp
-      end
-
-      def registered_timestamp
-        File.new(@instance_dir).ctime
-      end
-
-      def first_contacted
-        get_timestamp(:first_contacted)
-      end
-
-      def last_contacted
-        get_timestamp(:last_contacted)
+        times = services.map {|name,s| s.config_ended}
+        times.max if times.compact == times
       end
 
       def contacted= timestamp
-        first = first_contacted
-        if not first
-          write_timestamp(:first_contacted, timestamp.to_s)
+        if not first_contacted
+          @first_contacted = timestamp
         end
-        write_timestamp(:last_contacted, timestamp.to_s)
+        @last_contacted = timestamp
+        store_metadata
       end
 
       def status
-        "incomplete"
+        states = services.map {|name,svc| svc.status }
+
+        # if all the services reported a status
+        # find the "worst" status (error > incomplete > success)
+        # otherwise, at least one service couldn't report status = "incomplete"
+        # error > incomplete > success
+        # which nicely maps to alphabetical order
+        states.min
       end
 
       private
       alias config instance_config
-
-      def required_parameters_raw
-        @required_parameters || @@EMPTY_DOCUMENT
-      end
-      alias rp required_parameters_raw
 
       def provided_parameters_raw
         @provided_parameters || @@EMPTY_DOCUMENT
@@ -335,9 +293,32 @@ module ConfigServer
       def load_configs
         @instance_config = get_xml(get_path(@@INSTANCE_CONFIG_FILE))
         @provided_parameters = get_xml(get_path(@@PROVIDED_PARAMS_FILE))
-        @required_parameters = get_xml(get_path(@@REQUIRED_PARAMS_FILE))
         @ip = get_ip
+        load_services
+        load_metadata
         deployable
+      end
+
+      def load_services
+        @services ||= service_names.map do |svc_name|
+          {svc_name => Service.load(self, svc_name)}
+        end.reduce(:merge) || {}
+      end
+
+      def load_metadata
+        metadata = YAML.load_file(get_path(@@METADATA_FILE))
+        @first_contacted = metadata["first_contacted"]
+        @last_contacted = metadata["last_contacted"]
+        @registered_timestamp = metadata["registered"]
+      end
+
+      def store_metadata
+        metadata = {"first_contacted" => @first_contacted,
+            "last_contacted" => @last_contacted,
+            "registered" => @registered_timestamp}
+        File.open(get_path(@@METADATA_FILE), "w") do |f|
+          YAML.dump(metadata, f)
+        end
       end
 
       def get_path(filename)
@@ -361,14 +342,16 @@ module ConfigServer
           xml.write_xml_to(f)
         end
         @instance_config = xml
+        @registered_timestamp = File.new(@instance_dir).ctime
 
         replace_provided_parameters
-        replace_required_parameters
+        replace_services
+        store_metadata
 
         replace_tarball
 
         @secret = get_secret
- 
+
         deployable
         @deployable.add_instance(@uuid)
 
@@ -415,37 +398,31 @@ module ConfigServer
         @provided_parameters = Nokogiri::XML(xml)
       end
 
-      def replace_required_parameters
-        file = get_path(@@REQUIRED_PARAMS_FILE)
-        # grab all the services with reference parameters
-        services = config / '//service/parameters/parameter/reference/../../..'
-        if not services.empty?
-          xml = "<required-parameters>\n"
-          services.each do |s|
-            (services / './parameters/parameter/reference/..').each do |p|
-              ref = p % 'reference'
-              if ref.key? 'service-parameter'
-                xml += "  <service-parameter service='#{s['name']}'"
-                param_type = 'service-parameter'
-              else
-                xml += "  <required-parameter service='#{s['name']}'"
-                param_type = 'provided-parameter'
-              end
-              xml += " name='#{p['name']}'"
-              xml += " assembly='#{ref['assembly']}'"
-              xml += " parameter='#{ref[param_type]}'/>\n"
-            end
+      def replace_services
+        @services = {}
+        (config / '//services/service').each do |svc|
+          params = {}
+          static_params = svc / '//parameter/value/..'
+          reference_params = svc / '//parameter/reference[@provided-parameter]/..'
+          service_ref_params = svc / '//parameter/reference[@service-parameter]/..'
+          static_params.each do |param|
+            params[param["name"]] =
+              {"type" => "static", "value" => (param % 'value').content}
           end
-          xml += "</required-parameters>\n"
-          logger.debug("reqparams xml: #{xml}")
-
-          File.open(file, 'w') do |f|
-            f.write(xml)
+          reference_params.each do |param|
+            assembly = (param % 'reference')['assembly']
+            ref_param = (param % 'reference')['provided-parameter']
+            params[param["name"]] =
+              {"type" => "parameter-reference", "assembly" => assembly, "parameter" => ref_param}
           end
-          @required_parameters = Nokogiri::XML(xml)
-        else
-          File.delete(file) if File.exists?(file)
-          @required_parameters = nil
+          service_ref_params.each do |param|
+            assembly = (param % 'reference')['assembly']
+            service_param = (param % 'reference')['service-parameter']
+            params[param["name"]] =
+              {"type" => "service-reference", "assembly" => assembly, "service" => service_param}
+          end
+          service = Service.create(self, svc["name"], params)
+          @services[service.name] = service
         end
       end
 
@@ -538,23 +515,6 @@ module ConfigServer
           result[:body] = response.body
         end
         result
-      end
-
-      def get_timestamp(timestamp_name)
-        fname = get_path(@@TIMESTAMP_FILE)
-        timestamps = Hash[*File.read(fname).split(/[= \n]+/)] if File.exists?(fname)
-        if timestamps and timestamps.key? timestamp_name.to_s
-          timestamps[timestamp_name]
-        end
-      end
-
-      def write_timestamp(timestamp_name, value)
-        fname = get_path(@@TIMESTAMP_FILE)
-        timestamps = Hash[*File.read(fname).split(/[= \n]+/)] if File.exists?(fname)
-        if timestamps and timestamps.key? timestamp_name.to_s
-          timestamps[timestamp_name] = value
-          File.open(fname, "a") {|f| timestamps.each_pair {|k,v| f.write "#{k}=#{v}"}}
-        end
       end
     end
   end

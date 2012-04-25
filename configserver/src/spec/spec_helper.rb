@@ -2,6 +2,7 @@ require 'test/spec'
 require 'rspec'
 require 'rack/test'
 require 'logger'
+require 'nokogiri'
 
 begin
   require 'ruby-debug'
@@ -129,83 +130,158 @@ end
 ## Helpful test data
 
 INSTANCE_UUID = '039901bc-1c51-11e1-bae2-0019b91a7f08'
+INSTANCE2_UUID = '039901bc-1c51-11e1-bae2-0019b91a7f09'
 DEPLOYMENT_UUID = '038f5572-1c51-11e1-bae2-0019b91a7f08'
 
-INSTANCE_DATA_W_SRVDEP = '''<?xml version="1.0"?>
-<instance-config id="039901bc-1c51-11e1-bae2-0019b91a7f08" name="mysql" secret="fakesecret">
-  <deployable name="Wordpress Multi-Instance Deployable" id="038f5572-1c51-11e1-bae2-0019b91a7f08"/>
+INSTANCE_DATA_W_SRVDEP = """<?xml version='1.0'?>
+<instance-config id='#{INSTANCE2_UUID}' name='mysql' secret='fakesecret'>
+  <deployable name='Wordpress Multi-Instance Deployable' id='#{DEPLOYMENT_UUID}'/>
   <provided-parameters>
-    <provided-parameter name="ipaddress"/>
+    <provided-parameter name='ipaddress'/>
   </provided-parameters>
   <services>
-    <service name="test_service">
-      <executable url="http://localhost/example.sh"/>
+    <service name='test_service'>
+      <executable url='http://localhost/example.sh'/>
       <files>
-        <file url="http://localhost/example.xml"/>
+        <file url='http://localhost/example.xml'/>
       </files>
       <parameters>
-        <parameter name="test1">
+        <parameter name='test1'>
           <value><![CDATA[test1]]></value>
         </parameter>
-        <parameter name="test2">
+        <parameter name='test2'>
           <value><![CDATA[test2]]></value>
         </parameter>
-        <parameter name="ref_test">
-          <reference assembly="039901bc-1c51-11e1-bae2-0019b91a7f08" provided-parameter="ipaddress"/>
+        <parameter name='ref_test'>
+          <reference assembly='#{INSTANCE_UUID}' provided-parameter='ipaddress'/>
         </parameter>
-        <parameter name="service_ref_test">
-          <reference assembly="039901bc-1c51-11e1-bae2-0019b91a7f08" service-parameter="test_service"/>
+        <parameter name='service_ref_test'>
+          <reference assembly='#{INSTANCE_UUID}' service-parameter='test_service'/>
         </parameter>
       </parameters>
     </service>
   </services>
-</instance-config>'''
+</instance-config>"""
 
-INSTANCE_DATA_W_URL = '''<?xml version="1.0"?>
-<instance-config id="039901bc-1c51-11e1-bae2-0019b91a7f08" name="mysql" secret="fakesecret">
-  <deployable name="Wordpress Multi-Instance Deployable" id="038f5572-1c51-11e1-bae2-0019b91a7f08"/>
+INSTANCE_DATA_W_URL = """<?xml version='1.0'?>
+<instance-config id='#{INSTANCE_UUID}' name='mysql' secret='fakesecret'>
+  <deployable name='Wordpress Multi-Instance Deployable' id='#{DEPLOYMENT_UUID}'/>
   <provided-parameters>
-    <provided-parameter name="hostname"/>
-    <provided-parameter name="ipaddress"/>
+    <provided-parameter name='hostname'/>
+    <provided-parameter name='ipaddress'/>
   </provided-parameters>
   <services>
-    <service name="test_service">
-      <executable url="http://localhost/example.sh"/>
+    <service name='test_service'>
+      <executable url='http://localhost/example.sh'/>
       <files>
-        <file url="http://localhost/example.xml"/>
+        <file url='http://localhost/example.xml'/>
       </files>
       <parameters>
-        <parameter name="test1">
+        <parameter name='test1'>
           <value><![CDATA[test1]]></value>
         </parameter>
-        <parameter name="test2">
+        <parameter name='test2'>
           <value><![CDATA[test2]]></value>
         </parameter>
-        <parameter name="ref_test">
-          <reference assembly="039901bc-1c51-11e1-bae2-0019b91a7f08" provided-parameter="ipaddress"/>
+        <parameter name='ref_test'>
+          <reference assembly='#{INSTANCE_UUID}' provided-parameter='ipaddress'/>
         </parameter>
       </parameters>
     </service>
   </services>
-</instance-config>'''
+</instance-config>"""
 
-INSTANCE_DATA_INLINE = '''<?xml version="1.0"?>
-<instance-config id="039901bc-1c51-11e1-bae2-0019b91a7f08" name="mysql" secret="fakesecret">
-  <deployable name="Wordpress Multi-Instance Deployable" id="038f5572-1c51-11e1-bae2-0019b91a7f08"/>
+INSTANCE_DATA_INLINE = """<?xml version='1.0'?>
+<instance-config id='#{INSTANCE_UUID}' name='mysql' secret='fakesecret'>
+  <deployable name='single instance deployment' id='#{DEPLOYMENT_UUID}'/>
   <provided-parameters>
-    <provided-parameter name="hostname"/>
-    <provided-parameter name="ipaddress"/>
+    <provided-parameter name='hostname'/>
+    <provided-parameter name='ipaddress'/>
   </provided-parameters>
   <services>
-    <service name="test_service">
-      <executable url="http://localhost/example.sh"/>
+    <service name='test_service'>
+      <executable url='http://localhost/example.sh'/>
       <files>
         <file>
-          <contents filename="test-inline-file">
-            <![CDATA[ #!/bin/bash echo "hello" ]]>
+          <contents filename='test-inline-file'>
+            <![CDATA[ #!/bin/bash echo 'hello' ]]>
           </contents>
         </file>
       </files>
     </service>
   </services>
-</instance-config>'''
+</instance-config>"""
+
+
+MYSQL_UUID = 'mysql-uuid'
+WORDPRESS_UUID = 'wordpress-uuid'
+WORDPRESS_DEPL_UUID = 'wordpress_deployment'
+
+INSTANCE_WORDPRESS = """<?xml version='1.0'?>
+<instance-config id='#{WORDPRESS_UUID}' name='wordpress' secret='fakesecret'>
+  <deployable name='Wordpress Multi-Instance Deployable' id='#{WORDPRESS_DEPL_UUID}'/>
+  <provided-parameters>
+    <provided-parameter name='hostname'/>
+    <provided-parameter name='ipaddress'/>
+  </provided-parameters>
+  <services>
+    <service name='wordpress'>
+      <executable url='http://localhost/example.sh'/>
+      <parameters>
+        <parameter name='wp_name'><value>wordpress</value></parameter>
+        <parameter name='wp_user'><value>wordpress</value></parameter>
+        <parameter name='wp_pw'><value>wordpress</value></parameter>
+        <parameter name='mysql_ip'>
+          <reference assembly='#{MYSQL_UUID}' provided-parameter='ipaddress'/>
+        </parameter>
+        <parameter name='mysql_hostname'>
+          <reference assembly='#{MYSQL_UUID}' provided-parameter='hostname'/>
+        </parameter>
+        <parameter name='mysql_service'>
+          <reference assembly='#{MYSQL_UUID}' service-parameter='mysql'/>
+        </parameter>
+      </parameters>
+    </service>
+  </services>
+</instance-config>"""
+
+INSTANCE_MYSQL = """<?xml version='1.0'?>
+<instance-config id='#{MYSQL_UUID}' name='mysql' secret='fakesecret'>
+  <deployable name='Wordpress Multi-Instance Deployable' id='#{WORDPRESS_DEPL_UUID}'/>
+  <provided-parameters>
+    <provided-parameter name='hostname'/>
+    <provided-parameter name='ipaddress'/>
+  </provided-parameters>
+  <services>
+    <service name='mysql'>
+      <executable url='http://localhost/example.sh'/>
+      <parameters>
+        <parameter name='wp_name'><value>wordpress</value></parameter>
+        <parameter name='wp_user'><value>wordpress</value></parameter>
+        <parameter name='wp_pw'><value>wordpress</value></parameter>
+        <parameter name='apache_ip'>
+          <reference assembly='#{WORDPRESS_UUID}' provided-parameter='ipaddress'/>
+        </parameter>
+        <parameter name='apahe_hostname'>
+          <reference assembly='#{WORDPRESS_UUID}' provided-parameter='hostname'/>
+        </parameter>
+      </parameters>
+    </service>
+  </services>
+</instance-config>"""
+
+
+# Helper methods
+###
+
+def find_instance(uuid)
+  ConfigServer::Model::Instance.find(uuid)
+end
+
+def find_deployment(uuid)
+  ConfigServer::Model::Deployable.find(uuid)
+end
+
+def to_xml(str)
+  Nokogiri::XML(str).root
+end

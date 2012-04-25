@@ -132,25 +132,40 @@ module ConfigServer
           services = instance.services
           if not services.empty?
             xml.services_ {
-              services.each do |service|
-                xml.service_(:name => "FIXME", :status => "FIXME") {
-                  xml.send('configuration-started', "FIXME")
-                  xml.send('configuration-ended', "FIXME")
-                  xml.send('completed', "FIXME")
-                  xml.send('completion-status', "FIXME")
-                  xml.send('unresolved-service-parameters') {
-                    xml.send('service-parameter', :name => "FIXME") {
-                      xml.send('source-assembly', :uuid => "FIXME",
-                               :name => "FIXME")
-                      xml.send('source-parameter', :name => "FIXME")
+              services.each do |name,service|
+                xml.service_(:name => service.name, :status => service.status) {
+                  ts = service.config_started
+                  xml.send('configuration-started', ts) if ts
+                  ts = service.config_ended
+                  xml.send('configuration-ended', ts) if ts
+                  rc = service.return_code
+                  xml.send('completion-status', rc) if rc
+                  unresolved_params = service.unresolved_parameters
+                  if not unresolved_params.empty?
+                    xml.send('unresolved-service-parameters') {
+                      unresolved_params.each do |pname, param|
+                        xml.send('service-parameter', :name => pname) {
+                          xml.send('source-assembly', :uuid => param["assembly"])
+                          if param["type"] == "parameter-reference"
+                            xml.send('return-param-name', :name => param["parameter"])
+                          elsif param["type"] == "service-reference"
+                            xml.send('service-name', :name => param["service"])
+                          end
+                        }
+                      end
                     }
-                  }
-                  xml.send('pending-return-parameters') {
-                    xml.send('return-parameter', :name => "FIXME")
-                  }
+                  end
                 }
               end
             }
+            returns = instance.provided_parameters(:only_empty => true)
+            if not returns.empty?
+              xml.send('pending-return-parameters') {
+                returns.each do |name|
+                  xml.send('return-parameter', :name => name)
+                end
+              }
+            end
           end
         }
       end

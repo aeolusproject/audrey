@@ -15,34 +15,32 @@
 #
 module ConfigServer
   module Model
-    class Service < Base
-      def self.storage_path
-        super @name
-      end
-
-      def self.find(name)
-        service = Service.new(name)
-        service.load
-      end
-
-      def self.create(name)
-        service = Service.new(name)
+    class Service
+      def self.create(instance, name, params=nil)
+        service = Service.new(instance, name)
+        service.params = params
         service.store
       end
 
-      def self.find_or_create(name)
-        service = find(name) 
-        service ? service : create(name)
+      def self.load(instance, name)
+        Service.new(instance, name)
       end
 
-      attr_reader :name
-      attr_accessor :return_code
-      def initialize(name)
-        super()
+      attr_reader :name, :instance
+      attr_accessor :return_code, :params
+      attr_accessor :config_started, :config_ended
+      def initialize(instance, name)
         @name = name
+        @instance = instance
         @return_code = nil
+        @config_started = nil
+        @config_ended = nil
         @params = {}
-        @meta_file = path 'meta.yaml'
+        @meta_file = 'meta.yaml'
+        @params_file = 'params.yaml'
+        if exists?
+          load_service
+        end
       end
 
       def ensure_service_dir
@@ -50,30 +48,91 @@ module ConfigServer
       end
 
       def store()
-        Service.ensure_storage_path
         ensure_service_dir
-        File.open( @meta_file, 'w' ) do |out|
-          YAML.dump({'return_code' => @return_code}, out)
+        File.open(path(@meta_file), 'w') do |out|
+          YAML.dump(metadata, out)
+        end
+        if not @params.empty?
+          File.open(path(@params_file), 'w') do |out|
+            YAML.dump(@params, out)
+          end
         end
         self
       end
 
-      def load
-        if exists?
-          meta = YAML.load_file( @meta_file ) 
+      def load_service
+        if exists? @meta_file
+          meta = YAML.load_file(path(@meta_file))
           @return_code = meta['return_code']
-          self
+          @config_started = meta['config_started']
+          @config_ended = meta['config_ended']
+        end
+        if exists? @params_file
+          @params = YAML.load_file(path(@params_file))
+        end
+        self
+      end
+
+      def has_unresolved_parameters?
+        # use params and not @params in order to get as many
+        # reference values resolved as possible
+        params.any? {|name, data| data["value"].nil?}
+      end
+
+      def unresolved_parameters
+        params.reject do |name, data|
+          not (data["value"].nil? and
+            (["parameter-reference", "service-reference"].include? data["type"])
+          )
+        end
+      end
+
+      def params
+        # resolves parameter and service references each time
+        # this is on purpose ... want to enable resolved values to change over
+        # time
+        @params.each do |name, data|
+          unless data.keys.include?("value")
+            case data["type"]
+              when "parameter-reference"
+                data["value"] =
+                  instance.deployable.resolve_parameter_reference(
+                    data["assembly"], data["parameter"])
+              when "service-reference"
+                data["value"] =
+                  instance.deployable.resolve_service_reference(
+                    data["assembly"], data["service"])
+            end
+          end
+        end
+      end
+
+      def status
+        if @return_code
+          if @return_code.to_s == "0"
+            "success"
+          else
+            "error"
+          end
+        else
+          "incomplete"
         end
       end
 
       private
       def path(filename=nil)
-        p = File.join(Service.storage_path, @name)
+        p = File.join(instance.instance_dir, @name)
         filename ? File.join(p, filename) : p
       end
 
-      def exists?
-        File.exists?(path)
+      def exists?(filename=nil)
+        File.exists?(path(filename))
+      end
+
+      def metadata
+        {"return_code" => @return_code,
+         "config_started" => @config_started,
+         "config_ended" => @config_ended}
       end
     end
   end

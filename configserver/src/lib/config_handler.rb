@@ -58,15 +58,20 @@ module ConfigServer
     def get_configs(uuid, service=nil)
       if exists?(uuid)
         instance = Model::Instance.find(uuid)
-            services = instance.services service
-            log "uuid: #{uuid}"
-            log "services: #{services.inspect}"
+        instance.contacted = DateTime.now
+        services = service.nil? ?
+            instance.services :
+            { service => instance.services[service] }
+        log "uuid: #{uuid}"
+        log "services: #{services.inspect}"
         configs = "|" +
-            services.map do |svc_name,params|
-              "service|#{svc_name}" +
+            services.map do |svc_name, svc|
+              params = svc.params
+              "service|#{svc.name}" +
               if not params.empty?
                 "|parameters|" +
-                params.map do |p_name,value|
+                params.map do |p_name,data|
+                  value = data["value"] || ""
                   "#{p_name}&" + [value].pack("m0").delete("\n")
                 end.join("|")
               else
@@ -74,7 +79,17 @@ module ConfigServer
               end
             end.join("|") +
             "|"
-        return configs, instance.required_parameters_remaining?
+        unresolved_params = service.nil? ?
+            instance.has_unresolved_parameters? :
+            instance.services[service].has_unresolved_parameters?
+        # Update some timestamp information
+        if not unresolved_params
+          if service
+            instance.services[service].config_started = DateTime.now
+            instance.services[service].store
+          end
+        end
+        return configs, unresolved_params
       end
     end
 
@@ -82,12 +97,12 @@ module ConfigServer
       options[:as] ||= :text
       if exists?(uuid)
         instance = Model::Instance.find(uuid)
+        instance.contacted = DateTime.now
         parameters = instance.provided_parameters(:only_empty => true)
         if options[:apiv] == "1"
           process_provides(parameters)
         else
-          services = instance.services()
-          process_provides(parameters, services)
+          process_provides(parameters, instance.services)
         end
       end
     end
@@ -112,35 +127,13 @@ module ConfigServer
 
       instance = Model::Instance.find(uuid)
       instance.ip = ip
+      instance.contacted = DateTime.now
 
       params = parse_audrey_data(data)
       if data.start_with? '||'
         instance.service_return_code_values = params
       else
         instance.provided_parameters_values = params
-      end
-
-      provided_params = instance.provided_parameters(
-        :only_with_values => true,
-        :include_values => true)
-      log "provided_params: #{provided_params.inspect}"
-
-      dep = instance.deployable
-      assembly_identifiers = [instance.uuid, instance.assembly_name]
-      dep.instances_with_assembly_dependencies(assembly_identifiers).each do |uuid|
-        log "found a dependency"
-        other = Model::Instance.find(uuid)
-        params = {}
-        required_params = other.required_parameters
-        log "required_params: #{required_params.to_xml}"
-        match_string = assembly_identifiers.map {|id| "(@assembly='#{id}')"}.join("or")
-        required_params.xpath("//required-parameter[#{match_string}]").each do |p|
-          log "found a required param match: #{p.to_xml}"
-          if provided_params.key?(p['parameter'])
-            params[p['name']] = provided_params[p['parameter']]
-          end
-        end
-        other.required_parameters_values = params if not params.empty?
       end
 
       parameters = instance.provided_parameters(:only_empty => true)
@@ -150,6 +143,7 @@ module ConfigServer
     def get_file(uuid)
       if exists?(uuid)
         instance = Model::Instance.find(uuid)
+        instance.contacted = DateTime.now
         instance.file
       end
     end

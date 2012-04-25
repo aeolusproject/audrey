@@ -76,23 +76,13 @@ module ConfigServer
         @deployable_dir.entries - EXCLUDED_DIRS
       end
 
-      def instances
-        @instances ||= instance_uuids.map do |uuid|
+      def instances(uuid=nil)
+        unless uuid.nil?
           Instance.find(uuid)
-        end
-      end
-
-      def instances_with_assembly_dependencies(assembly_names)
-        if not assembly_names.kind_of? Array
-          assembly_names = [assembly_names]
-        end
-        match_string = "['\"](#{assembly_names.join("|")})['\"]"
-        logger.debug("match_string: #{match_string}")
-        instance_uuids.select do |uuid|
-          p = File.join(@deployable_dir.path, uuid, 'required-parameters.xml')
-          File.open(p) do |f|
-            not f.grep(/<required-parameter .* assembly=#{match_string}/).empty?
-          end if File.exists?(p)
+        else
+          @instances ||= instance_uuids.map do |uuid|
+            Instance.find(uuid)
+          end
         end
       end
 
@@ -106,11 +96,7 @@ module ConfigServer
         # if there are no nils in the instances' completed timestamps
         # find the last (highest) completion timestamp
         # otherwise, nil
-        if times.compact == times
-          times.max do |t1, t2|
-            nilable_max_comparison(t1, t2)
-          end
-        end
+        times.max if times.compact == times
       end
 
       def status
@@ -119,34 +105,23 @@ module ConfigServer
         # if all the instances reported a status
         # find the "worst" status (error > incomplete > success)
         # otherwise, at least one instance couldn't report status = "incomplete"
-        if states.compact == states
-          states.max do |s1, s2|
-            # error > incomplete > success
-            # which nicely maps to alphabetical order
-            nilable_max_comparison(s1, s2)
-          end
-        else
-          "incomplete"
-        end
+        # error > incomplete > success
+        # which nicely maps to alphabetical order
+        states.min
+      end
+
+      def resolve_parameter_reference(instance_uuid, parameter)
+        instance = instances(instance_uuid)
+        param = instance.provided_parameters(:name => parameter, :include_values => true) unless instance.nil?
+        param.values[0]
+      end
+
+      def resolve_service_reference(instance_uuid, service)
+        instance = instances(instance_uuid)
+        instance.services[service].return_code unless instance.nil?
       end
 
       private
-      def nilable_max_comparison(x, y, &block)
-        if x and y
-          if block_given?
-            yield x, y
-          else
-            x <=> y
-          end
-        elsif x
-          1
-        elsif y
-          -1
-        else
-          0
-        end
-      end
-
       def ensure_deployable_dir
         path = Deployable.storage_path @uuid
         FileUtils.mkdir_p(path, :mode => 0700) if not File.directory?(path)
