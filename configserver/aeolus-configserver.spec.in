@@ -111,12 +111,14 @@ install -m 0644 \
 install -m 0644 \
     src/lib/application_helper.rb \
     src/lib/config_handler.rb \
+    src/lib/report_server.rb \
     src/lib/model.rb %{buildroot}/%{app_root}/lib
 
 install -m 0644 \
     src/lib/model/base.rb \
     src/lib/model/consumer.rb \
     src/lib/model/deployable.rb \
+    src/lib/model/service.rb \
     src/lib/model/instance.rb %{buildroot}/%{app_root}/lib/model
 
 # copy over init scripts and configs
@@ -130,7 +132,7 @@ install -m 0644 \
   install -m644 conf/%{name}.service %{buildroot}/%{_unitdir}/
   echo  %{buildroot}/%{_unitdir}/
 %endif
-  
+
 install -m 0644 conf/%{name}.sysconf \
     %{buildroot}%{_sysconfdir}/sysconfig/%{name}
 install -m 0644 conf/%{name}.logrotate \
@@ -203,8 +205,36 @@ fi
 
 %files
 %defattr(-,root,root,-)
-%{_bindir}/aeolus-configserver-setup
 %{app_root}
+%{app_root}/config.ru
+%{app_root}/common_config.rb
+%{app_root}/configserver.rb
+%{app_root}/configure
+%{app_root}/configure/puppet
+%{app_root}/configure/puppet/modules
+%{app_root}/configure/puppet/modules/apache
+%{app_root}/configure/puppet/modules/apache/manifests
+%{app_root}/configure/puppet/modules/apache/manifests/init.pp
+%{app_root}/configure/puppet/modules/apache/templates
+%{app_root}/configure/puppet/modules/apache/templates/vhost443.erb
+%{app_root}/configure/puppet/modules/apache/templates/vhost80.erb
+%{app_root}/configure/puppet/modules/apache/templates/vhost.erb
+%{app_root}/configure/puppet/modules/configserver
+%{app_root}/configure/puppet/modules/configserver/manifests
+%{app_root}/configure/puppet/modules/configserver/manifests/init.pp
+%{app_root}/lib
+%{app_root}/lib/application_helper.rb
+%{app_root}/lib/config_handler.rb
+%{app_root}/lib/model.rb
+%{app_root}/lib/report_server.rb
+%{app_root}/lib/model
+%{app_root}/lib/model/base.rb
+%{app_root}/lib/model/consumer.rb
+%{app_root}/lib/model/deployable.rb
+%{app_root}/lib/model/instance.rb
+%{app_root}/lib/model/service.rb
+
+%{_bindir}/aeolus-configserver-setup
 %dir %{_sysconfdir}/%{name}
 
 %if 0%{?rhel}
@@ -222,7 +252,7 @@ fi
 %doc COPYING
 
 %changelog
-* Tue Mar 13 2012 Joe VLcek <jvlcek@redhat.com> 0.5.0-4
+* Tue Mar 13 2012 Joe VLcek <jvlcek@redhat.com> 0.5.0-0
 - Convert init scripts to sysV and systemd
 * Mon Mar 05 2012 Dan Radez <dradez@redhat.com> 0.4.6-1
 - https://bugzilla.redhat.com/show_bug.cgi?id=798787
