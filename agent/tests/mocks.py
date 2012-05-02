@@ -31,6 +31,7 @@ except ImportError:  # python 3
     from io import BytesIO as BIO
 
 API_VERSION = '2'
+TOOLING_DIR = 'test_tooling'
 
 DUMMY_USER_DATA = '1|http://example.com/|oauthConsumer|oauthSecret'
 CLOUD_INFO_FILE = 'test_cloud_info'
@@ -62,6 +63,11 @@ VALIDATE_SERVICE_CONFIG_DATA = {
     'AUDREY_VAR_jon1_jon_server_ip': '192.168.1.1',
     'AUDREY_VAR_jon1_jon_server_ip_2': '192.168.1.2',
     'AUDREY_VAR_jon1_jon_server_ip_3': '192.168.1.3'}
+
+TARFILE = tarfile.open("test_tooling.tar.gz", mode="w:gz")
+TARFILE.add('/etc/passwd')
+TARFILE.close()
+TARFILE = "test_tooling.tar.gz"
 
 
 #####

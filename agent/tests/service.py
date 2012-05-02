@@ -22,11 +22,13 @@ import base64
 from audrey.errors import AAError
 from audrey.shell import run_cmd
 from audrey.factory import AudreyFactory
+from audrey.tooling import Tooling
 
+from tests.mocks import TOOLING_DIR
+from tests.mocks import TARFILE
 from tests.mocks import DUMMY_CS_CONFIG
 from tests.mocks import DUMMY_SERVICE_CONFIG_DATA
 from tests.mocks import DUMMY_NO_SERVICE_CONFIG_DATA
-from tests import _write_file
 
 
 class TestAudreyAgentServiceV1(unittest.TestCase):
@@ -34,9 +36,11 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
     Class for exercising the parsing of the Required Configs from the CS.
     '''
 
+
     def setUp(self):
         self.factory = AudreyFactory(1)
-        self.service = self.factory.service('test_service')
+        self.tooling = self.factory.Tooling(TARFILE, TOOLING_DIR)
+        self.service = self.factory.Service('test_service', self.tooling)
 
     def test_success_service_n_provides(self):
         '''
@@ -44,8 +48,9 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         - Exercise service().parse_require_config() with valid input
         '''
         # Exersise code segment
-        services = self.factory.service('jon1').parse_require_config(
-                                                     DUMMY_SERVICE_CONFIG_DATA)
+        services = self.factory.Service.parse_require_config(
+                                            DUMMY_SERVICE_CONFIG_DATA,
+                                            self.tooling)
 
         # Validate results
         self.assertEqual(services[0].name, 'jon1')
@@ -68,7 +73,7 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         '''
 
         src = '||'
-        services = self.service.parse_require_config(src)
+        services = self.service.parse_require_config(src, self.tooling)
         self.assertEqual(services, [])
 
     def test_success_empty_service(self):
@@ -77,8 +82,9 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         - Exercise service().parse_require_config() with valid input
         '''
 
-        services = self.factory.service('').parse_require_config(
-                                                  DUMMY_NO_SERVICE_CONFIG_DATA)
+        services = self.factory.Service.parse_require_config(
+                                            DUMMY_NO_SERVICE_CONFIG_DATA,
+                                            self.tooling)
         self.assertEqual(services[0].name, '')
         self.assertEqual(services[1].name, 'jon2')
 
@@ -118,7 +124,7 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
             'AUDREY_VAR_jon_server_ip_3': '192.168.1.3'}
 
         self.assertRaises(AAError,
-                          self.factory.service('').parse_require_config, src)
+                          self.factory.Service.parse_require_config, src, self.tooling)
 
     def test_failure_bad_service_name(self):
         '''
@@ -128,7 +134,7 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
 
         src = '|service|parameters|'
         self.assertRaises(AAError,
-                          self.factory.service('').parse_require_config, src)
+                          self.factory.Service.parse_require_config, src, self.tooling)
 
     def test_failure_service_tag_not_found(self):
         '''
@@ -137,7 +143,7 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         '''
         src = '|notservice|blah|'
         self.assertRaises(AAError,
-                          self.factory.service('').parse_require_config, src)
+                          self.factory.Service.parse_require_config, src, self.tooling)
 
     def test_failure_no_amp_delim(self):
         '''
@@ -146,7 +152,7 @@ class TestAudreyAgentServiceV1(unittest.TestCase):
         '''
         src = '|service|blah|parameters|blah|'
         self.assertRaises(AAError,
-                          self.factory.service('').parse_require_config, src)
+                          self.factory.Service.parse_require_config, src, self.tooling)
 
 
 class TestAudreyAgentServiceV2(TestAudreyAgentServiceV1):
@@ -156,4 +162,5 @@ class TestAudreyAgentServiceV2(TestAudreyAgentServiceV1):
 
     def setUp(self):
         self.factory = AudreyFactory(2)
-        self.service = self.factory.service('test_service')
+        self.tooling = self.factory.Tooling(TARFILE, TOOLING_DIR)
+        self.service = self.factory.Service('test_service', self.tooling)

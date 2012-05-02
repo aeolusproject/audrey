@@ -176,6 +176,8 @@ class Tooling(object):
             return 1 - True if top level tooling found, False otherwise.
             return 2 - path to tooling
         '''
+        if not service_name:
+            raise AAError('Empty service name passed')
         # common join
         service_start = os.path.join(service_name, 'start')
         # returns, check the paths and return the tuple
@@ -190,5 +192,5 @@ class Tooling(object):
                 return path
 
         # No tooling found. Raise an error.
-        raise AAError(('No configuration tooling found for service: %s') % \
-            (service_name))
+        raise AAError('No configuration tooling found for service: %s' % \
+                                                                  service_name)

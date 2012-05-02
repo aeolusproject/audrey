@@ -40,7 +40,7 @@ class ProvidesV1(dict):
         # Now pass the set to the parent object to be completed
         super(ProvidesV1, self).__setitem__(key, value)
 
-    def parse_cs_str(self, src, tooling=None):
+    def parse_cs_str(self, src, tooling):
         '''
         Description:
             Parse the provides parameters text message sent from the
@@ -128,6 +128,8 @@ class ProvidesV1(dict):
         non_none = reduce(is_not_none, self.items(), [])
         kv_pairs = ['&'.join(x) for x in non_none]
 
+        if not kv_pairs:
+            kv_pairs = ['&']
         return urllib.urlencode({'audrey_data': '|%s|' % '|'.join(kv_pairs)})
 
 
@@ -146,7 +148,7 @@ class ProvidesV2(ProvidesV1):
             if self[provide] is not None:
                 del self[provide]
 
-    def parse_cs_str(self, src, tooling=None):
+    def parse_cs_str(self, src, tooling):
         '''
         Description:
             Parse the provides parameters text message sent from the
@@ -168,7 +170,7 @@ class ProvidesV2(ProvidesV1):
         '''
 
         # use the V1 code to populate my dict
-        super(ProvidesV2, self).parse_cs_str(src)
+        super(ProvidesV2, self).parse_cs_str(src, tooling)
 
         services = {}
         # split and prune the payload

@@ -28,6 +28,7 @@ from audrey.tooling import Tooling
 from audrey.factory import AudreyFactory
 
 from tests.mocks import HttpUnitTest
+from tests.mocks import TARFILE
 from tests.mocks import EXIT_ZERO
 from tests.mocks import EXIT_ONE
 from tests.mocks import DUMMY_SERVICE_CONFIG_DATA
@@ -41,7 +42,7 @@ class TestAudreyAgentToolingV1(unittest.TestCase):
     '''
     def setUp(self):
         self.tool_dir = os.path.join(os.path.abspath('.'), 'test_tooling')
-        self.tooling = Tooling(None, self.tool_dir)
+        self.tooling = Tooling(TARFILE, self.tool_dir)
         self.factory = AudreyFactory(1)
 
     def tearDown(self):
@@ -57,7 +58,11 @@ class TestAudreyAgentToolingV1(unittest.TestCase):
     def test_find_user_tooling(self):
         start_path = os.path.join(self.tooling.user_dir, 'start')
         _write_file(start_path, EXIT_ZERO, 0744)
-        self.tooling.find_tooling('')
+        # this is expected to fail because we don't allow user tooling
+        # anymore, it can probably go away but is kept for now
+        # because there are other user tooling tests and code
+        # that need to be torn out too
+        self.assertRaises(AAError, self.tooling.find_tooling, '')
 
     def test_find_user_service_tooling(self):
         service_dir = os.path.join(self.tooling.user_dir, 'test_service')
@@ -91,23 +96,26 @@ class TestAudreyAgentToolingV1(unittest.TestCase):
     def test_fail_execution_invoke_tooling(self):
         start_path = os.path.join(self.tooling.user_dir, 'start')
         _write_file(start_path, EXIT_ONE, 0744)
-        services = self.factory.service('').parse_require_config(
-                                                  DUMMY_NO_SERVICE_CONFIG_DATA)
+        services = self.factory.Service.parse_require_config(
+                                            DUMMY_NO_SERVICE_CONFIG_DATA,
+                                            self.tooling)
         self.tooling.invoke_tooling(services)
 
     def test_user_invoke_tooling(self):
         start_path = os.path.join(self.tooling.user_dir, 'start')
         _write_file(start_path, EXIT_ZERO, 0744)
-        services = self.factory.service('').parse_require_config(
-                                                  DUMMY_NO_SERVICE_CONFIG_DATA)
+        services = self.factory.Service.parse_require_config(
+                                            DUMMY_NO_SERVICE_CONFIG_DATA,
+                                            self.tooling)
         self.tooling.invoke_tooling(services)
 
     def test_user_service_invoke_tooling(self):
         service_dir = os.path.join(self.tooling.user_dir, 'jon1')
         os.mkdir(service_dir)
         _write_file(os.path.join(service_dir, 'start'), EXIT_ZERO, 0744)
-        services = self.factory.service('jon1').parse_require_config(
-                                                     DUMMY_SERVICE_CONFIG_DATA)
+        services = self.factory.Service.parse_require_config(
+                                            DUMMY_SERVICE_CONFIG_DATA,
+                                            self.tooling)
         self.tooling.invoke_tooling(services)
 
 

@@ -160,7 +160,7 @@ class CSClient(object):
         LOGGER.info('Invoked CSClient.get_configs()')
         url = self._cs_url(CONFIGS_URL)
         if service:
-            url = '%s/%s/' % (url, service)
+            url = '%s/%s' % (url, service)
         headers = {'Accept': 'text/plain'}
 
         response, body = self._get(url, headers=headers)

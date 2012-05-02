@@ -26,6 +26,7 @@ import audrey.user_data_ec2
 from audrey import setup_logging
 from audrey.main import main
 from audrey.errors import AAError
+from audrey.errors import AAErrorGetTooling
 from audrey.shell import run_cmd
 
 import tests.mocks
@@ -136,7 +137,7 @@ class TestAudreyAgentV1(unittest.TestCase):
     def test_404_from_tooling(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')
         audrey.csclient.TOOLING_URL = 'gimmie-404'
-        main()
+        self.assertRaises(AAErrorGetTooling, main)
 
     def test_404_from_provides(self):
         _write_file(CLOUD_INFO_FILE, 'EC2')

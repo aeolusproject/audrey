@@ -42,11 +42,12 @@ from tests.shell import *
 from tests.csclient import *
 from tests.user_data import *
 from tests.mocks import CLOUD_INFO_FILE
+from tests.mocks import TOOLING_DIR
 
 #### Override from config params
 audrey.agent.SLEEP_SECS = 0
 audrey.csclient.SLEEP_SECS = 0
-audrey.agent.PWD_TOOLING = 'test_tooling'
+audrey.agent.PWD_TOOLING = TOOLING_DIR
 
 audrey.tooling.TOOLING_DIR = os.path.join(
                                       os.path.abspath('.'), 'test_tooling')

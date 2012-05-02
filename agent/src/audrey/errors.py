@@ -46,3 +46,10 @@ class AAErrorPutProvides(AAError):
     Put on provides failed
     '''
     pass
+
+
+class AAErrorGetTooling(AAError):
+    pass
+
+class AAErrorMissingDelimiter(AAError):
+    pass

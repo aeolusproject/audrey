@@ -21,6 +21,7 @@ from time import sleep
 
 from audrey.errors import AAError
 from audrey.errors import AAErrorPutProvides
+from audrey.errors import AAErrorGetTooling
 from audrey.csclient import CSClient
 
 SLEEP_SECS = 10
@@ -42,16 +43,21 @@ class AgentV1(object):
         '''
         conf: argparse dict
         '''
+        tool_dir = {}
+        if 'pwd' in conf and conf['pwd']:
+            tool_dir = {'tool_dir': PWD_TOOLING}
+
         # Create the Client Object
         self.client = CSClient(**conf)
         self.client.test_connection()
 
         # Get any optional tooling from the Config Server
-        tarball = self.client.get_tooling()[1]
-        if 'pwd' in conf and conf['pwd']:
-            self.tooling = Tooling(tarball, PWD_TOOLING)
-        else:
-            self.tooling = Tooling(tarball)
+        tooling_status, tarball = self.client.get_tooling()
+        if tooling_status != 200:
+            logger.error('Get Tooling returned: %s' % tooling_status)
+            raise AAErrorGetTooling('Get Tooling returned: %s' % tooling_status)
+        
+        self.tooling = Tooling(tarball, **tool_dir)
 
     def run(self):
         '''
@@ -78,7 +84,7 @@ class AgentV1(object):
 
                 # Configure the system with the provided Required Configs
                 if config_status == 200:
-                    services = Service.parse_require_config(configs)
+                    services = Service.parse_require_config(configs, self.tooling)
                     self.tooling.invoke_tooling(services)
                     # don't do any more config status work
                     # now that the tooling has run
@@ -96,7 +102,7 @@ class AgentV1(object):
                 if get_status == 200:
                     params_values = Provides().generate_cs_str()
                 else:
-                    params_values = '||'
+                    params_values = '|&|'
 
                 # Put the requested provides with values to the Config Server
                 provides_status = self.client.put_provides(params_values)[0]
@@ -131,7 +137,8 @@ class AgentV2(AgentV1):
 
         status, provides_str = self.client.get_provides()
         if status == 200:
-            services, provides = Provides().parse_cs_str(provides_str)
+            services, provides = Provides().parse_cs_str(provides_str,
+                                                         self.tooling)
         else:
             raise AAError('HTTP %s from provides & services list' % status)
 
@@ -154,7 +161,8 @@ class AgentV2(AgentV1):
             for service in services.keys():
                 svc = services[service]
                 # Get the Required Configs from Config Server for the service
-                status = self.client.get_configs(svc.name)[0]
+                status, configs = self.client.get_configs(s.name)
+                s.parse_configs(configs)
 
                 # Configure the system with the provided Required Configs
                 if status == 202:

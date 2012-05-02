@@ -25,6 +25,8 @@ from audrey.errors import AAError
 from audrey.shell import run_cmd
 from audrey.factory import AudreyFactory
 
+from tests.mocks import TOOLING_DIR
+from tests.mocks import TARFILE
 from tests.mocks import HttpUnitTest
 from tests import _write_file
 
@@ -37,6 +39,7 @@ class TestAudreyAgentProvidesV1(unittest.TestCase):
 
     def setUp(self):
         self.factory = AudreyFactory(1)
+        self.tooling = self.factory.Tooling(TARFILE, TOOLING_DIR)
 
     def test_success_parameters(self):
         '''
@@ -48,8 +51,8 @@ class TestAudreyAgentProvidesV1(unittest.TestCase):
         src = '|operatingsystem&is_virtual|'
         expected = ['operatingsystem', 'is_virtual']
 
-        provides = self.factory.provides()
-        provides.parse_cs_str(src)
+        provides = self.factory.Provides()
+        provides.parse_cs_str(src, self.tooling)
         provides_str = provides.generate_cs_str()
         self.assertEqual(expected, provides.keys())
 
@@ -67,12 +70,11 @@ class TestAudreyAgentProvidesV1(unittest.TestCase):
           with valid demlims but empty input
         '''
         src = '||'
-        provides = self.factory.provides()
-        provides.parse_cs_str(src)
+        provides = self.factory.Provides()
+        provides.parse_cs_str(src, self.tooling)
         provides_str = provides.generate_cs_str()
         self.assertEqual(provides.keys(), [])
-        #self.assertEqual(provides.generate_cs_str(), 'audrey_data=%7C%26%7C')
-        self.assertEqual(provides.generate_cs_str(), 'audrey_data=%7C%7C')
+        self.assertEqual(provides.generate_cs_str(), 'audrey_data=%7C%26%7C')
 
     def test_success_no_provides(self):
         '''
@@ -86,8 +88,8 @@ class TestAudreyAgentProvidesV1(unittest.TestCase):
         #expected = ['uptime_days', 'unavailable_dogs', 'ipaddress']
         expected = ['ipaddress', 'uptime_days', 'unavailable_dogs']
 
-        provides = self.factory.provides()
-        provides.parse_cs_str(src)
+        provides = self.factory.Provides()
+        provides.parse_cs_str(src, self.tooling)
         provides_str = provides.generate_cs_str()
 
         # Validate results
@@ -115,8 +117,8 @@ class TestAudreyAgentProvidesV1(unittest.TestCase):
         expected = ['uptime_days']
 
         # Exersise code segment
-        provides = self.factory.provides()
-        provides.parse_cs_str(src)
+        provides = self.factory.Provides()
+        provides.parse_cs_str(src, self.tooling)
         provides_str = provides.generate_cs_str()
 
         # Validate results
@@ -139,8 +141,8 @@ class TestAudreyAgentProvidesV1(unittest.TestCase):
         src = '|unavailable_dogs|'
         expected = ['unavailable_dogs']
 
-        provides = self.factory.provides()
-        provides.parse_cs_str(src)
+        provides = self.factory.Provides()
+        provides.parse_cs_str(src, self.tooling)
         provides_str = provides.generate_cs_str()
         self.assertEqual(provides.keys(), expected)
 
@@ -164,8 +166,8 @@ class TestAudreyAgentProvidesV1(unittest.TestCase):
         src = 'unavailable_dogs|'
         expected = ['unavailable_dogs']
 
-        provides = self.factory.provides()
-        self.assertRaises(AAError, self.factory.provides().parse_cs_str, src)
+        provides = self.factory.Provides()
+        self.assertRaises(AAError, self.factory.Provides().parse_cs_str, src, self.tooling)
 
 
 class TestAudreyAgentProvidesV2(unittest.TestCase):
@@ -176,6 +178,7 @@ class TestAudreyAgentProvidesV2(unittest.TestCase):
 
     def setUp(self):
         self.factory = AudreyFactory(2)
+        self.tooling = self.factory.Tooling(TARFILE, TOOLING_DIR)
 
     def test_success_parameters(self):
         '''
@@ -187,8 +190,8 @@ class TestAudreyAgentProvidesV2(unittest.TestCase):
         src = '|operatingsystem&is_virtual|test_service&test_service2|'
         expected = ['operatingsystem', 'is_virtual']
 
-        provides = self.factory.provides()
-        provides.parse_cs_str(src)
+        provides = self.factory.Provides()
+        provides.parse_cs_str(src, self.tooling)
         provides_str = provides.generate_cs_str()
         self.assertEqual(expected, provides.keys())
 
@@ -206,12 +209,11 @@ class TestAudreyAgentProvidesV2(unittest.TestCase):
           with valid demlims but empty input
         '''
         src = '|||'
-        provides = self.factory.provides()
-        provides.parse_cs_str(src)
+        provides = self.factory.Provides()
+        provides.parse_cs_str(src, self.tooling)
         provides_str = provides.generate_cs_str()
         self.assertEqual(provides.keys(), [])
-        #self.assertEqual(provides.generate_cs_str(), 'audrey_data=%7C%26%7C')
-        self.assertEqual(provides.generate_cs_str(), 'audrey_data=%7C%7C')
+        self.assertEqual(provides.generate_cs_str(), 'audrey_data=%7C%26%7C')
 
     def test_success_no_provides(self):
         '''
@@ -225,8 +227,8 @@ class TestAudreyAgentProvidesV2(unittest.TestCase):
         #expected = ['uptime_days', 'unavailable_dogs', 'ipaddress']
         expected = ['ipaddress', 'uptime_days', 'unavailable_dogs']
 
-        provides = self.factory.provides()
-        provides.parse_cs_str(src)
+        provides = self.factory.Provides()
+        provides.parse_cs_str(src, self.tooling)
         provides_str = provides.generate_cs_str()
 
         # Validate results
@@ -254,8 +256,8 @@ class TestAudreyAgentProvidesV2(unittest.TestCase):
         expected = ['uptime_days']
 
         # Exersise code segment
-        provides = self.factory.provides()
-        provides.parse_cs_str(src)
+        provides = self.factory.Provides()
+        provides.parse_cs_str(src, self.tooling)
         provides_str = provides.generate_cs_str()
 
         # Validate results
@@ -278,8 +280,8 @@ class TestAudreyAgentProvidesV2(unittest.TestCase):
         src = '|unavailable_dogs|not_real_service|'
         expected = ['unavailable_dogs']
 
-        provides = self.factory.provides()
-        provides.parse_cs_str(src)
+        provides = self.factory.Provides()
+        provides.parse_cs_str(src, self.tooling)
         provides_str = provides.generate_cs_str()
         self.assertEqual(provides.keys(), expected)
 
@@ -303,5 +305,5 @@ class TestAudreyAgentProvidesV2(unittest.TestCase):
         src = 'unavailable_dogs|service_name'
         expected = ['unavailable_dogs']
 
-        provides = self.factory.provides()
-        self.assertRaises(AAError, provides.parse_cs_str, src)
+        provides = self.factory.Provides()
+        self.assertRaises(AAError, provides.parse_cs_str, src, self.tooling)
