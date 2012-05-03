@@ -50,14 +50,16 @@ BuildRequires:   rubygem-activesupport rubygem-nokogiri
 BuildRequires:   rubygem-oauth rubygem-rack
 BuildRequires:   rubygem-rack-test rubygem-rake
 BuildRequires:   rubygem-rspec rubygem-rspec-core
-BuildRequires:   rubygem-ruby-debug rubygem-sinatra
+BuildRequires:   rubygem-sinatra
+
+%else
+Requires:        ruby-nokogiri
 %endif
 
 Requires:        httpd
 Requires:        mod_ssl
 Requires:        puppet
 
-Requires:        ruby-nokogiri
 Requires:        rubygems
 
 Requires:        ruby(abi) = %{ruby_abi}

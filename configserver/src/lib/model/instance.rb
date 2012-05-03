@@ -489,8 +489,10 @@ module ConfigServer
       def write_configuration_file(file_data, config_dir, file_type=:executable)
         filename = file_data[:name]
         if file_type == :executable
-          open("#{config_dir}/#{filename}", "wb", 0755) do |file|
-            file << file_data[:body]
+          if filename
+            open("#{config_dir}/#{filename}", "wb", 0755) do |file|
+              file << file_data[:body]
+            end
           end
           open("#{config_dir}/start", "wb", 0755) do |file|
             file << file_data[:body]
