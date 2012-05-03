@@ -54,7 +54,7 @@ class AgentV1(object):
         # Get any optional tooling from the Config Server
         tooling_status, tarball = self.client.get_tooling()
         if tooling_status != 200:
-            logger.error('Get Tooling returned: %s' % tooling_status)
+            LOGGER.error('Get Tooling returned: %s' % tooling_status)
             raise AAErrorGetTooling('Get Tooling returned: %s' % tooling_status)
         
         self.tooling = Tooling(tarball, **tool_dir)
@@ -161,8 +161,8 @@ class AgentV2(AgentV1):
             for service in services.keys():
                 svc = services[service]
                 # Get the Required Configs from Config Server for the service
-                status, configs = self.client.get_configs(s.name)
-                s.parse_configs(configs)
+                status, configs = self.client.get_configs(svc.name)
+                svc.parse_configs(configs)
 
                 # Configure the system with the provided Required Configs
                 if status == 202:
