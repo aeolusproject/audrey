@@ -1,5 +1,6 @@
 env = ENV['RACK_ENV'].to_sym
 
+$: << "."
 require 'common_config'
 
 set :environment,         env
