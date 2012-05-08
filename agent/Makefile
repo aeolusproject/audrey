@@ -16,7 +16,7 @@
 
 AUDREY_STARTUP_CACHE_DIR	?= $(HOME)/audrey-agent-cache
 
-VERSION = 0.4.5
+VERSION = 0.4.6
 
 # For Release: 0..., set _audrey-agent_dev=1 so that we get extra_release.GIT-
 # annotated rpm version strings.

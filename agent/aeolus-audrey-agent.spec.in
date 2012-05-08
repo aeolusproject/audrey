@@ -74,17 +74,25 @@ install audrey_agent.py %{buildroot}%{_bindir}/audrey
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
   # install the sysv service script
   mkdir -p %{buildroot}/%{_initrddir}/%{name}
-  install -Dp -m755 scripts/audrey.sysv %{buildroot}%{_initrddir}/audrey
+  install -Dp -m755 scripts/audrey.sysv %{buildroot}%{_initrddir}/ZZaudrey
 else
   # install the systemd unit file
   mkdir -p %{buildroot}/%{_unitdir}/
   install -m644 scripts/audrey.service %{buildroot}/%{_unitdir}/
 fi
 
+%pre
+# this removes the audrey service
+# in prep for the ZZaudrey service
+# part of fix for BZ816104
+if [ -e %{_initrddir}/audrey ]; then
+/sbin/chkconfig --del audrey
+fi
+
 %post
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
-/sbin/chkconfig --add audrey
-/sbin/chkconfig audrey on
+/sbin/chkconfig --add ZZaudrey
+/sbin/chkconfig ZZaudrey on
 else
 /bin/systemctl enable audrey.service > /dev/null
 fi
@@ -93,7 +101,7 @@ fi
 %preun
 if [ "$1" = 0 ] ; then
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
-/sbin/chkconfig --del audrey
+/sbin/chkconfig --del ZZaudrey
 else
 /bin/systemctl disable audrey.service > /dev/null
 fi
@@ -104,13 +112,15 @@ fi
 %{_bindir}/audrey
 %{_mandir}/man8/audrey.8*
 %if 0%{?rhel} == 5 || 0%{?rhel} == 6
-%{_initrddir}/audrey
+%{_initrddir}/ZZaudrey
 %else
 %{_unitdir}/audrey.service
 %endif
 %doc COPYING
 
 %changelog
+* Tue May 08 2012 Dan Radez <dradez@redhat.com> 0.4.6-1
+- fix for BZ816104
 * Tue Mar 13 2012 Dan Radez <dradez@redhat.com> 0.4.5-1
 - update the sysv priorities to fix BZ800251
 * Mon Mar 05 2012 Dan Radez <dradez@redhat.com> 0.4.4-3
