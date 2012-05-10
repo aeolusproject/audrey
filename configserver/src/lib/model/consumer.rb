@@ -56,6 +56,12 @@ module ConfigServer
         end
       end
 
+      def delete!
+        if exists?
+          FileUtils.rm_rf(path)
+        end
+      end
+
       private
       def path
         File.join(Consumer.storage_path, key)

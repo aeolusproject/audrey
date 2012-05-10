@@ -111,6 +111,9 @@ module ConfigServer
 
       def self.delete!(uuid)
         FileUtils.rm_rf(storage_path uuid)
+        if c = Consumer.find(uuid)
+          c.delete!
+        end
       end
 
       def self.get_validator
