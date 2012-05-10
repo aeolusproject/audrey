@@ -1,4 +1,4 @@
-#
+
 #   Copyright [2011] [Red Hat, Inc.]
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,17 +75,25 @@ install -m644 audrey.8 %{buildroot}%{_mandir}/man8
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
   # install the sysv service script
   mkdir -p %{buildroot}/%{_initrddir}
-  install -Dp -m755 scripts/audrey.sysv %{buildroot}%{_initrddir}/audrey
+  install -Dp -m755 scripts/audrey.sysv %{buildroot}%{_initrddir}/ZZaudrey
 else
   # install the systemd unit file
   mkdir -p %{buildroot}/%{_unitdir}/
   install -m644 scripts/audrey.service %{buildroot}/%{_unitdir}/
 fi
 
+%pre
+# this removes the audrey service
+# in prep for the ZZaudrey service
+# part of fix for BZ816104
+if [ -e %{_initrddir}/audrey ]; then
+/sbin/chkconfig --del audrey
+fi
+
 %post
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
-/sbin/chkconfig --add audrey
-/sbin/chkconfig audrey on
+/sbin/chkconfig --add ZZaudrey
+/sbin/chkconfig ZZaudrey on
 else
 /bin/systemctl enable audrey.service > /dev/null
 fi
@@ -94,7 +102,7 @@ fi
 %preun
 if [ "$1" = 0 ] ; then
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
-/sbin/chkconfig --del audrey
+/sbin/chkconfig --del ZZaudrey
 else
 /bin/systemctl disable audrey.service > /dev/null
 fi
@@ -106,13 +114,15 @@ fi
 %{python_sitelib}/audrey/*
 %{_mandir}/man8/audrey.8*
 %if 0%{?rhel} == 5 || 0%{?rhel} == 6
-%{_initrddir}/audrey
+%{_initrddir}/ZZaudrey
 %else
 %{_unitdir}/audrey.service
 %endif
 %doc COPYING
 
 %changelog
+* Tue May 08 2012 Dan Radez <dradez@redhat.com> 0.4.6-1
+- fix for BZ816104
 * Fri Mar 16 2012 Joe VLcek <jvlcek@redhat.com> 0.4.4-4
 - Added auto cloud-info identification
 * Mon Mar 05 2012 Dan Radez <dradez@redhat.com> 0.4.4-3
