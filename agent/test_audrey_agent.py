@@ -32,6 +32,9 @@ import unittest
 import sys
 import tarfile
 
+import audrey_agent
+audrey_agent.SLEEP_SECS = 0
+
 from audrey_agent import CSClient
 from audrey_agent import ConfigTooling
 from audrey_agent import ASError

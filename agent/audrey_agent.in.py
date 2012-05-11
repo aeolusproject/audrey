@@ -57,6 +57,7 @@ from time import sleep
 from collections import deque
 from subprocess import Popen, PIPE
 
+SLEEP_SECS = 10
 EC2_USER_DATA_URL = 'http://169.254.169.254/latest/user-data'
 CLOUD_INFO_FILE = '/etc/sysconfig/cloud-info'
 
@@ -1317,6 +1318,7 @@ def audrey_script_main(client_http=None):
             exit(1)
 
     max_retry = 5
+    loop_count = 60
 
     LOGGER.info(str(cs_client))
 
@@ -1382,7 +1384,10 @@ def audrey_script_main(client_http=None):
             if max_retry < 0:
                 _raise_ASError('Too many erroneous Config Server responses.')
 
-        sleep(10)
+        if loop_count:
+            sleep(SLEEP_SECS)
+        else:
+            break
 
 if __name__ == '__main__':
 
