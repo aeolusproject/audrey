@@ -1385,6 +1385,7 @@ def audrey_script_main(client_http=None):
                 _raise_ASError('Too many erroneous Config Server responses.')
 
         if loop_count:
+            loop_count-=1
             sleep(SLEEP_SECS)
         else:
             break

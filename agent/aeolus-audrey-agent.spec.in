@@ -119,7 +119,7 @@ fi
 %doc COPYING
 
 %changelog
-* Wed May 23 2012 Dan Radez <dradez@redhat.com> 0.4.7-1
+* Wed May 23 2012 Dan Radez <dradez@redhat.com> 0.4.8-1
 - fix for BZ801861
 * Tue May 08 2012 Dan Radez <dradez@redhat.com> 0.4.6-1
 - fix for BZ816104
