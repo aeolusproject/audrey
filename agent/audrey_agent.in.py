@@ -813,6 +813,12 @@ class CSClient(object):
         client = oauth.Client(consumer, token)
         self.http = client
 
+        # BZ812915 compatibility for httplib2 0.7.x
+        # assuming we're going to be connecting to a self signed cert
+        if 'disable_ssl_certificate_validation' in dir(self.http):
+            self.http.disable_ssl_certificate_validation = True
+
+
     def __del__(self):
         '''
         Description:
@@ -986,6 +992,11 @@ def discover_config_server(cloud_info_file=CLOUD_INFO_FILE,
     # Read the file populated with Cloud back end type.
     # e.g.: CLOUD_TYPE="EC2"
     #
+
+    # BZ812915 compatibility for httplib2 0.7.x
+    # assuming we're going to be connecting to a self signed cert
+    if 'disable_ssl_certificate_validation' in dir(http):
+        http.disable_ssl_certificate_validation = True
 
     def _parse_user_data(data, condor=None):
         '''
