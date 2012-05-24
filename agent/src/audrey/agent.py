@@ -69,6 +69,7 @@ class AgentV1(object):
         provides_status = -1
 
         max_retry = MAX_RETRY
+        loop_count = 60
         services = []
 
         # Process the Requires and Provides parameters until the HTTP status
@@ -120,7 +121,11 @@ class AgentV1(object):
                 if max_retry < 0:
                     raise AAError('Too many 404 Config Server responses.')
 
-            sleep(SLEEP_SECS)
+            if loop_count:
+                loop_count-=1
+                sleep(SLEEP_SECS)
+            else:
+                break
 
 
 class AgentV2(AgentV1):
