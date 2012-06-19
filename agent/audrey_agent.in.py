@@ -50,6 +50,7 @@ import sys
 import tarfile
 import tarfile as tf # To simplify exception names.
 import tempfile
+import time
 import urllib
 import oauth2 as oauth
 
@@ -976,6 +977,50 @@ class CSClient(object):
 
         return response.status, self.tarball
 
+def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
+    """Retry calling the decorated function using an exponential backoff.
+
+    http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
+    original from: http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
+
+    :param ExceptionToCheck: the exception to check. may be a tuple of
+        excpetions to check
+    :type ExceptionToCheck: Exception or tuple
+    :param tries: number of times to try (not retry) before giving up
+    :type tries: int
+    :param delay: initial delay between retries in seconds
+    :type delay: int
+    :param backoff: backoff multiplier e.g. value of 2 will double the delay
+        each retry
+    :type backoff: int
+    :param logger: logger to use. If None, print
+    :type logger: logging.Logger instance
+    """
+    def deco_retry(f):
+        def f_retry(*args, **kwargs):
+            mtries, mdelay = tries, delay
+            try_one_last_time = True
+            while mtries > 1:
+                try:
+                    return f(*args, **kwargs)
+                    try_one_last_time = False
+                    break
+                except ExceptionToCheck, e:
+                    msg = "%s, Retrying in %d seconds..." % (str(e), mdelay)
+                    if logger:
+                        logger.warning(msg)
+                    else:
+                        print msg
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            if try_one_last_time:
+                return f(*args, **kwargs)
+            return
+        return f_retry  # true decorator
+    return deco_retry
+
+@retry(Exception, tries=7)
 def discover_config_server(cloud_info_file=CLOUD_INFO_FILE,
                            condor_addr_file=CONDORCLOUD_CS_ADDR,
                            condor_uuid_file=CONDORCLOUD_CS_UUID,
@@ -1134,8 +1179,9 @@ def discover_config_server(cloud_info_file=CLOUD_INFO_FILE,
                 return _parse_user_data(line)
             finally:
                 fp.close()
-        except:
-            _raise_ASError('Failed accessing RHEVm user data.')
+        except Exception, e:
+            _raise_ASError('Failed accessing RHEVm user data: %s' % e)
+
 
     elif 'VSPHERE' in cloud_type:
         #
