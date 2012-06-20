@@ -80,8 +80,8 @@ class UserData(UserDataBase):
             user_data_file = open(DELTA_CLOUD_USER_DATA, 'r')
             user_data = user_data_file.read().strip()
             user_data_file.close()
-        except:
-            raise AAError('Failed accessing RHEVm user data file.')
+        except Exception, e:
+            raise AAError('Failed accessing RHEVm user data: %s' % e)
 
         if '|' not in user_data:
             user_data = base64.b64decode(user_data)
