@@ -185,6 +185,8 @@ fi
 %doc COPYING
 
 %changelog
+* Fri Jun 29 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.9-1
+- https://bugzilla.redhat.com/show_bug.cgi?id=809181
 * Thu Apr 12 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.8-1
 - Fixes provided by jlaska@redhat.com for BZ 812107
 - https://bugzilla.redhat.com/show_bug.cgi?id=812107
