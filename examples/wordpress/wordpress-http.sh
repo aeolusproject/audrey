@@ -1,42 +1,38 @@
-#!/usr/bin/python
+#!/bin/bash
 
-import os
-import subprocess
+# Dump the working environment environment to a log file (useful for debugging)
+env > /var/log/audrey_environment.log
 
-# 2012-07-03 JC Set SELinux to permissive mode
-subprocess.call(["/usr/sbin/setenforce", "Permissive"])
-conf = open('/etc/selinux/config', 'w')
-conf.write('SELINUX=permissive\n')
-conf.write('SELINUXTYPE=targeted\n')
-conf.close()
+# Add the MySQL node's settings to the Wordpress configuration file
+sed -i -e "s/database_name_here/${AUDREY_VAR_http_wp_name}/" /etc/wordpress/wp-config.php
+sed -i -e "s/username_here/${AUDREY_VAR_http_wp_user}/" /etc/wordpress/wp-config.php
+sed -i -e "s/password_here/${AUDREY_VAR_http_wp_pw}/" /etc/wordpress/wp-config.php
+sed -i -e "s/localhost/${AUDREY_VAR_http_mysql_ip}/" /etc/wordpress/wp-config.php
 
-# get the pre rpm's wp conf
-conf = open('/etc/wordpress/wp-config.php', 'r')
-lines = conf.readlines()
-conf.close()
+# Let Apache use remote databases (an SELinux permission)
+/usr/sbin/setsebool -P httpd_can_network_connect_db 1
 
-# get the audrey vars
-wp_keys = {'database_name_here': 'AUDREY_VAR_http_wp_name',
-           'username_here': 'AUDREY_VAR_http_wp_user',
-           'password_here': 'AUDREY_VAR_http_wp_pw',
-           'localhost': 'AUDREY_VAR_http_mysql_ip'}
+# Start the Apache http daemon
+/sbin/service httpd start
 
-# map the wp key values in to the config
-def sub_wp_values(line):
-  for key, val in wp_keys.items():
-    line = line.replace(key, os.environ[val])
-  return line
+# Figure out which virtualisation platform we're running on
+if [ -f /etc/sysconfig/cloud-info ]
+then
+  source /etc/sysconfig/cloud-info
+fi
 
-lines = map(sub_wp_values, lines)
+# Retrieve an IP address people can connect to
+if [ "$CLOUD_TYPE" = "ec2" ]
+then
+  # We're running in EC2, so get the public address
+  HOSTADDRESS=`/usr/bin/facter ec2_public_hostname`
+else
+  # We're not running in EC2, so just grab any ip address
+  HOSTADDRESS=`/usr/bin/facter ipaddress`
+fi
 
-# write the conf file back out
-conf = open('/etc/wordpress/wp-config.php', 'w')
-conf.write("".join(lines))
-conf.close()
+# Run the Wordpress installer, passing all the values it needs
+curl -d "weblog_title=AudreyFTW&user_name=admin&admin_password=admin&admin_password2=admin&admin_email=admin@example.com&blog_public=0" "http://${HOSTADDRESS}/wordpress/wp-admin/install.php?step=2" > /var/log/audrey_curl.log
 
-# be sure apache is running
-subprocess.call(["/sbin/service", "httpd", "start"])
-
-# Run the Wordpress installer
-hostname = subprocess.check_output(["/usr/bin/facter", "ec2_public_hostname"]).strip()
-subprocess.call(["curl", "-d", "weblog_title=AudreyFTW&user_name=admin&admin_password=admin&admin_password2=admin&admin_email=admin@example.com&blog_public=0", "http://%s/wordpress/wp-admin/install.php?step=2" % hostname])
+# Print useful info to the Audrey log
+echo Wordpress should now be available at http://${HOSTADDRESS}/wordpress
