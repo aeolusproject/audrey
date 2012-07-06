@@ -1,49 +1,36 @@
-<deployable version="1.0" name="Wordpress Multi-Instance Deployable">
+<deployable name="Wordpress Multi-Instance Deployable">
   <description>This is an example of a multi deployment that deploys wordpress across an apache and mysql instance</description>
   <assemblies>
-    <assembly name="apache" hwp="hwp1">
-      <image id="APACHE_IMAGE_ID"/>
+    <assembly hwp="small-x86_64" name="apache">
+      <image id="APACHE_INSTANCE_ID"/>
       <services>
         <service name="http">
-          <executable url="https://github.com/aeolusproject/audrey/raw/master/examples/wordpress/wordpress-http.sh"/>
+          <!-- This script file is executed on the Apache node, after the MySQL node -->
+          <!-- finishes running it's database setup script (as per comments below in -->
+          <!-- its section).  On this node, the script runs Wordpress's installer,   -->
+          <!-- giving it the MySQL database connection details, and some other basic -->
+          <!-- parameters. -->
+          <executable url="https://raw.github.com/justinclift/audrey/master/examples/wordpress/wordpress-http.sh"/>
           <parameters>
-            <parameter name="wp_name" type="scalar">
+            <parameter name="wp_name">
                 <value>wordpress</value>
             </parameter>
-            <parameter name="wp_user" type="scalar">
+            <parameter name="wp_user">
                 <value>wordpress</value>
             </parameter>
-            <parameter name="wp_pw" type="scalar">
+            <parameter name="wp_pw">
                 <value>wordpress</value>
             </parameter>
-            <parameter name="mysql_ip" type="scalar">
+            <parameter name="mysql_ip">
               <reference assembly="mysql" parameter="ipaddress"/>
             </parameter>
-            <parameter name="mysql_hostname" type="scalar">
+            <parameter name="mysql_hostname">
               <reference assembly="mysql" parameter="hostname"/>
             </parameter>
-            <parameter name="mysql_dbup" type="scalar">
+            <parameter name="mysql_dbup">
               <reference assembly="mysql" parameter="dbup"/>
             </parameter>
           </parameters>
-        </service>
-        <service name="pubkey">
-          <executable>
-            <contents><![CDATA[#!/bin/bash
-                mkdir -p /root/.ssh
-                chmod 700 /root/.ssh
-                cat pubkey >> /root/.ssh/authorized_keys
-                chmod 600 /root/.ssh/authorized_keys
-              ]]>
-            </contents>
-          </executable>
-          <files>
-            <file>
-              <contents filename="pubkey">
-                pubkey contents
-              </contents>
-            </file>
-          </files>
         </service>
       </services>
       <returns>
@@ -51,49 +38,35 @@
         <return name="ipaddress"/>
       </returns>
     </assembly>
-    <assembly name="mysql" hwp="hwp1">
-      <image id="MYSQL_IMAGE_ID"/>
+    <assembly hwp="small-x86_64" name="mysql">
+      <image id="MYSQLD_INSTANCE_ID"/>
       <services>
         <service name="mysql">
-          <executable url="https://github.com/aeolusproject/audrey/raw/master/examples/wordpress/wordpress-mysql.sh"/>
+          <!-- This script file is executed on the MySQL node.  It creates the "wordpress" -->
+          <!-- user in the MySQL database, and an empty "wordpress" database owned by it.  -->
+          <!-- When this script has finished, Audrey then goes on to configure the apache  -->
+          <!-- node (above). -->
+          <executable url="https://raw.github.com/justinclift/audrey/master/examples/wordpress/wordpress-mysql.sh"/>
           <files>
-            <file url="https://github.com/aeolusproject/audrey/raw/master/examples/wordpress/dbup.rb"/>
+            <file url="https://raw.github.com/justinclift/audrey/master/examples/wordpress/dbup.rb"/>
           </files>
           <parameters>
-            <parameter name="wp_name" type="scalar">
+            <parameter name="wp_name">
                 <value>wordpress</value>
             </parameter>
-            <parameter name="wp_user" type="scalar">
+            <parameter name="wp_user">
                 <value>wordpress</value>
             </parameter>
-            <parameter name="wp_pw" type="scalar">
+            <parameter name="wp_pw">
                 <value>wordpress</value>
             </parameter>
-            <parameter name="apache_ip" type="scalar">
+            <parameter name="apache_ip">
               <reference assembly="apache" parameter="ipaddress"/>
             </parameter>
-            <parameter name="apache_hostname" type="scalar">
+            <parameter name="apache_hostname">
               <reference assembly="apache" parameter="hostname"/>
             </parameter>
           </parameters>
-        </service>
-        <service name="pubkey">
-          <executable>
-            <contents><![CDATA[#!/bin/bash
-                mkdir -p /root/.ssh
-                chmod 700 /root/.ssh
-                cat pubkey >> /root/.ssh/authorized_keys
-                chmod 600 /root/.ssh/authorized_keys
-              ]]>
-            </contents>
-          </executable>
-          <files>
-            <file>
-              <contents filename="pubkey">
-                pubkey contents
-              </contents>
-            </file>
-          </files>
         </service>
       </services>
       <returns>

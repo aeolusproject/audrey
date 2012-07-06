@@ -3,6 +3,13 @@
 import os
 import subprocess
 
+# 2012-07-03 JC Set SELinux to permissive mode
+subprocess.call(["/usr/sbin/setenforce", "Permissive"])
+conf = open('/etc/selinux/config', 'w')
+conf.write('SELINUX=permissive\n')
+conf.write('SELINUXTYPE=targeted\n')
+conf.close()
+
 # get the pre rpm's wp conf
 conf = open('/etc/wordpress/wp-config.php', 'r')
 lines = conf.readlines()
@@ -30,6 +37,6 @@ conf.close()
 # be sure apache is running
 subprocess.call(["/sbin/service", "httpd", "start"])
 
-# complete the wp installation
+# Run the Wordpress installer
 hostname = subprocess.check_output(["/usr/bin/facter", "ec2_public_hostname"]).strip()
 subprocess.call(["curl", "-d", "weblog_title=AudreyFTW&user_name=admin&admin_password=admin&admin_password2=admin&admin_email=admin@example.com&blog_public=0", "http://%s/wordpress/wp-admin/install.php?step=2" % hostname])
