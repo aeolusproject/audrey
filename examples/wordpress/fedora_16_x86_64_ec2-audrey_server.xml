@@ -1,5 +1,5 @@
 <template>
-  <name>ec2_audrey_server</name>
+  <name>audrey_server</name>
   <description>Audrey Config Server, running on Fedora 16</description>
   <os>
     <name>Fedora</name>

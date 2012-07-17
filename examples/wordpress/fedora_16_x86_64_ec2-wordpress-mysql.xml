@@ -1,5 +1,5 @@
 <template>
-  <name>ec2_mysql</name>
+  <name>mysql</name>
   <description>MySQL daemon</description>
   <os>
     <name>Fedora</name>
@@ -42,7 +42,7 @@
   <commands>
 
     <!-- Installs the Audrey Agent on this node, so post startup configuration can be done -->
-    <command name="install-audrey-agent">yum install -y --enablerepo=updates-testing aeolus-audrey-agent</command>
+    <command name="install-audrey-agent">yum install -y aeolus-audrey-agent</command>
 
     <!-- This pulls in updated Fedora packages.  Practically mandatory  -->
     <!-- in any real world deployment. :>                               -->
