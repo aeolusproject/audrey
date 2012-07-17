@@ -10,7 +10,7 @@
           <!-- its section).  On this node, the script runs Wordpress's installer,   -->
           <!-- giving it the MySQL database connection details, and some other basic -->
           <!-- parameters. -->
-          <executable url="https://raw.github.com/justinclift/audrey/master/examples/wordpress/wordpress-http.sh"/>
+          <executable url="https://raw.github.com/aeolusproject/audrey/master/examples/wordpress/wordpress-http.sh"/>
           <parameters>
             <parameter name="wp_name">
                 <value>wordpress</value>
@@ -46,9 +46,9 @@
           <!-- user in the MySQL database, and an empty "wordpress" database owned by it.  -->
           <!-- When this script has finished, Audrey then goes on to configure the apache  -->
           <!-- node (above). -->
-          <executable url="https://raw.github.com/justinclift/audrey/master/examples/wordpress/wordpress-mysql.sh"/>
+          <executable url="https://raw.github.com/aeolusproject/audrey/master/examples/wordpress/wordpress-mysql.sh"/>
           <files>
-            <file url="https://raw.github.com/justinclift/audrey/master/examples/wordpress/dbup.rb"/>
+            <file url="https://raw.github.com/aeolusproject/audrey/master/examples/wordpress/dbup.rb"/>
           </files>
           <parameters>
             <parameter name="wp_name">
