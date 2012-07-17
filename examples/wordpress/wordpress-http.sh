@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Dump the working environment environment to a log file (useful for debugging)
+# Dump the working environment to a log file (useful for debugging)
 env > /var/log/audrey_environment.log
 
 # Add the MySQL node's settings to the Wordpress configuration file
