@@ -39,7 +39,7 @@
       </returns>
     </assembly>
     <assembly hwp="small-x86_64" name="mysql">
-      <image id="MYSQLD_IMAGE_ID"/>
+      <image id="MYSQL_IMAGE_ID"/>
       <services>
         <service name="mysql">
           <!-- This script file is executed on the MySQL node.  It creates the "wordpress" -->
