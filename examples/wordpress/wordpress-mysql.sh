@@ -1,20 +1,14 @@
-#!/usr/bin/python
+#!/bin/bash
 
-import os
-import subprocess
-import shutil
+# Start the MySQL daemon
+/sbin/service mysqld start
 
-subprocess.call(["/sbin/service", "mysqld", "start"])
-subprocess.call(["/usr/bin/mysql", "-u", "root", "-e", 
-                 'create database %s;' % os.environ['AUDREY_VAR_mysql_wp_name']])
-subprocess.call(["/usr/bin/mysql", "-u", "root", "-e", 
-                 "grant all on %s.* to %s@%s;" % (
-                 os.environ['AUDREY_VAR_mysql_wp_name'],
-                 os.environ['AUDREY_VAR_mysql_wp_user'],
-                 os.environ['AUDREY_VAR_mysql_apache_ip'] ) ] )
-subprocess.call(["/usr/bin/mysql", "-u", "root", "-e", 
-                 "set password for %s@%s = password('%s');" % (
-                 os.environ['AUDREY_VAR_mysql_wp_user'],
-                 os.environ['AUDREY_VAR_mysql_apache_ip'],
-                 os.environ['AUDREY_VAR_mysql_wp_pw'] ) ] )
-shutil.copyfile('dbup.rb', '/usr/lib/ruby/site_ruby/1.8/facter/dbup.rb')
+# Create an empty database for Wordpress to use
+/usr/bin/mysql -u root -e "create database ${AUDREY_VAR_mysql_wp_name}"
+
+# Set up MySQL access controls, so the Apache server can get to the database
+/usr/bin/mysql -u root -e "grant all on ${AUDREY_VAR_mysql_wp_name}.* to ${AUDREY_VAR_mysql_wp_user}@${AUDREY_VAR_mysql_apache_ip};"
+/usr/bin/mysql -u root -e "set password for ${AUDREY_VAR_mysql_wp_user}@${AUDREY_VAR_mysql_apache_ip} = password('${AUDREY_VAR_mysql_wp_pw}');"
+
+# Copy the dbup.rb file to the required location
+cp -f dbup.rb /usr/lib/ruby/site_ruby/1.8/facter/dbup.rb

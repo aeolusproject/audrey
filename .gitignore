@@ -12,3 +12,4 @@ configserver/pkg/*
 configserver/src/coverage/
 configserver/src/common_config.rb
 configserver/aeolus-configserver.spec
+.DS_Store

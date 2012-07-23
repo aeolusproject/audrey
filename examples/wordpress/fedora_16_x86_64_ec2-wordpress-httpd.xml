@@ -1,0 +1,59 @@
+<template>
+  <name>apache</name>
+  <description>Apache httpd server, running on Fedora 16</description>
+  <os>
+    <name>Fedora</name>
+    <version>16</version>
+    <arch>x86_64</arch>
+    <install type="url">
+
+      <!-- This is the Fedora 16 base repository -->
+      <url>http://download.fedoraproject.org/pub/fedora/linux/releases/16/Everything/x86_64/os/</url>
+
+      <!-- Note that only a base package installation is done. -->
+      <!-- No yum updates are automatically applied.  If you   -->
+      <!-- want updates (and you do! :>), you'll need to have  -->
+      <!-- a "yum update -y" in the command list below.        -->
+
+    </install>
+
+    <!-- The password for the root user.  You can use this to  -->
+    <!-- log in remotely if desired.                           -->
+    <rootpw>p@ssw0rd</rootpw>
+
+  </os>
+
+
+  <!-- After the main OS has been installed, the packages below are installed --> 
+  <!-- in a separate step.  It takes into account the repositories in         -->
+  <!-- /etc/yum.repos.d/, unlike the base OS installation which doesn't.      -->
+
+  <packages>
+
+    <!-- These packages install Wordpress on this node.  In theory, just specifying -->
+    <!-- "wordpress" should be good enough.  In reality, that didn't consistently   -->
+    <!-- work for me.  Specifying httpd, php-gettext, and wordpress does.           -->
+    <!-- Note though, that could just be due to some unknown transient repo error   -->
+    <!-- or something. -->
+    <package name="httpd"/>
+    <package name="php-gettext"/>
+    <package name="wordpress"/>
+
+  </packages>
+
+
+  <!-- After the above packages have been installed, -->
+  <!-- the commands below are run, in order.         -->
+
+  <commands>
+
+    <!-- Installs the Audrey Agent on this node, so post startup configuration can be done -->
+    <command name="install-audrey-agent">yum install -y aeolus-audrey-agent</command>
+
+    <!-- This pulls in updated Fedora packages.  Practically mandatory  -->
+    <!-- in any real world deployment. :>                               -->
+    <command name="yum-update">yum update -y</command>
+
+  </commands>
+
+</template>
