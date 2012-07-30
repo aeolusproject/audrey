@@ -169,6 +169,9 @@ install -m 0644 \
 install configure/bin/config_httpd.sh \
     %{buildroot}%{_bindir}/aeolus-configserver-setup
 
+install conf/aeolus-configserver-thinwrapper \
+    %{buildroot}%{_bindir}/aeolus-configserver-thinwrapper
+
 # copy the generated man page from the buildroot
 install -m 0644 aeolus-configserver-setup.8 %{buildroot}%{_mandir}/man8
 
@@ -237,6 +240,7 @@ fi
 %{app_root}/lib/model/service.rb
 
 %{_bindir}/aeolus-configserver-setup
+%{_bindir}/aeolus-configserver-thinwrapper
 %dir %{_sysconfdir}/%{name}
 
 %if 0%{?rhel}
@@ -256,6 +260,7 @@ fi
 %changelog
 * Tue Mar 13 2012 Joe VLcek <jvlcek@redhat.com> 0.5.0-0
 - Convert init scripts to sysV and systemd
+- https://bugzilla.redhat.com/show_bug.cgi?id=833660
 * Mon Mar 05 2012 Dan Radez <dradez@redhat.com> 0.4.6-1
 - https://bugzilla.redhat.com/show_bug.cgi?id=798787
 - chkconfig on for http and configserver

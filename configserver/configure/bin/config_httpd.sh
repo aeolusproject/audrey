@@ -165,7 +165,6 @@ cat <<yaml
 classes:
     - apache::base
     - apache::ssl
-    - apache::auth
     - configserver
 parameters:
     conductor_key: ${conductor_key}
