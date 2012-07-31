@@ -505,9 +505,16 @@ module ConfigServer
             file << file_data[:body]
           end
         end
+
+        # create a symlink for the original_name of the file if the original
+        # name is different from the filename
+        original_name = file_data[:original_name]
+        if original_name and filename != original_name
+          FileUtils.symlink("#{config_dir}/#{filename}", "#{config_dir}/#{original_name}")
+        end
       end
 
-      def download_file(url)
+      def download_file(url, original_name=nil, redirects=0)
         result = {}
         uri = URI.parse(url)
         http = Net::HTTP.new(uri.host, uri.port)
@@ -518,9 +525,23 @@ module ConfigServer
         request = Net::HTTP::Get.new(uri.path)
         response = http.start {|h| h.request(request) }
         result[:code] = response.code
+        name = uri.path.split('/').last
         if "200" == response.code.to_s
-          result[:name] = uri.path.split('/').last
+          # if this was a redirect, original name represents the filename from
+          # the original URL
+          result[:original_name] = original_name if original_name
+          result[:name] = name
           result[:body] = response.body
+        elsif response.kind_of? Net::HTTPRedirection
+          unless redirects > 10 # allow 10 redirects before dying
+            redirect_url = if response['location'].nil?
+              response.body.match(/<a href=\"([^>]+)\">/i)[1]
+            else
+              response['location']
+            end
+            original_name ||= name
+            return download_file(redirect_url, original_name, redirects + 1)
+          end
         end
         result
       end
