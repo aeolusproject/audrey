@@ -511,7 +511,10 @@ module ConfigServer
         result = {}
         uri = URI.parse(url)
         http = Net::HTTP.new(uri.host, uri.port)
+        # use ssl if necessary
         http.use_ssl = uri.port == 443
+        http.verify_mode = OpenSSL::SSL::VERIFY_NONE if http.use_ssl
+
         request = Net::HTTP::Get.new(uri.path)
         response = http.start {|h| h.request(request) }
         result[:code] = response.code
