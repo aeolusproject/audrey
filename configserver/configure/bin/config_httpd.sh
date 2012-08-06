@@ -82,7 +82,7 @@ puppetclass="ssl"
 root_context="/"
 if [ -d "/etc/httpd/conf.d/aeolus-conductor.d" ]; then
     puppetclass="conductor"
-    root_context="configserver"
+    root_context="/configserver/"
 else
     echo "$PREAMBLE"
     echo -n "Do you wish to continue [y/N]: "
@@ -110,32 +110,6 @@ conductor_key=`</dev/urandom tr -dc 0-9 | head -c24`
 conductor_secret=`</dev/urandom tr -dc A-Za-z0-9 | head -c48`
 
 
-# Collect the Config Server application URL
-URL_INFO="""
-
-Please provide the web application URL where the Config Server is currently
-running on this server.  If the Config Server was installed from an RPM, then
-this will typically be:
-
-  http://localhost:4567/
-
-The provided URL should be a fully qualified URL, providing the scheme,
-hostname, and port:  http://HOSTNAME:PORT/
-
-"""
-echo "$URL_INFO"
-echo -n "Enter the application URL [http://localhost:4567/]: "
-read app_url
-if [ "x$app_url" == "x" ]; then
-    app_url="http://localhost:4567/"
-fi
-
-echo "Root context: $root_context"
-echo "App URL: $app_url"
-echo "Conductor Auth Key: $conductor_key"
-echo "Conductor Auth Secret: $conductor_secret"
-echo "\n\n*** You need to add this config server information to a ***"
-echo "*** provider account in conductor.                      ***"
 manifest_file=$(mktemp)
 manifest="""#!/bin/sh
 
@@ -147,15 +121,24 @@ classes:
 parameters:
     conductor_key: ${conductor_key}
     conductor_secret: ${conductor_secret}
-    proxy_type: \"apache\"
     config_server_context: ${root_context}
-    config_server_url: ${app_url}
+    config_server_url: http://localhost:4567/
 yaml"""
 echo "$manifest" > $manifest_file
 chmod 755 $manifest_file
 
-echo "running: echo | $PUPPET --modulepath $MODULE_PATH --external_nodes $manifest_file\
+echo -e "\nrunning: echo | $PUPPET --modulepath $MODULE_PATH --external_nodes $manifest_file\
  --node_terminus exec"
 
 echo | $PUPPET --modulepath $MODULE_PATH --external_nodes $manifest_file \
  --node_terminus exec
+
+endpoint="https://FQDN${root_context} (where FQDN is the fully qualified domain name of this server)"
+
+echo -e "\n********************************"
+echo -n "Use the following information in Conductor to register this "
+echo -e "configserver with a provider account.\n"
+echo "Endpoint:  $endpoint"
+echo "Key:       $conductor_key"
+echo "Secret:    $conductor_secret"
+echo "********************************"

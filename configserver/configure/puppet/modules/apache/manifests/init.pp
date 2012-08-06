@@ -131,7 +131,6 @@ class apache {
       ensure => present,
       content => template("apache/dropfile.erb"),
       require => Package["apache"],
-      require => Exec["graceful-apache"],
       notify => Exec["graceful-apache"],
     }
   }
