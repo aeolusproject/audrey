@@ -12,6 +12,8 @@ NameVirtualHost *:443
 
   ProxyRequests off
 
+  Include conf.d/cs443/*.conf
+
   Alias /examples "/usr/share/aeolus-configserver/examples"
   <Directory "/usr/share/aeolus-configserver/examples">
     Options +Indexes
@@ -27,6 +29,5 @@ NameVirtualHost *:443
   ProxyPassReverse /icons/ !
   ProxyPassReverse /examples !
 
-  Include conf.d/cs443/*.conf
 
 </VirtualHost>

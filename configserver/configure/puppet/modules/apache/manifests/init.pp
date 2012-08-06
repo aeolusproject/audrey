@@ -14,27 +14,16 @@ class apache {
       ''        => 'http://localhost:4567/',
       default   => $config_server_url
     }
-    $proxy_type = $proxy_type ? {
-      ''        => 'apache',
-      default   => $proxy_type
-    }
-
   }
 
-  class base {
+  class packages {
     package { "apache":
       name => "httpd",
       ensure => installed,
     }
+  }
 
-    exec { "permit-http-networking":
-      command   => "/usr/sbin/setsebool -P httpd_can_network_connect 1",
-      logoutput => true,
-      unless    => "/usr/bin/test 'Disabled' = `/usr/sbin/getenforce`",
-      require   => Package["apache"],
-      notify    => Exec["graceful-apache"],
-    }
-
+  class service {
     exec { "graceful-apache":
       command => "/sbin/service httpd graceful",
       refreshonly => true,
@@ -42,8 +31,26 @@ class apache {
     }
   }
 
+  class selinux {
+    exec { "permit-http-networking":
+      command   => "/usr/sbin/setsebool -P httpd_can_network_connect 1",
+      logoutput => true,
+      unless    => "/usr/bin/test 'Disabled' = `/usr/sbin/getenforce`",
+      require   => Package["apache"],
+      notify    => Exec["graceful-apache"],
+    }
+  }
+
+  class base {
+    include apache::packages
+    include apache::service
+    include apache::selinux
+  }
+
+
   class ssl {
     include apache::variables
+    include apache::base
 
     $pk_file="/etc/pki/tls/private/config-server.key"
     $cert_file="/etc/pki/tls/config-server.crt"
@@ -110,6 +117,22 @@ class apache {
       onlyif    => "/usr/bin/test `/bin/grep -E 'dport (https|443)' /etc/sysconfig/iptables | /usr/bin/wc -l` -eq 0",
       require => [Package["apache"], Exec["config-iptables-for-443"]],
       notify  => Exec["graceful-apache"]
+    }
+  }
+
+  class conductor {
+    include apache::variables
+    include apache::packages
+    include apache::service
+
+    file { "configserver-drop-file":
+      name => "/etc/httpd/conf.d/aeolus-conductor.d/configserver.conf",
+      mode => 0644, owner => root, group => root,
+      ensure => present,
+      content => template("apache/dropfile.erb"),
+      require => Package["apache"],
+      require => Exec["graceful-apache"],
+      notify => Exec["graceful-apache"],
     }
   }
 

@@ -1,0 +1,19 @@
+
+<% context = scope.lookupvar("apache::variables::config_server_context") %>
+<% context = "/#{context}" unless context.start_with? "/" %>
+<% app_url = scope.lookupvar("apache::variables::config_server_url") %>
+
+Alias <%= context %>/examples "/usr/share/aeolus-configserver/examples"
+<Directory "/usr/share/aeolus-configserver/examples">
+  Options +Indexes
+</Directory>
+
+# for directory listing in examples dir
+Alias /icons/ "/var/www/icons/"
+
+ProxyPass /examples !
+ProxyPass /icons/ !
+ProxyPass <%= context %> <%= app_url %>
+ProxyPassReverse <%= context %> <%= app_url %>
+ProxyPassReverse /icons/ !
+ProxyPassReverse /examples !

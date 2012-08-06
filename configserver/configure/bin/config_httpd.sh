@@ -77,35 +77,31 @@ if [ "x$PUPPET" == "x" ]; then
     exit 1
 fi
 
-echo "$PREAMBLE"
-echo -n "Do you wish to continue [y/N]: "
-if isatty ; then
-    while read keep_going ; do
-        if [[ $keep_going == [Yy] ]]; then
-            break
-        elif [[ $keep_going == [Nn] ]] || [[ "n$keep_going" == "n" ]]; then
-            # catches the "empty" answer and defaults to "no"
-            exit 1
-        else
-            echo -n "Do you wish to continue [y/N]: "
-            continue
-        fi
-    done
+## is this config server being installed alongside a conductor installation?
+puppetclass="ssl"
+root_context="/"
+if [ -d "/etc/httpd/conf.d/aeolus-conductor.d" ]; then
+    puppetclass="conductor"
+    root_context="configserver"
 else
-    echo y
+    echo "$PREAMBLE"
+    echo -n "Do you wish to continue [y/N]: "
+    if isatty ; then
+        while read keep_going ; do
+            if [[ $keep_going == [Yy] ]]; then
+                break
+            elif [[ $keep_going == [Nn] ]] || [[ "n$keep_going" == "n" ]]; then
+                # catches the "empty" answer and defaults to "no"
+                exit 1
+            else
+                echo -n "Do you wish to continue [y/N]: "
+                continue
+            fi
+        done
+    else
+        echo y
+    fi
 fi
-
-
-PREAMBLE2="""
-There are a few pieces of information to collect.  Some of the information
-provides default values. The default values are enclosed in square brackets
-after the propmt, such as:
-
-  Enter the root context [/]:
-
-In this case, "/" is the default used for the root context.
-
-"""
 
 # Generate OAuth key and secret for conductor
 # the argument to -dc is the characters to choose from
@@ -113,22 +109,6 @@ In this case, "/" is the default used for the root context.
 conductor_key=`</dev/urandom tr -dc 0-9 | head -c24`
 conductor_secret=`</dev/urandom tr -dc A-Za-z0-9 | head -c48`
 
-# Collect the Config Server application context
-CONTEXT_INFO="""
-
-Please provide the web application root context for the Config Server.  This is
-the context that clients will use to access the Config Server.  For instance, if
-the root context is "configserver", then the URL for the Config Server will be:
-
-  https://\$HOSTNAME:443/configserver
-
-"""
-#echo "$CONTEXT_INFO"
-#echo -n "Enter the root context [/]: "
-#read root_context
-if [ "x$root_context" == "x" ]; then
-    root_context="/"
-fi
 
 # Collect the Config Server application URL
 URL_INFO="""
@@ -157,15 +137,12 @@ echo "Conductor Auth Secret: $conductor_secret"
 echo "\n\n*** You need to add this config server information to a ***"
 echo "*** provider account in conductor.                      ***"
 manifest_file=$(mktemp)
-
 manifest="""#!/bin/sh
 
 cat <<yaml
 ---
 classes:
-    - apache::base
-    - apache::ssl
-    - apache::auth
+    - apache::${puppetclass}
     - configserver
 parameters:
     conductor_key: ${conductor_key}
