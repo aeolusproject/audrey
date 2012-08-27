@@ -24,7 +24,7 @@ require 'rake/clean'
 require 'rubygems'
 require 'rubygems/package_task'
 
-version = '0.4.9'
+version = '0.4.10'
 man_section = '8'
 pkg_name = 'aeolus-configserver'
 

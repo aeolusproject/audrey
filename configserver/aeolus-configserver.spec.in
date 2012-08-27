@@ -128,6 +128,7 @@ install -m 0644 \
     configure/puppet/modules/apache/templates/vhost443.erb \
     configure/puppet/modules/apache/templates/vhost80.erb \
     configure/puppet/modules/apache/templates/vhost.erb \
+    configure/puppet/modules/apache/templates/dropfile.erb \
     %{buildroot}%{app_root}/configure/puppet/modules/apache/templates
 
 install -d \
@@ -185,6 +186,12 @@ fi
 %doc COPYING
 
 %changelog
+* Tue Aug 07 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.10-1
+- https://bugzilla.redhat.com/show_bug.cgi?id=782922
+- https://bugzilla.redhat.com/show_bug.cgi?id=806053
+- https://bugzilla.redhat.com/show_bug.cgi?id=819673
+- https://bugzilla.redhat.com/show_bug.cgi?id=751088
+- https://bugzilla.redhat.com/show_bug.cgi?id=828519
 * Fri Jun 29 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.9-1
 - https://bugzilla.redhat.com/show_bug.cgi?id=809181
 * Thu Apr 12 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.8-1
