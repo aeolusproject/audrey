@@ -74,6 +74,11 @@ Requires(post):  chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
 
+%if 0%{?fedora} >= 17
+Requires(post):  systemd-units
+Requires(preun): systemd-units
+%endif
+
 BuildArch:      noarch
 
 %description
@@ -193,18 +198,28 @@ getent passwd aeolus >/dev/null || \
   chkconfig %{name} on
   chkconfig httpd on
 %else
-  systemctl enable %{name}.service > /dev/null
+  %if 0%{?fedora} <= 17
+      if [ $1 -eq 1]; then
+          systemctl enable %{name}.service > /dev/null 2>&1 || :
+      fi
+  %else
+      %systemd_post %{name}.service
+  %endif
 %endif
 
 %preun
-# stop and unregister the service before package deletion
+# halt and unregister the service before package deletion
 if [ $1 = 0 ]; then
 %if 0%{?rhel}
   service %{name} stop > /dev/null 2>&1
   chkconfig --del %{name}
 %else
-  systemctl stop %{name}.service > /dev/null
-  systemctl disable %{name}.service > /dev/null
+  %if 0%{?fedora} <= 17
+    /bin/systemctl stop %{name}.service > /dev/null 2>&1 || :
+    /bin/systemctl --no-reload disable %{name}.service > /dev/null 2>&1 || :
+  %else
+    %systemd_preun %{name}.service
+  %endif
 %endif
 fi
 
@@ -258,6 +273,10 @@ fi
 %doc COPYING
 
 %changelog
+* Thu Sep 13 2012 Greg Blomquist <gblomqui@redhat.com> 0.5.0-0
+- https://bugzilla.redhat.com/show_bug.cgi?id=856650
+- https://bugzilla.redhat.com/show_bug.cgi?id=851247
+- https://bugzilla.redhat.com/show_bug.cgi?id=833660
 * Tue Mar 13 2012 Joe VLcek <jvlcek@redhat.com> 0.5.0-0
 - Convert init scripts to sysV and systemd
 - https://bugzilla.redhat.com/show_bug.cgi?id=833660
