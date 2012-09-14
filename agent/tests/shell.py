@@ -62,8 +62,10 @@ class TestAudreyShell(unittest.TestCase):
     def test_single_undefined_facts(self):
         self.assertEqual(get_system_info(['not_real']), {})
 
-    def test_mutliple_facs(self):
-        self.assertIn('ipaddress', get_system_info(['ipaddress']))
+    def test_mutliple_facts(self):
+        self.assertIn('uptime', get_system_info(['timezone', 'uptime']))
+        self.assertIn('timezone', get_system_info(['timezone', 'uptime']))
 
     def test_multiple_with_undefined_facts(self):
-        self.assertIn('ipaddress', get_system_info(['not_real', 'ipaddress']))
+        self.assertIn('uptime', get_system_info(['not_real', 'uptime']))
+        self.assertNotIn('not_real', get_system_info(['not_real', 'uptime']))

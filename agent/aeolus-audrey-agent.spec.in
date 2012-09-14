@@ -46,6 +46,11 @@ Requires:   python-setuptools
 BuildRequires: systemd-units
 %endif
 
+%if 0%{?fedora} >= 17
+Requires(post):  systemd-units
+Requires(preun): systemd-units
+%endif
+
 BuildArch:  noarch
 
 %description
@@ -87,24 +92,33 @@ fi
 # in prep for the ZZaudrey service
 # part of fix for BZ816104
 if [ -e %{_initrddir}/audrey ]; then
-/sbin/chkconfig --del audrey
+  /sbin/chkconfig --del audrey
 fi
 
 %post
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
-/sbin/chkconfig --add ZZaudrey
-/sbin/chkconfig ZZaudrey on
+  /sbin/chkconfig --add ZZaudrey
+  /sbin/chkconfig ZZaudrey on
 else
-/bin/systemctl enable audrey.service > /dev/null
+  %if 0%{?fedora} <= 17
+    if [ $1 -eq 1]; then
+      /bin/systemctl enable audrey.service > /dev/null 2>&1 || :
+    fi
+  %else
+      %systemd_post audrey.service
+  %endif
 fi
-
 
 %preun
 if [ "$1" = 0 ] ; then
 if [ 0%{?rhel} == 05 ] || [ 0%{?rhel} == 06 ]; then
-/sbin/chkconfig --del ZZaudrey
+    /sbin/chkconfig --del ZZaudrey
 else
-/bin/systemctl disable audrey.service > /dev/null
+  %if 0%{?fedora} <= 17
+    /bin/systemctl --no-reload disable audrey.service > /dev/null 2>&1 || :
+  %else
+    %systemd_preun audrey.service
+  %endif
 fi
 fi
 
@@ -121,6 +135,8 @@ fi
 %doc COPYING
 
 %changelog
+* Fri Sep 14 2012 Joe VLcek <jvlcek@redhat.com> 0.5.1
+- fix for BZ850389
 * Tue May 08 2012 Dan Radez <dradez@redhat.com> 0.4.6-1
 - fix for BZ816104
 * Fri Mar 16 2012 Joe VLcek <jvlcek@redhat.com> 0.4.4-4

@@ -16,8 +16,8 @@
 
 AUDREY_STARTUP_CACHE_DIR	?= $(HOME)/audrey-agent-cache
 
-VERSION = 0.5.0
-RELEASE = 0
+VERSION = 0.5.1
+RELEASE = 1
 
 # For Release: 0..., set _audrey-agent_dev=1 so that we get extra_release.GIT-
 # annotated rpm version strings.
@@ -85,6 +85,7 @@ clean:
 	aeolus-audrey-agent.spec audrey.$(man_section) \
 	audrey.log test_toolinglog test_toolinguser \
 	src/audrey/__init__.py src/audrey/__init__.pyc \
+        test_tooling* \
 	toolinglog toolinguser
 
 # report coverage
