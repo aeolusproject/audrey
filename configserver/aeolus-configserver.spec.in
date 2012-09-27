@@ -17,7 +17,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    2%{?dist}
+Release:    1%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -137,6 +137,11 @@ install -m 0644 \
     configure/puppet/modules/configserver/manifests/init.pp \
     %{buildroot}%{app_root}/configure/puppet/modules/configserver/manifests
 
+install -d %{buildroot}%{app_root}/configure/puppet/modules/configserver/templates
+install -m 0644 \
+    configure/puppet/modules/configserver/templates/aeolus-configserver.conf.erb \
+    %{buildroot}%{app_root}/configure/puppet/modules/configserver/templates
+
 install configure/bin/config_httpd.sh \
     %{buildroot}%{_bindir}/aeolus-configserver-setup
 
@@ -186,6 +191,8 @@ fi
 %doc COPYING
 
 %changelog
+* Tue Sep 20 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.11-1
+- refix: https://bugzilla.redhat.com/show_bug.cgi?id=751088
 * Tue Aug 07 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.10-2
 - https://bugzilla.redhat.com/show_bug.cgi?id=782922
 - https://bugzilla.redhat.com/show_bug.cgi?id=806053

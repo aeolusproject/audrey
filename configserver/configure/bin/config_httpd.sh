@@ -80,9 +80,11 @@ fi
 ## is this config server being installed alongside a conductor installation?
 puppetclass="ssl"
 root_context="/"
+prefix="/"
 if [ -d "/etc/httpd/conf.d/aeolus-conductor.d" ]; then
     puppetclass="conductor"
     root_context="/configserver/"
+    prefix="/configserver/"
 else
     echo "$PREAMBLE"
     echo -n "Do you wish to continue [y/N]: "
@@ -122,7 +124,8 @@ parameters:
     conductor_key: ${conductor_key}
     conductor_secret: ${conductor_secret}
     config_server_context: ${root_context}
-    config_server_url: http://localhost:4567/
+    config_server_prefix: ${prefix}
+    config_server_url: http://localhost:4567${prefix}
 yaml"""
 echo "$manifest" > $manifest_file
 chmod 755 $manifest_file

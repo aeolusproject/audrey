@@ -11,6 +11,18 @@ class configserver {
     ensure     => installed,
   }
 
+  $config_server_prefix = $config_server_prefix ? {
+    ''        => '/',
+    default   => $config_server_prefix
+  }
+  file { "/etc/sysconfig/aeolus-configserver":
+    owner   => 'root',
+    group   => 'root',
+    content => template("configserver/aeolus-configserver.conf.erb"),
+    require => Package["configserver"],
+    notify  => Service["configserver"],
+  }
+
   file { "/var/lib/aeolus-configserver/":
     ensure  => directory,
     owner   => 'aeolus',
