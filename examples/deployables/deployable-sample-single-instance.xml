@@ -47,21 +47,21 @@
                  values or not. -->
             <!-- Only scalar parameter types are going to be supported
                  initially. -->
-            <parameter name="service_1_param_1" type="scalar">
+            <parameter name="service_1_param_1">
               <!-- Default values can be provided directly in the deployable. -->
-              <value><![CDATA[value 1]]></value>
+              <value type="scalar"><![CDATA[value 1]]></value>
             </parameter>
-            <parameter name="service_1_param_2" type="scalar"/>
+            <parameter name="service_1_param_2"/>
           </parameters>
         </service>
         <service name="service2">
           <executable url="https://www.aeolusproject.org/redmine/attachments/download/169/start_simple"/>
           <parameters>
-            <parameter name="service_2_param_1" type="scalar">
-              <value><![CDATA[value 1]]></value>
+            <parameter name="service_2_param_1">
+              <value type="scalar"><![CDATA[value 1]]></value>
             </parameter>
-            <parameter name="service_2_param_2" type="scalar">
-              <value><![CDATA[value 2]]></value>
+            <parameter name="service_2_param_2">
+              <value type="scalar"><![CDATA[value 2]]></value>
             </parameter>
           </parameters>
         </service>
