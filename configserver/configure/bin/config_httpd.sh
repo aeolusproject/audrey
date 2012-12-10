@@ -128,7 +128,8 @@ parameters:
     config_server_url: http://localhost:4567${prefix}
 yaml"""
 echo "$manifest" > $manifest_file
-chmod 755 $manifest_file
+
+chmod 700 $manifest_file
 
 echo -e "\nrunning: echo | $PUPPET --modulepath $MODULE_PATH --external_nodes $manifest_file\
  --node_terminus exec"

@@ -172,6 +172,13 @@ getent passwd aeolus >/dev/null || \
 # BZ:872300
 [ -e %{_localstatedir}/log/%{name}/configserver.log ] && chmod 600 %{_localstatedir}/log/%{name}/configserver.log || :
 
+# ensure that pre-existing tmp manifest files are not world-readable
+# BZ:875222
+[ -e /tmp/tmp.* ] && for f in `grep -l "config_server_context" /tmp/tmp.*`; do
+  chmod 700 $f
+done || :
+
+
 %preun
 # cleanup the service before package deletion
 if [ $1 = 0 ]; then
