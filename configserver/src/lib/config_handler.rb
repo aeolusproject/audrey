@@ -91,7 +91,7 @@ module ConfigServer
           when :text
             services = instance.services
             log "uuid: #{uuid}"
-            log "services: #{services.inspect}"
+            logger.debug "services: #{services.inspect}"
             "|" +
             services.map do |svc_name,params|
               "service|#{svc_name}" +

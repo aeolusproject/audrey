@@ -168,6 +168,10 @@ getent passwd aeolus >/dev/null || \
 /sbin/chkconfig %{name} on
 /sbin/chkconfig httpd on
 
+# ensure that pre-existing log files are not world-readable
+# BZ:872300
+[ -e %{_localstatedir}/log/%{name}/configserver.log ] && chmod 600 %{_localstatedir}/log/%{name}/configserver.log || :
+
 %preun
 # cleanup the service before package deletion
 if [ $1 = 0 ]; then
