@@ -202,6 +202,9 @@ fi
 %doc COPYING
 
 %changelog
+* Fri Dec 14 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.12-1
+- https://bugzilla.redhat.com/show_bug.cgi?id=872300
+- https://bugzilla.redhat.com/show_bug.cgi?id=875222
 * Tue Sep 20 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.11-1
 - refix: https://bugzilla.redhat.com/show_bug.cgi?id=751088
 * Tue Aug 07 2012 Greg Blomquist <gblomqui@redhat.com> 0.4.10-2
