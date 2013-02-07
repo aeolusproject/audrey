@@ -17,7 +17,7 @@
 
 Name:       aeolus-configserver
 Version:    @VERSION@
-Release:    1%{?dist}
+Release:    2%{?dist}
 Summary:    The Aeolus Config Server
 
 Group:      Applications/System
@@ -174,10 +174,9 @@ getent passwd aeolus >/dev/null || \
 
 # ensure that pre-existing tmp manifest files are not world-readable
 # BZ:875222
-[ -e /tmp/tmp.* ] && for f in `grep -l "config_server_context" /tmp/tmp.*`; do
-  chmod 700 $f
-done || :
-
+for f in `stat --format=%n /tmp/tmp.* 2>/dev/null | xargs grep -l "config_server_context"`; do
+  chmod 700 $f;
+done
 
 %preun
 # cleanup the service before package deletion
